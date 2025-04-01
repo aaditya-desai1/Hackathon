@@ -24,6 +24,8 @@ import {
   IconButton,
   useTheme,
   CircularProgress,
+  Paper,
+  Container,
 } from '@mui/material';
 import {
   BarChart as ChartIcon,
@@ -131,27 +133,35 @@ function Visualizations() {
           visualizationSuggestions: [
             {
               type: 'bar',
-              description: 'Bar Chart',
+              description: 'Bar Chart - Good for comparing values across categories',
               reasoning: 'Based on data structure',
-              confidence: 85
+              confidence: 85,
+              xAxis: analysisData.analysis.recommendedAxes?.x || Object.keys(analysisData.analysis.basicAnalysis || {})[0],
+              yAxis: analysisData.analysis.recommendedAxes?.y || Object.keys(analysisData.analysis.basicAnalysis || {})[1]
             },
             {
               type: 'line',
-              description: 'Line Chart',
+              description: 'Line Chart - Best for showing trends over time or continuous data',
               reasoning: 'Good for trends over time',
-              confidence: 75
+              confidence: 75,
+              xAxis: analysisData.analysis.recommendedAxes?.x || Object.keys(analysisData.analysis.basicAnalysis || {})[0],
+              yAxis: analysisData.analysis.recommendedAxes?.y || Object.keys(analysisData.analysis.basicAnalysis || {})[1]
             },
             {
               type: 'pie',
-              description: 'Pie Chart',
+              description: 'Pie Chart - Excellent for showing proportions of a whole',
               reasoning: 'Good for showing proportions',
-              confidence: 65
+              confidence: 65,
+              xAxis: analysisData.analysis.recommendedAxes?.x || Object.keys(analysisData.analysis.basicAnalysis || {})[0],
+              yAxis: analysisData.analysis.recommendedAxes?.y || Object.keys(analysisData.analysis.basicAnalysis || {})[1]
             },
             {
               type: 'scatter',
-              description: 'Scatter Plot',
+              description: 'Scatter Plot - Ideal for showing correlation between variables',
               reasoning: 'Good for showing correlations',
-              confidence: 60
+              confidence: 60,
+              xAxis: analysisData.analysis.recommendedAxes?.x || Object.keys(analysisData.analysis.basicAnalysis || {})[0],
+              yAxis: analysisData.analysis.recommendedAxes?.y || Object.keys(analysisData.analysis.basicAnalysis || {})[1]
             }
           ]
         });
@@ -175,7 +185,6 @@ function Visualizations() {
 
   const handleCreateClick = () => {
     setOpenDialog(true);
-    setPreviewCharts([]);
     setSelectedXAxis('');
     setSelectedYAxis('');
     setAxisSelectionOpen(false);
@@ -198,9 +207,6 @@ function Visualizations() {
     setAxisSelectionOpen(false);
     setOpenDialog(false);
     
-    // Clear existing visualizations display by setting previewCharts to empty
-    setPreviewCharts([]);
-    
     // Create preview charts for all chart types
     const previewData = [];
     ['bar', 'line', 'pie', 'scatter'].forEach(chartType => {
@@ -222,15 +228,12 @@ function Visualizations() {
     });
     
     setPreviewFile(selectedFile);
+    setPreviewCharts(previewData);
     
     // Schedule rendering after the DOM updates
     setTimeout(() => {
-      // Set the preview charts after a delay to ensure DOM is ready
-      setPreviewCharts(previewData);
-      setTimeout(() => {
-        renderPreviewCharts(previewData);
-      }, 300);
-    }, 100);
+      renderPreviewCharts(previewData);
+    }, 300);
   };
 
   const renderPreviewCharts = (charts) => {
@@ -257,36 +260,88 @@ function Visualizations() {
     if (!ctx) return;
     
     try {
-      // Sample data for the charts
-      const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-      const data = {
-        labels: labels,
-        datasets: [{
-          label: chart.yAxis,
-          data: [65, 59, 80, 81, 56, 55],
-          backgroundColor: [
-            'rgba(255, 99, 132, 1)',
-            'rgba(54, 162, 235, 1)',
-            'rgba(255, 206, 86, 1)',
-            'rgba(75, 192, 192, 1)',
-            'rgba(153, 102, 255, 1)',
-            'rgba(255, 159, 64, 1)'
-          ],
-          borderColor: [
-            'rgba(255, 99, 132, 1)',
-            'rgba(54, 162, 235, 1)',
-            'rgba(255, 206, 86, 1)',
-            'rgba(75, 192, 192, 1)',
-            'rgba(153, 102, 255, 1)',
-            'rgba(255, 159, 64, 1)'
-          ],
-          borderWidth: 1
-        }]
-      };
+      // Set up data for different chart types
+      let chartData;
+      
+      // Use sorted numeric values for the x-axis labels if possible
+      const xLabels = [20, 25, 30, 35, 40, 45];
+      
+      if (chart.chartType === 'scatter') {
+        // For scatter charts, create paired x-y coordinates
+        chartData = {
+          datasets: [{
+            label: chart.yAxis,
+            data: [
+              { x: 20, y: 45 },
+              { x: 25, y: 55 },
+              { x: 30, y: 65 },
+              { x: 35, y: 75 },
+              { x: 40, y: 70 },
+              { x: 45, y: 60 }
+            ],
+            backgroundColor: 'rgba(75, 192, 192, 0.8)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            pointRadius: 7,
+            pointHoverRadius: 9,
+          }]
+        };
+      } else if (chart.chartType === 'pie') {
+        chartData = {
+          labels: ['20-25', '25-30', '30-35', '35-40', '40-45', '45-50'],
+          datasets: [{
+            label: chart.yAxis,
+            data: [65, 59, 80, 81, 56, 55],
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.8)',
+              'rgba(54, 162, 235, 0.8)',
+              'rgba(255, 206, 86, 0.8)',
+              'rgba(75, 192, 192, 0.8)',
+              'rgba(153, 102, 255, 0.8)',
+              'rgba(255, 159, 64, 0.8)'
+            ],
+            borderColor: [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)',
+              'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+          }]
+        };
+      } else {
+        // For bar and line charts
+        chartData = {
+          labels: ['20', '25', '30', '35', '40', '45'],
+          datasets: [{
+            label: chart.yAxis,
+            data: [65, 59, 80, 81, 56, 55],
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.8)',
+              'rgba(54, 162, 235, 0.8)',
+              'rgba(255, 206, 86, 0.8)',
+              'rgba(75, 192, 192, 0.8)',
+              'rgba(153, 102, 255, 0.8)',
+              'rgba(255, 159, 64, 0.8)'
+            ],
+            borderColor: chart.chartType === 'line' ? 'rgba(75, 192, 192, 1)' : [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)',
+              'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1,
+            tension: 0.1
+          }]
+        };
+      }
       
       const chartInstance = new Chart(ctx, {
         type: chart.chartType,
-        data: data,
+        data: chartData,
         options: {
           responsive: true,
           maintainAspectRatio: false,
@@ -344,6 +399,34 @@ function Visualizations() {
 
   const handleSaveChart = async (chart) => {
     try {
+      // Save the chart as an image
+      const canvasRef = chartPreviewRefs.current[chart.chartType];
+      if (canvasRef) {
+        // Get the image data URL
+        const imageUrl = canvasRef.toDataURL("image/png");
+        
+        // Create a temporary link element to download the image
+        const downloadLink = document.createElement("a");
+        downloadLink.href = imageUrl;
+        downloadLink.download = `${chart.name}.png`;
+        
+        // Append to body, click, and remove
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        
+        console.log("Chart image saved locally");
+        
+        // Success message
+        alert("Chart saved to your downloads folder");
+      }
+      
+      // Ask if the user wants to save to the server as well
+      const saveToServer = window.confirm("Do you also want to save this visualization to your account?");
+      if (!saveToServer) {
+        return;
+      }
+      
       setLoading(true);
       setError(null);
       
@@ -360,15 +443,6 @@ function Visualizations() {
         title: chart.name,
         subtitle: `Generated on ${new Date().toLocaleDateString()}`
       };
-      
-      console.log('Creating visualization with config:', {
-        name: chart.name,
-        description: chart.description,
-        fileId: chart.fileId,
-        chartType: chart.chartType,
-        confidence: chart.confidence,
-        config: config
-      });
       
       // Send request to create visualization
       const response = await fetch('/api/visualizations', {
@@ -396,13 +470,10 @@ function Visualizations() {
       console.log('Visualization created:', result);
       
       // Show success message
-      alert('Visualization saved successfully!');
+      alert('Visualization saved successfully to your account!');
       
       // Refresh visualizations
       await fetchVisualizations();
-      
-      // Clear preview charts after successful save
-      setPreviewCharts([]);
     } catch (error) {
       console.error('Error creating visualization:', error);
       setError('Failed to create visualization: ' + error.message);
@@ -633,36 +704,85 @@ function Visualizations() {
       return;
     }
     
-    console.log('Chart type:', visualization.chartType);
-    console.log('Chart config:', visualization.config);
-    
     try {
-      // Generate mock data based on the chart type and config
-      const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-      const data = {
-        labels: labels,
-        datasets: [{
-          label: visualization.config?.yAxis?.label || 'Value',
-          data: [65, 59, 80, 81, 56, 55],
-          backgroundColor: [
-            'rgba(255, 99, 132, 1)',
-            'rgba(54, 162, 235, 1)',
-            'rgba(255, 206, 86, 1)',
-            'rgba(75, 192, 192, 1)',
-            'rgba(153, 102, 255, 1)',
-            'rgba(255, 159, 64, 1)'
-          ],
-          borderColor: [
-            'rgba(255, 99, 132, 1)',
-            'rgba(54, 162, 235, 1)',
-            'rgba(255, 206, 86, 1)',
-            'rgba(75, 192, 192, 1)',
-            'rgba(153, 102, 255, 1)',
-            'rgba(255, 159, 64, 1)'
-          ],
-          borderWidth: 1
-        }]
-      };
+      // Generate appropriate data based on the chart type
+      let data;
+      
+      if (visualization.chartType === 'scatter') {
+        // For scatter charts, create paired x-y coordinates with realistic data
+        data = {
+          datasets: [{
+            label: visualization.config?.yAxis?.label || 'Value',
+            data: [
+              { x: 20, y: 45 },
+              { x: 25, y: 55 },
+              { x: 30, y: 65 },
+              { x: 35, y: 75 },
+              { x: 40, y: 70 },
+              { x: 45, y: 60 }
+            ],
+            backgroundColor: 'rgba(75, 192, 192, 0.8)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            pointRadius: 7,
+            pointHoverRadius: 9,
+          }]
+        };
+      } else if (visualization.chartType === 'pie') {
+        // For pie charts
+        const labels = ['20-25', '25-30', '30-35', '35-40', '40-45', '45-50'];
+        data = {
+          labels: labels,
+          datasets: [{
+            label: visualization.config?.yAxis?.label || 'Value',
+            data: [65, 59, 80, 81, 56, 55],
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.8)',
+              'rgba(54, 162, 235, 0.8)',
+              'rgba(255, 206, 86, 0.8)',
+              'rgba(75, 192, 192, 0.8)',
+              'rgba(153, 102, 255, 0.8)',
+              'rgba(255, 159, 64, 0.8)'
+            ],
+            borderColor: [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)',
+              'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+          }]
+        };
+      } else {
+        // For bar and line charts
+        const labels = ['20', '25', '30', '35', '40', '45'];
+        data = {
+          labels: labels,
+          datasets: [{
+            label: visualization.config?.yAxis?.label || 'Value',
+            data: [65, 59, 80, 81, 56, 55],
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.8)',
+              'rgba(54, 162, 235, 0.8)',
+              'rgba(255, 206, 86, 0.8)',
+              'rgba(75, 192, 192, 0.8)',
+              'rgba(153, 102, 255, 0.8)',
+              'rgba(255, 159, 64, 0.8)'
+            ],
+            borderColor: visualization.chartType === 'line' ? 'rgba(75, 192, 192, 1)' : [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)',
+              'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1,
+            tension: 0.1
+          }]
+        };
+      }
       
       // Create the chart based on the type
       console.log('Creating new chart');
@@ -684,7 +804,7 @@ function Visualizations() {
               color: theme.palette.text.secondary
             },
             legend: {
-              display: true,
+              display: visualization.chartType !== 'bar',
               position: 'top',
               labels: {
                 color: theme.palette.text.primary
@@ -695,7 +815,7 @@ function Visualizations() {
             x: {
               title: {
                 display: true,
-                text: visualization.config?.xAxis?.label || 'Category',
+                text: visualization.config?.xAxis?.label || 'Age',
                 color: theme.palette.text.primary
               },
               ticks: {
@@ -743,36 +863,256 @@ function Visualizations() {
     };
   }, [chartInstance, chartPreviewInstances]);
 
-  // Re-render charts when theme changes
+  // Don't clear previewCharts when component mounts/unmounts
+  // This will keep visualizations when navigating away and back
   useEffect(() => {
-    if (currentVisualization && openViewDialog) {
-      setTimeout(() => {
-        renderChart(currentVisualization);
-      }, 300);
-    }
+    fetchFiles();
+    fetchVisualizations();
     
-    if (previewCharts.length > 0) {
-      setTimeout(() => {
-        renderPreviewCharts(previewCharts);
-      }, 300);
+    if (location.state?.openCreateDialog) {
+      setOpenDialog(true);
+      window.history.replaceState({}, document.title);
     }
-  }, [theme.palette.mode]);
+
+    // Restore saved previewCharts and selectedFile from sessionStorage if they exist
+    const savedPreviewCharts = sessionStorage.getItem('previewCharts');
+    const savedPreviewFile = sessionStorage.getItem('previewFile');
+    
+    if (savedPreviewCharts) {
+      try {
+        const parsedCharts = JSON.parse(savedPreviewCharts);
+        setPreviewCharts(parsedCharts);
+        
+        if (savedPreviewFile) {
+          setPreviewFile(JSON.parse(savedPreviewFile));
+        }
+        
+        // Schedule rendering after component mounts
+        setTimeout(() => {
+          renderPreviewCharts(parsedCharts);
+        }, 300);
+      } catch (error) {
+        console.error('Error restoring saved charts:', error);
+      }
+    }
+  }, [location]);
+
+  // Save previewCharts to sessionStorage whenever they change
+  useEffect(() => {
+    if (previewCharts.length > 0) {
+      sessionStorage.setItem('previewCharts', JSON.stringify(previewCharts));
+      
+      if (previewFile) {
+        sessionStorage.setItem('previewFile', JSON.stringify(previewFile));
+      }
+    }
+  }, [previewCharts, previewFile]);
+
+  // Add recommended visualizations section with previews
+  const renderRecommendedVisualizations = () => {
+    if (!analysis?.visualizationSuggestions?.length) return null;
+
+    return (
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          Recommended Visualizations
+        </Typography>
+        <Grid container spacing={2}>
+          {analysis.visualizationSuggestions.map((suggestion, index) => (
+            <Grid item xs={12} sm={6} md={3} key={index}>
+              <Paper
+                sx={{
+                  p: 2,
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: 4,
+                  },
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
+                  border: 1,
+                  borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+                }}
+                onClick={() => {
+                  setSelectedXAxis(suggestion.xAxis || analysis.columns[0]);
+                  setSelectedYAxis(suggestion.yAxis || analysis.columns[1]);
+                  handleGenerateCharts();
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
+                    {suggestion.type.charAt(0).toUpperCase() + suggestion.type.slice(1)} Chart
+                  </Typography>
+                  <Chip
+                    label={`${suggestion.confidence}% match`}
+                    color="primary"
+                    size="small"
+                  />
+                </Box>
+                
+                <Box sx={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                  {suggestion.type === 'bar' && <ChartIcon sx={{ fontSize: 50, color: '#1976d2' }} />}
+                  {suggestion.type === 'line' && <LineIcon sx={{ fontSize: 50, color: '#2e7d32' }} />}
+                  {suggestion.type === 'pie' && <PieIcon sx={{ fontSize: 50, color: '#ed6c02' }} />}
+                  {suggestion.type === 'scatter' && <ScatterIcon sx={{ fontSize: 50, color: '#9c27b0' }} />}
+                </Box>
+                
+                <Typography variant="body2" color="text.secondary">
+                  {suggestion.description}
+                </Typography>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    );
+  };
 
   return (
-    <Box sx={{ p: 3, backgroundColor: 'background.default', minHeight: '100vh' }}>
-      <PageHeader
-        title="Visualizations"
-        icon={<ChartIcon />}
-        actions={
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleCreateClick}
+    <Container maxWidth="xl">
+      <Box sx={{ py: 4 }}>
+        <PageHeader
+          title="Visualizations"
+          subtitle="Create and manage your data visualizations"
+          action={
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setOpenDialog(true)}
+            >
+              Create Visualization
+            </Button>
+          }
+        />
+
+        {renderRecommendedVisualizations()}
+        
+        {previewCharts.length > 0 ? (
+          <Box sx={{ 
+            mb: 4, 
+            p: 3, 
+            bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' ? '0 2px 10px rgba(0, 0, 0, 0.2)' : '0 2px 10px rgba(0, 0, 0, 0.05)',
+            border: 1,
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              mb: 2
+            }}>
+              <Typography variant="h5" component="h2">
+                Chart Preview: {selectedXAxis} vs {selectedYAxis}
+              </Typography>
+              <Box>
+                <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 1 }}>
+                  Data from: {previewFile?.name}
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => setOpenDialog(true)}
+                  sx={{ ml: 2 }}
+                >
+                  Create New Visualization
+                </Button>
+              </Box>
+            </Box>
+
+            {/* All Chart Types */}
+            <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+              All Chart Types
+            </Typography>
+            <Grid container spacing={3}>
+              {previewCharts.map((chart) => (
+                <Grid item xs={12} sm={6} key={chart.chartType}>
+                  <Card sx={{ 
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    bgcolor: 'background.paper'
+                  }}>
+                    <Box sx={{ 
+                      bgcolor: 'primary.main', 
+                      color: 'white',
+                      p: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <Typography variant="h6" component="div">
+                        {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                      </Typography>
+                      <Chip 
+                        label={`${chart.confidence}% match`} 
+                        color={chart.confidence > 80 ? 'success' : chart.confidence > 70 ? 'primary' : 'default'} 
+                        size="small"
+                        sx={{ fontWeight: 'bold', color: 'white', bgcolor: chart.confidence > 80 ? '#2e7d32' : chart.confidence > 70 ? '#1976d2' : '#757575' }}
+                      />
+                    </Box>
+                    <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
+                      {chart.yAxis} by {chart.xAxis}
+                    </Typography>
+                    <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
+                      <canvas 
+                        ref={el => chartPreviewRefs.current[chart.chartType] = el}
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    </Box>
+                    <Box sx={{ p: 2, mt: 'auto' }}>
+                      <Button 
+                        variant="contained" 
+                        fullWidth
+                        onClick={() => handleSaveChart(chart)}
+                      >
+                        Save Visualization
+                      </Button>
+                    </Box>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        ) : (
+          <Box 
+            sx={{ 
+              mt: 4, 
+              p: 4, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              backgroundColor: 'white',
+              borderRadius: 2,
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
+              minHeight: '300px'
+            }}
           >
-            Create Visualization
-          </Button>
-        }
-      />
+            <TimelineIcon sx={{ fontSize: 64, color: 'primary.light', mb: 2 }} />
+            <Typography variant="h6" align="center" gutterBottom>
+              No Visualizations Yet
+            </Typography>
+            <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 3 }}>
+              Create your first visualization to see it displayed here.
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setOpenDialog(true);
+              }}
+            >
+              Create Visualization
+            </Button>
+          </Box>
+        )}
+      </Box>
 
       {/* File Selection Dialog */}
       <Dialog
@@ -782,10 +1122,16 @@ function Visualizations() {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 2,
-            bgcolor: theme.palette.mode === 'dark' ? 'background.default' : 'white',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-            overflow: 'hidden'
+            bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+            '& .MuiSelect-root': {
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+              }
+            }
           }
         }}
       >
@@ -1043,212 +1389,6 @@ function Visualizations() {
         </Box>
       </Dialog>
 
-      {/* Main content */}
-      {previewCharts.length > 0 && (
-        <Box sx={{ 
-          mb: 4, 
-          p: 3, 
-          bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
-          borderRadius: 2,
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)'
-        }}>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            mb: 2
-          }}>
-            <Typography variant="h5" component="h2">
-              Chart Preview: {selectedXAxis} vs {selectedYAxis}
-            </Typography>
-            <Typography variant="subtitle1" color="text.secondary">
-              Data from: {previewFile?.name}
-            </Typography>
-          </Box>
-
-          {/* All Chart Types */}
-          <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-            All Chart Types
-          </Typography>
-          <Grid container spacing={3}>
-            {previewCharts.map((chart) => (
-              <Grid item xs={12} sm={6} key={chart.chartType}>
-                <Card sx={{ 
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                  borderRadius: 2,
-                  overflow: 'hidden',
-                  bgcolor: 'background.paper'
-                }}>
-                  <Box sx={{ 
-                    bgcolor: 'primary.main', 
-                    color: 'white',
-                    p: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <Typography variant="h6" component="div">
-                      {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
-                    </Typography>
-                    <Chip 
-                      label={`${chart.confidence}% match`} 
-                      color={chart.confidence > 80 ? 'success' : chart.confidence > 70 ? 'primary' : 'default'} 
-                      size="small"
-                      sx={{ fontWeight: 'bold', color: 'white', bgcolor: chart.confidence > 80 ? '#2e7d32' : chart.confidence > 70 ? '#1976d2' : '#757575' }}
-                    />
-                  </Box>
-                  <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
-                    {chart.yAxis} by {chart.xAxis}
-                  </Typography>
-                  <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
-                    <canvas 
-                      ref={el => chartPreviewRefs.current[chart.chartType] = el}
-                      style={{ width: '100%', height: '100%' }}
-                    />
-                  </Box>
-                  <Box sx={{ p: 2, mt: 'auto' }}>
-                    <Button 
-                      variant="contained" 
-                      fullWidth
-                      onClick={() => handleSaveChart(chart)}
-                    >
-                      Save Visualization
-                    </Button>
-                  </Box>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-      )}
-
-      {visualizations.length === 0 && !loading && previewCharts.length === 0 ? (
-        <Box 
-          sx={{ 
-            mt: 4, 
-            p: 4, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            backgroundColor: 'white',
-            borderRadius: 2,
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
-            minHeight: '300px'
-          }}
-        >
-          <TimelineIcon sx={{ fontSize: 64, color: 'primary.light', mb: 2 }} />
-          <Typography variant="h6" align="center" gutterBottom>
-            No Visualizations Yet
-          </Typography>
-          <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 3 }}>
-            Create your first visualization to see it displayed here.
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              setOpenDialog(true);
-            }}
-          >
-            Create Visualization
-          </Button>
-        </Box>
-      ) : (
-        !previewCharts.length > 0 && (
-          <Grid container spacing={3} sx={{ mt: 2 }}>
-            {loading ? (
-              <Grid item xs={12}>
-                <Box sx={{ width: '100%', mt: 2 }}>
-                  <LinearProgress />
-                  <Typography sx={{ mt: 1 }} align="center" color="text.secondary">
-                    Loading visualizations...
-                  </Typography>
-                </Box>
-              </Grid>
-            ) : (
-              visualizations.map((viz) => (
-                <Grid item xs={12} sm={6} lg={4} key={viz._id}>
-                  <Card sx={{ 
-                    height: '100%', 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                    '&:hover': {
-                      transform: 'translateY(-5px)',
-                      boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
-                      cursor: 'pointer'
-                    } 
-                  }} onClick={() => handleViewVisualization(viz)}>
-                    <CardHeader 
-                      title={viz.name}
-                      subheader={`Created: ${new Date(viz.createdAt).toLocaleDateString()}`}
-                      action={
-                        <Chip 
-                          label={`${viz.confidence || 90}% match`} 
-                          color="primary" 
-                          size="small"
-                          sx={{ fontWeight: 'bold' }}
-                        />
-                      }
-                    />
-                    <Box sx={{ 
-                      p: 2, 
-                      pt: 0, 
-                      height: 200, 
-                      position: 'relative',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      {getVisualizationIcon(viz.chartType)}
-                    </Box>
-                    <Box sx={{ 
-                      p: 2, 
-                      bgcolor: 'primary.main', 
-                      color: 'white',
-                      display: 'flex',
-                      alignItems: 'center',
-                      mt: 'auto'
-                    }}>
-                      <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>
-                        {viz.chartType.charAt(0).toUpperCase() + viz.chartType.slice(1)} Chart
-                      </Typography>
-                      <Box sx={{ flexGrow: 1 }} />
-                      <Box sx={{ display: 'flex' }}>
-                        <IconButton 
-                          size="small" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditVisualization(viz);
-                          }}
-                          sx={{ color: 'white', mr: 1 }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton 
-                          size="small" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteVisualization(viz._id);
-                          }}
-                          sx={{ color: 'white' }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    </Box>
-                  </Card>
-                </Grid>
-              ))
-            )}
-          </Grid>
-        )
-      )}
-
       {/* View Visualization Dialog */}
       <Dialog
         open={openViewDialog}
@@ -1471,7 +1611,7 @@ function Visualizations() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Container>
   );
 }
 

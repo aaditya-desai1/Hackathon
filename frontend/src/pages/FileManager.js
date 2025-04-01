@@ -45,6 +45,8 @@ function FileManager() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const theme = useTheme();
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState(null);
 
   useEffect(() => {
     // Check if we should open the upload dialog from navigation state
@@ -88,16 +90,60 @@ function FileManager() {
 
   const handleDeleteFile = async (fileId) => {
     try {
+      setLoading(true);
+      
+      console.log('Deleting file with ID:', fileId);
+      
       // Get auth token if available
       const token = localStorage.getItem('authToken');
-      await fetch(`/api/files/${fileId}`, { 
+      const response = await fetch(`/api/files/${fileId}`, { 
         method: 'DELETE',
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
       });
-      await fetchFiles(); // Refresh the list after deletion
+      
+      console.log('Delete response:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData.message || 'Failed to delete file');
+      }
+      
+      // Close dialog and refresh file list
+      setOpenDeleteDialog(false);
+      setFileToDelete(null);
+      
+      console.log('File deleted successfully');
+      
+      // Refresh the file list
+      await fetchFiles();
+      
+      // Show success message
+      alert('File deleted successfully');
     } catch (error) {
       console.error('Error deleting file:', error);
+      alert(`Error deleting file: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleConfirmDelete = () => {
+    if (fileToDelete) {
+      handleDeleteFile(fileToDelete._id);
+    }
+  };
+
+  const handleDeleteClick = (file) => {
+    setFileToDelete(file);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleCancelDelete = () => {
+    setOpenDeleteDialog(false);
+    setFileToDelete(null);
   };
 
   const handleDownloadFile = async (fileId, fileName) => {
@@ -123,21 +169,41 @@ function FileManager() {
 
   const handleViewFile = async (fileId) => {
     try {
+      console.log('Viewing file with ID:', fileId);
+      
       // Get the file details
-      const response = await fetch(`/api/files/${fileId}`);
-      if (!response.ok) {
+      const fileResponse = await fetch(`/api/files/${fileId}`);
+      if (!fileResponse.ok) {
         throw new Error('Failed to fetch file details');
       }
       
-      const data = await response.json();
-      console.log('File preview data:', data);
+      const fileData = await fileResponse.json();
+      console.log('File details:', fileData);
+      
+      // Make a separate request to get the file preview data
+      const previewResponse = await fetch(`/api/files/${fileId}/preview`);
+      if (!previewResponse.ok) {
+        throw new Error('Failed to fetch file preview');
+      }
+      
+      const previewData = await previewResponse.json();
+      console.log('File preview data:', previewData);
+      
+      // Create the preview data structure
+      const combinedData = {
+        ...fileData.file,
+        data: {
+          headers: previewData.headers || previewData.columns || [],
+          rows: previewData.rows || previewData.data || []
+        }
+      };
       
       // Set preview data and open modal
-      setPreviewData(data.file);
+      setPreviewData(combinedData);
       setOpenPreviewDialog(true);
     } catch (error) {
       console.error('Error viewing file:', error);
-      alert('Failed to load file preview');
+      alert('Failed to load file preview: ' + error.message);
     }
   };
 
@@ -241,7 +307,7 @@ function FileManager() {
                             </IconButton>
                             <IconButton 
                               color="error"
-                              onClick={() => handleDeleteFile(file._id)}
+                              onClick={() => handleDeleteClick(file)}
                               size="small"
                               sx={{ 
                                 bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
@@ -383,6 +449,41 @@ function FileManager() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseUploadDialog}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={handleCancelDelete}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+          }
+        }}
+      >
+        <DialogTitle sx={{ bgcolor: 'error.main', color: 'white' }}>
+          Delete File
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2, p: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <DeleteIcon color="error" sx={{ mr: 2, fontSize: 32 }} />
+            <Typography variant="h6">
+              Are you sure?
+            </Typography>
+          </Box>
+          <Typography>
+            The file "{fileToDelete?.name}" will be permanently deleted. This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={handleCancelDelete} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained">
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>
