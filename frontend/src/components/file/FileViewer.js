@@ -21,10 +21,12 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import CodeIcon from '@mui/icons-material/Code';
 import InfoIcon from '@mui/icons-material/Info';
 import EmptyState from '../common/EmptyState';
+import { useTheme } from '@mui/material/styles';
 
 function FileViewer({ file, data }) {
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const theme = useTheme();
 
   if (!file || !data) {
     return <EmptyState 
@@ -117,7 +119,13 @@ function FileViewer({ file, data }) {
           Showing {filteredData.length} of {data.length} rows
         </Typography>
         
-        <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 400 }}>
+        <TableContainer component={Paper} variant="outlined" sx={{ 
+          maxHeight: 400,
+          overflow: 'auto',
+          '& .MuiTableCell-root': {
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+          }
+        }}>
           <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
