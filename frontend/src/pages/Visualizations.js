@@ -231,9 +231,9 @@ function Visualizations() {
     setPreviewCharts(previewData);
     
     // Schedule rendering after the DOM updates
-    setTimeout(() => {
-      renderPreviewCharts(previewData);
-    }, 300);
+      setTimeout(() => {
+        renderPreviewCharts(previewData);
+      }, 300);
   };
 
   const renderPreviewCharts = (charts) => {
@@ -288,10 +288,10 @@ function Visualizations() {
       } else if (chart.chartType === 'pie') {
         chartData = {
           labels: ['20-25', '25-30', '30-35', '35-40', '40-45', '45-50'],
-          datasets: [{
-            label: chart.yAxis,
-            data: [65, 59, 80, 81, 56, 55],
-            backgroundColor: [
+        datasets: [{
+          label: chart.yAxis,
+          data: [65, 59, 80, 81, 56, 55],
+          backgroundColor: [
               'rgba(255, 99, 132, 0.8)',
               'rgba(54, 162, 235, 0.8)',
               'rgba(255, 206, 86, 0.8)',
@@ -300,13 +300,13 @@ function Visualizations() {
               'rgba(255, 159, 64, 0.8)'
             ],
             borderColor: [
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(75, 192, 192, 1)',
-              'rgba(153, 102, 255, 1)',
-              'rgba(255, 159, 64, 1)'
-            ],
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)'
+          ],
             borderWidth: 1
           }]
         };
@@ -326,17 +326,17 @@ function Visualizations() {
               'rgba(255, 159, 64, 0.8)'
             ],
             borderColor: chart.chartType === 'line' ? 'rgba(75, 192, 192, 1)' : [
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(75, 192, 192, 1)',
-              'rgba(153, 102, 255, 1)',
-              'rgba(255, 159, 64, 1)'
-            ],
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)'
+          ],
             borderWidth: 1,
             tension: 0.1
-          }]
-        };
+        }]
+      };
       }
       
       const chartInstance = new Chart(ctx, {
@@ -731,11 +731,11 @@ function Visualizations() {
         // For pie charts
         const labels = ['20-25', '25-30', '30-35', '35-40', '40-45', '45-50'];
         data = {
-          labels: labels,
-          datasets: [{
-            label: visualization.config?.yAxis?.label || 'Value',
-            data: [65, 59, 80, 81, 56, 55],
-            backgroundColor: [
+        labels: labels,
+        datasets: [{
+          label: visualization.config?.yAxis?.label || 'Value',
+          data: [65, 59, 80, 81, 56, 55],
+          backgroundColor: [
               'rgba(255, 99, 132, 0.8)',
               'rgba(54, 162, 235, 0.8)',
               'rgba(255, 206, 86, 0.8)',
@@ -744,13 +744,13 @@ function Visualizations() {
               'rgba(255, 159, 64, 0.8)'
             ],
             borderColor: [
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(75, 192, 192, 1)',
-              'rgba(153, 102, 255, 1)',
-              'rgba(255, 159, 64, 1)'
-            ],
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)'
+          ],
             borderWidth: 1
           }]
         };
@@ -771,17 +771,17 @@ function Visualizations() {
               'rgba(255, 159, 64, 0.8)'
             ],
             borderColor: visualization.chartType === 'line' ? 'rgba(75, 192, 192, 1)' : [
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(75, 192, 192, 1)',
-              'rgba(153, 102, 255, 1)',
-              'rgba(255, 159, 64, 1)'
-            ],
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)'
+          ],
             borderWidth: 1,
             tension: 0.1
-          }]
-        };
+        }]
+      };
       }
       
       // Create the chart based on the type
@@ -888,15 +888,15 @@ function Visualizations() {
         }
         
         // Schedule rendering after component mounts
-        setTimeout(() => {
+      setTimeout(() => {
           renderPreviewCharts(parsedCharts);
-        }, 300);
+      }, 300);
       } catch (error) {
         console.error('Error restoring saved charts:', error);
-      }
+    }
     }
   }, [location]);
-
+    
   // Save previewCharts to sessionStorage whenever they change
   useEffect(() => {
     if (previewCharts.length > 0) {
@@ -912,7 +912,7 @@ function Visualizations() {
   const renderRecommendedVisualizations = () => {
     if (!analysis?.visualizationSuggestions?.length) return null;
 
-    return (
+  return (
       <Box sx={{ mb: 4 }}>
         <Typography variant="h6" gutterBottom>
           Recommended Visualizations
@@ -971,19 +971,19 @@ function Visualizations() {
   return (
     <Container maxWidth="xl">
       <Box sx={{ py: 4 }}>
-        <PageHeader
-          title="Visualizations"
+      <PageHeader
+        title="Visualizations"
           subtitle="Create and manage your data visualizations"
           action={
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
               onClick={() => setOpenDialog(true)}
-            >
-              Create Visualization
-            </Button>
-          }
-        />
+          >
+            Create Visualization
+          </Button>
+        }
+      />
 
         {renderRecommendedVisualizations()}
         
