@@ -153,15 +153,21 @@ exports.deleteFile = async (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    // Delete file from filesystem
-    await fs.unlink(file.path);
+    try {
+      // Delete file from filesystem
+      await fs.unlink(file.path);
+    } catch (unlinkError) {
+      console.error('Error deleting file from filesystem:', unlinkError);
+      // Continue with database deletion even if file deletion fails
+    }
     
     // Delete from database
-    await file.deleteOne();
+    await File.deleteOne({ _id: file._id });
     
     res.json({ success: true, message: 'File deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error in deleteFile controller:', error);
+    res.status(500).json({ error: error.message || 'Failed to delete file' });
   }
 };
 
