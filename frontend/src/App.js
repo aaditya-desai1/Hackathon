@@ -1,10 +1,12 @@
-import React, { useState, useMemo, createContext, useContext } from 'react';
+import React, { useState, useMemo, createContext, useContext, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import FileManager from './pages/FileManager';
 import Visualizations from './pages/Visualizations';
+import Settings from './pages/Settings';
+import Help from './pages/Help';
 
 // Create Theme Context
 export const ColorModeContext = createContext({
@@ -16,12 +18,24 @@ export const ColorModeContext = createContext({
 export const useColorMode = () => useContext(ColorModeContext);
 
 function App() {
-  const [mode, setMode] = useState('light');
+  // Initialize theme from localStorage or default to 'light'
+  const [mode, setMode] = useState(() => {
+    const savedMode = localStorage.getItem('themeMode');
+    return savedMode || 'light';
+  });
+
+  // Update localStorage when theme changes
+  useEffect(() => {
+    localStorage.setItem('themeMode', mode);
+  }, [mode]);
 
   const colorMode = useMemo(
     () => ({
       toggleColorMode: () => {
-        setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
+        setMode((prevMode) => {
+          const newMode = prevMode === 'light' ? 'dark' : 'light';
+          return newMode;
+        });
       },
       mode,
     }),
@@ -77,6 +91,13 @@ function App() {
               },
             },
           },
+          MuiPaper: {
+            styleOverrides: {
+              root: {
+                backgroundImage: 'none',
+              },
+            },
+          },
         },
       }),
     [mode]
@@ -91,6 +112,8 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/files" element={<FileManager />} />
             <Route path="/visualizations" element={<Visualizations />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/help" element={<Help />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Layout>

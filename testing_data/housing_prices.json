@@ -1,0 +1,16 @@
+[
+  {"house_id": 1, "square_feet": 1200, "price": 210000, "bedrooms": 2},
+  {"house_id": 2, "square_feet": 1800, "price": 320000, "bedrooms": 3},
+  {"house_id": 3, "square_feet": 2500, "price": 450000, "bedrooms": 4},
+  {"house_id": 4, "square_feet": 1500, "price": 275000, "bedrooms": 3},
+  {"house_id": 5, "square_feet": 3200, "price": 590000, "bedrooms": 5},
+  {"house_id": 6, "square_feet": 1350, "price": 240000, "bedrooms": 2},
+  {"house_id": 7, "square_feet": 2800, "price": 510000, "bedrooms": 4},
+  {"house_id": 8, "square_feet": 1650, "price": 295000, "bedrooms": 3},
+  {"house_id": 9, "square_feet": 2200, "price": 385000, "bedrooms": 4},
+  {"house_id": 10, "square_feet": 1950, "price": 345000, "bedrooms": 3},
+  {"house_id": 11, "square_feet": 2700, "price": 485000, "bedrooms": 4},
+  {"house_id": 12, "square_feet": 3500, "price": 650000, "bedrooms": 5},
+  {"house_id": 13, "square_feet": 1400, "price": 252000, "bedrooms": 2},
+  {"house_id": 14, "square_feet": 2900, "price": 525000, "bedrooms": 4}
+] 
