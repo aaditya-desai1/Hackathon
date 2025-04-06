@@ -90,23 +90,34 @@ function Visualizations() {
       setFileNotFound(false);
       setError(null);
       
-      console.log('Fetching files...');
+      console.log('[Visualizations] Fetching files, attempt', retryCount + 1);
+      
+      // Network status check
+      if (navigator.onLine === false) {
+        console.error('[Visualizations] Browser is offline');
+        setError('Network connection unavailable');
+        return;
+      }
+      
       const response = await fetchApi('/api/files');
       const data = await response.json();
-      console.log('Files fetched:', data);
+      console.log('[Visualizations] Files fetched:', data);
       
       if (data.files && Array.isArray(data.files)) {
         setFiles(data.files || []);
+        if (data.files.length === 0) {
+          console.log('[Visualizations] No files found in response');
+        }
       } else {
-        console.warn('Files data format unexpected:', data);
+        console.warn('[Visualizations] Files data format unexpected:', data);
         setFiles([]);
       }
     } catch (error) {
-      console.error('Error fetching files:', error);
+      console.error('[Visualizations] Error fetching files:', error);
       
       // Retry logic - attempt up to 3 retries with increasing delay
       if (retryCount < 3) {
-        console.log(`Retrying fetch files (${retryCount + 1}/3) in ${(retryCount + 1) * 1000}ms...`);
+        console.log(`[Visualizations] Retrying fetch files (${retryCount + 1}/3) in ${(retryCount + 1) * 1000}ms...`);
         setTimeout(() => fetchFiles(retryCount + 1), (retryCount + 1) * 1000);
         return;
       }
@@ -1490,6 +1501,22 @@ function Visualizations() {
     return getDefaultColumns();
   };
 
+  // Add this after No visualizations yet
+  const testApiConnection = async () => {
+    try {
+      setError(null);
+      console.log('[Visualizations] Testing API connection...');
+      const response = await fetchApi('/api/test');
+      const data = await response.json();
+      console.log('[Visualizations] API test result:', data);
+      alert(`API Connection Test: ${data.success ? 'SUCCESS' : 'FAILED'}\nMongo: ${data.mongo_connection === 1 ? 'Connected' : 'Disconnected'}\nEnv: ${data.environment}`);
+    } catch (error) {
+      console.error('[Visualizations] API test failed:', error);
+      setError(`API test failed: ${error.message}`);
+      alert(`API Connection Test FAILED: ${error.message}`);
+    }
+  };
+
   return (
     <Container maxWidth="xl">
       <Box sx={{ py: 4 }}>
@@ -1529,7 +1556,19 @@ function Visualizations() {
         {loading && <LinearProgress sx={{ mb: 2 }} />}
         
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert 
+            severity="error" 
+            sx={{ mb: 3 }}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={testApiConnection}
+              >
+                Test Connection
+              </Button>
+            }
+          >
             {error}
           </Alert>
         )}
