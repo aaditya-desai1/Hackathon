@@ -15,6 +15,7 @@ import {
   ListItemText,
   ListItemIcon,
   Divider,
+  CircularProgress,
 } from '@mui/material';
 import {
   Description as FileIcon,
@@ -38,40 +39,65 @@ function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Function to fetch data
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // In a real app, you would fetch from the API
-        // For now, we'll use the testing_data as our sample data
-        
-        // Simulate fetching dashboard data with testing_data info
-        const dashboardData = {
-          totalFiles: 8, // We have 8 files in the testing_data folder
-          totalVisualizations: 4, // Let's say we've created 4 visualizations
-          recentFiles: [
-            { id: 1, name: 'student_scores.csv', type: 'csv', date: new Date().toLocaleDateString() },
-            { id: 2, name: 'height_weight.json', type: 'json', date: new Date().toLocaleDateString() },
-            { id: 3, name: 'car_performance.csv', type: 'csv', date: new Date().toLocaleDateString() },
-            { id: 4, name: 'housing_prices.json', type: 'json', date: new Date().toLocaleDateString() },
-          ],
-          recentVisualizations: [
-            { id: 1, name: 'Student Performance Analysis', type: 'bar', date: new Date().toLocaleDateString() },
-            { id: 2, name: 'Height vs Weight Correlation', type: 'scatter', date: new Date().toLocaleDateString() },
-            { id: 3, name: 'Sales by Marketing Spend', type: 'line', date: new Date().toLocaleDateString() },
-            { id: 4, name: 'Market Share Distribution', type: 'pie', date: new Date().toLocaleDateString() },
-          ]
-        };
-        
-        setStats(dashboardData);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch files from the API
+      const filesResponse = await fetch('/api/files');
+      if (!filesResponse.ok) {
+        throw new Error('Failed to fetch files');
       }
-    };
+      const filesData = await filesResponse.json();
+      
+      // Fetch visualizations from the API
+      const vizResponse = await fetch('/api/visualizations');
+      if (!vizResponse.ok) {
+        throw new Error('Failed to fetch visualizations');
+      }
+      const vizData = await vizResponse.json();
+      
+      // Build dashboard data
+      const dashboardData = {
+        totalFiles: filesData.files ? filesData.files.length : 0,
+        totalVisualizations: vizData.visualizations ? vizData.visualizations.length : 0,
+        recentFiles: filesData.files ? 
+          filesData.files
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 4)
+            .map(file => ({
+              id: file._id,
+              name: file.name,
+              type: file.type === 'text/csv' ? 'csv' : 'json',
+              date: file.createdAt
+            })) : [],
+        recentVisualizations: vizData.visualizations ?
+          vizData.visualizations
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 4)
+            .map(viz => ({
+              id: viz._id,
+              name: viz.name,
+              type: viz.chartType || 'bar',
+              date: viz.createdAt
+            })) : []
+      };
+      
+      setStats(dashboardData);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      // Set empty data on error
+      setStats({
+        totalFiles: 0,
+        totalVisualizations: 0,
+        recentFiles: [],
+        recentVisualizations: []
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -84,10 +110,8 @@ function Dashboard() {
   };
 
   const handleRefresh = () => {
-    // Refresh stats
-    setLoading(true);
-    // In a real app you would re-fetch data from the server
-    setTimeout(() => setLoading(false), 800); // Simulate loading
+    // Refresh stats by calling the API again
+    fetchData();
   };
 
   const getChartIcon = (type) => {
