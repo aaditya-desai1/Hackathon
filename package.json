@@ -1,0 +1,11 @@
+{
+  "name": "dataviz-pro",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "vercel-build": "bash ./build.sh"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+} 
