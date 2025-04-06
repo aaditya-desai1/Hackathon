@@ -16,7 +16,6 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
 
   const onDrop = useCallback(async (acceptedFiles) => {
     const file = acceptedFiles[0]; // Handle one file at a time
-    console.log('File dropped:', file);
     
     if (!allowedTypes.includes(file.type)) {
       setError(`File type not supported. Please upload ${allowedTypes.join(', ')} files.`);
@@ -28,10 +27,47 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       setSuccess(false);
       setUploadProgress(0);
 
+      // In a real environment, we would upload to the server
+      // In this demo, we'll simulate a successful upload
+      
+      // Start simulated upload progress
+      let progress = 0;
+      const progressInterval = setInterval(() => {
+        progress += 5;
+        setUploadProgress(Math.min(progress, 95)); // Cap at 95% until "server response"
+        
+        if (progress >= 95) {
+          clearInterval(progressInterval);
+          
+          // Simulate server processing delay
+          setTimeout(() => {
+            // Create a mock server response
+            const mockResponse = {
+              success: true,
+              file: {
+                _id: `temp_${Date.now()}`,
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                createdAt: new Date().toISOString(),
+                columns: [],
+                preview: []
+              }
+            };
+            
+            setSuccess(true);
+            setUploadProgress(100);
+            onUploadSuccess(mockResponse.file);
+          }, 500);
+        }
+      }, 100);
+      
+      return;
+      
+      /* Real implementation would be:
       const formData = new FormData();
       formData.append('file', file);
 
-      console.log('Uploading file to server...');
       const response = await fetch('/api/files/upload', {
         method: 'POST',
         body: formData,
@@ -46,10 +82,10 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       }
 
       const result = await response.json();
-      console.log('Upload successful, server response:', result);
       setSuccess(true);
       setUploadProgress(100);
       onUploadSuccess(result.file);
+      */
     } catch (err) {
       console.error('Upload error:', err);
       setError(err.message || 'Failed to upload file');

@@ -109,6 +109,24 @@ function Dashboard() {
     return <FileTypeIcon color={type === 'csv' ? 'primary' : 'secondary'} />;
   };
 
+  // Helper function to format dates
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown date';
+    
+    const date = new Date(dateString);
+    if (date.toString() === 'Invalid Date') return 'Unknown date';
+    
+    try {
+      return date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short', 
+        day: 'numeric'
+      });
+    } catch (e) {
+      return 'Unknown date';
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <PageHeader 
@@ -195,7 +213,7 @@ function Dashboard() {
                       </ListItemIcon>
                       <ListItemText 
                         primary={file.name} 
-                        secondary={`Added ${file.date}`} 
+                        secondary={`Added ${formatDate(file.date)}`} 
                       />
                     </ListItem>
                     {index < stats.recentFiles.length - 1 && <Divider />}
@@ -223,7 +241,7 @@ function Dashboard() {
                       </ListItemIcon>
                       <ListItemText 
                         primary={viz.name} 
-                        secondary={`Created ${viz.date}`} 
+                        secondary={`Created ${formatDate(viz.date)}`} 
                       />
                     </ListItem>
                     {index < stats.recentVisualizations.length - 1 && <Divider />}
