@@ -6,10 +6,6 @@ import CssBaseline from '@mui/material/CssBaseline';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
-// Log environment info for debugging
-console.log('Environment:', process.env.NODE_ENV);
-console.log('PUBLIC_URL:', process.env.PUBLIC_URL || '');
-
 // Create a custom theme
 const theme = createTheme({
   palette: {
@@ -65,33 +61,17 @@ const theme = createTheme({
   },
 });
 
-// Error boundary for the entire app
-window.addEventListener('error', (event) => {
-  console.error('Global error caught:', event.error);
-});
-
-try {
-  const root = ReactDOM.createRoot(document.getElementById('root'));
-  
-  if (!document.getElementById('root')) {
-    console.error('Root element not found in the document!');
-  } else {
-    console.log('Root element found, rendering app');
-    
-    root.render(
-      <React.StrictMode>
-        <BrowserRouter basename={process.env.PUBLIC_URL || ''}>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <App />
-          </ThemeProvider>
-        </BrowserRouter>
-      </React.StrictMode>
-    );
-  }
-} catch (error) {
-  console.error('Failed to render the app:', error);
-}
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <App />
+      </ThemeProvider>
+    </BrowserRouter>
+  </React.StrictMode>
+);
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
