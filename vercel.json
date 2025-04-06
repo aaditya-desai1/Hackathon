@@ -14,67 +14,15 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "headers": { "cache-control": "s-maxage=0" },
       "dest": "/backend/server.js"
     },
     {
       "src": "/uploads/(.*)",
-      "headers": { "cache-control": "s-maxage=0" },
       "dest": "/backend/server.js"
     },
     {
       "src": "/health",
-      "headers": { "cache-control": "s-maxage=0" },
       "dest": "/backend/server.js"
-    },
-    {
-      "src": "/static/(.*)",
-      "headers": { "cache-control": "s-maxage=31536000, immutable" },
-      "dest": "/frontend/build/static/$1"
-    },
-    {
-      "src": "/favicon.ico",
-      "dest": "/frontend/build/favicon.ico"
-    },
-    {
-      "src": "/manifest.json",
-      "dest": "/frontend/build/manifest.json"
-    },
-    {
-      "src": "/logo192.png",
-      "dest": "/frontend/build/logo192.png"
-    },
-    {
-      "src": "/logo512.png",
-      "dest": "/frontend/build/logo512.png"
-    },
-    {
-      "src": "/asset-manifest.json",
-      "dest": "/frontend/build/asset-manifest.json"
-    },
-    {
-      "src": "/robots.txt",
-      "dest": "/frontend/build/robots.txt"
-    },
-    {
-      "src": "/(.*).js",
-      "dest": "/frontend/build/$1.js"
-    },
-    {
-      "src": "/(.*).css",
-      "dest": "/frontend/build/$1.css"
-    },
-    {
-      "src": "/(.*).png",
-      "dest": "/frontend/build/$1.png"
-    },
-    {
-      "src": "/(.*).svg",
-      "dest": "/frontend/build/$1.svg"
-    },
-    {
-      "src": "/(.*).json",
-      "dest": "/frontend/build/$1.json"
     },
     {
       "handle": "filesystem"
