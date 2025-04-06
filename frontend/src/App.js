@@ -1,5 +1,5 @@
 import React, { useState, useMemo, createContext, useContext, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, HashRouter } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
@@ -18,7 +18,7 @@ export const ColorModeContext = createContext({
 // Custom hook to use the color mode context
 export const useColorMode = () => useContext(ColorModeContext);
 
-function App() {
+function AppRoutes() {
   const location = useLocation();
 
   // Log current route for debugging
@@ -26,6 +26,21 @@ function App() {
     console.log('Current route:', location.pathname);
   }, [location]);
 
+  return (
+    <Routes>
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/files" element={<FileManager />} />
+      <Route path="/visualizations" element={<Visualizations />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/help" element={<Help />} />
+      <Route path="/about" element={<AboutUs />} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
+
+function App() {
   // Initialize theme from localStorage or default to 'light'
   const [mode, setMode] = useState(() => {
     const savedMode = localStorage.getItem('themeMode');
@@ -115,18 +130,11 @@ function App() {
     <ColorModeContext.Provider value={colorMode}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Layout>
-          <Routes>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/files" element={<FileManager />} />
-            <Route path="/visualizations" element={<Visualizations />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/help" element={<Help />} />
-            <Route path="/about" element={<AboutUs />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </Layout>
+        <HashRouter>
+          <Layout>
+            <AppRoutes />
+          </Layout>
+        </HashRouter>
       </ThemeProvider>
     </ColorModeContext.Provider>
   );
