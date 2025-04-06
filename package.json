@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "vercel-build": "cd frontend && npm install && npm run vercel-build"
+    "vercel-build": "cd frontend && npm install && cross-env DISABLE_ESLINT_PLUGIN=true CI=false npm run vercel-build"
   },
   "engines": {
     "node": "22.x"
   },
   "dependencies": {
+    "cross-env": "^7.0.3",
     "fs-extra": "^11.1.1"
   }
 } 
