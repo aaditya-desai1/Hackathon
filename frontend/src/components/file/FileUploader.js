@@ -13,89 +13,93 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileName, setFileName] = useState('');
+  const [uploading, setUploading] = useState(false);
+
+  const uploadFile = async (file) => {
+    if (!file) return;
+    
+    setUploading(true);
+    setError(null);
+    setSuccess(false);
+    setUploadProgress(0);
+    
+    // Simulate upload progress for better UX
+    const progressInterval = setInterval(() => {
+      setUploadProgress((prevProgress) => {
+        const newProgress = Math.min(prevProgress + 5, 90);
+        return newProgress;
+      });
+    }, 100);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Important: Use the absolute URL for consistent behavior
+      const response = await fetch('/api/files/upload', {
+        method: 'POST',
+        body: formData,
+        // Do not set Content-Type header for FormData
+      });
+      
+      clearInterval(progressInterval);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Upload successful:', data);
+      
+      setUploadProgress(100);
+      setSuccess(true);
+      
+      // Wait a moment to show success message before closing
+      setTimeout(() => {
+        setSelectedFile(null);
+        setFileName('');
+        
+        // Call the success callback with the file data
+        if (onUploadSuccess && data.file) {
+          onUploadSuccess(data.file);
+        }
+      }, 1500);
+    } catch (error) {
+      console.error('Upload error:', error);
+      setError(error.message || 'Failed to upload file');
+      setUploadProgress(0);
+    } finally {
+      clearInterval(progressInterval);
+      setUploading(false);
+    }
+  };
 
   const onDrop = useCallback(async (acceptedFiles) => {
     const file = acceptedFiles[0]; // Handle one file at a time
+    
+    if (!file) return;
     
     if (!allowedTypes.includes(file.type)) {
       setError(`File type not supported. Please upload ${allowedTypes.join(', ')} files.`);
       return;
     }
 
-    try {
-      setError(null);
-      setSuccess(false);
-      setUploadProgress(0);
-
-      // In a real environment, we would upload to the server
-      // In this demo, we'll simulate a successful upload
-      
-      // Start simulated upload progress
-      let progress = 0;
-      const progressInterval = setInterval(() => {
-        progress += 5;
-        setUploadProgress(Math.min(progress, 95)); // Cap at 95% until "server response"
-        
-        if (progress >= 95) {
-          clearInterval(progressInterval);
-          
-          // Simulate server processing delay
-          setTimeout(() => {
-            // Create a mock server response
-            const mockResponse = {
-              success: true,
-              file: {
-                _id: `temp_${Date.now()}`,
-                name: file.name,
-                type: file.type,
-                size: file.size,
-                createdAt: new Date().toISOString(),
-                columns: [],
-                preview: []
-              }
-            };
-            
-            setSuccess(true);
-            setUploadProgress(100);
-            onUploadSuccess(mockResponse.file);
-          }, 500);
-        }
-      }, 100);
-      
-      return;
-      
-      /* Real implementation would be:
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/files/upload', {
-        method: 'POST',
-        body: formData,
-        onUploadProgress: (progressEvent) => {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(progress);
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const result = await response.json();
-      setSuccess(true);
-      setUploadProgress(100);
-      onUploadSuccess(result.file);
-      */
-    } catch (err) {
-      console.error('Upload error:', err);
-      setError(err.message || 'Failed to upload file');
-      setUploadProgress(0);
-    }
+    setSelectedFile(file);
+    setFileName(file.name);
+    
+    // Upload the file immediately when dropped
+    uploadFile(file);
   }, [allowedTypes, onUploadSuccess]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: allowedTypes.join(','),
+    accept: allowedTypes.reduce((acc, type) => {
+      acc[type] = [];
+      return acc;
+    }, {}),
     multiple: false,
   });
 
@@ -120,15 +124,15 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
           border: '2px dashed',
           borderColor: isDragActive ? 'primary.main' : 'grey.300',
           backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
-          cursor: 'pointer',
+          cursor: uploading ? 'default' : 'pointer',
           transition: 'all 0.2s ease',
           '&:hover': {
-            borderColor: 'primary.main',
-            backgroundColor: 'action.hover',
+            borderColor: uploading ? 'grey.300' : 'primary.main',
+            backgroundColor: uploading ? 'background.paper' : 'action.hover',
           },
         }}
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps()} disabled={uploading} />
         <Box
           sx={{
             display: 'flex',
@@ -143,6 +147,8 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
           <Typography variant="h6" gutterBottom>
             {isDragActive
               ? 'Drop the file here'
+              : uploading
+              ? 'Uploading...'
               : 'Drag and drop a file here, or click to select'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -155,7 +161,7 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
         <Box sx={{ mt: 2 }}>
           <LinearProgress variant="determinate" value={uploadProgress} />
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
-            {uploadProgress}% uploaded
+            {uploadProgress < 100 ? `${uploadProgress}% uploaded` : 'Upload complete!'}
           </Typography>
         </Box>
       )}
