@@ -43,6 +43,7 @@ import {
 } from '@mui/icons-material';
 import PageHeader from '../components/common/PageHeader';
 import { Chart, registerables } from 'chart.js/auto';
+import { fetchApi } from '../services/api';
 
 // Register all chart components
 Chart.register(...registerables);
@@ -86,7 +87,7 @@ function Visualizations() {
 
   const fetchFiles = async () => {
     try {
-      const response = await fetch('/api/files');
+      const response = await fetchApi('/api/files');
       const data = await response.json();
       setFiles(data.files || []);
     } catch (error) {
@@ -98,7 +99,7 @@ function Visualizations() {
   const fetchVisualizations = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/visualizations');
+      const response = await fetchApi('/api/visualizations');
       const data = await response.json();
       console.log('Fetched visualizations:', data);
       setVisualizations(data.visualizations || []);
@@ -123,7 +124,7 @@ function Visualizations() {
     
     try {
       console.log('Analyzing file with ID:', file._id);
-      const response = await fetch(`/api/files/${file._id}/analyze`);
+      const response = await fetchApi(`/api/files/${file._id}/analyze`);
       console.log('Analysis response status:', response.status);
       
       if (!response.ok) {
