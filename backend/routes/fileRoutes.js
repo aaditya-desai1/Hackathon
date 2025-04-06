@@ -54,6 +54,7 @@ router.get('/', fileController.getFiles);
 
 // File operation routes - making these public for testing
 router.get('/:id', fileController.getFileById);
+router.get('/:id/preview', fileController.getFilePreview);
 router.get('/:id/analyze', fileController.analyzeFile);
 router.get('/:id/download', fileController.downloadFile);
 router.delete('/:id', fileController.deleteFile);

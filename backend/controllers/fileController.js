@@ -219,4 +219,39 @@ exports.downloadFile = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+};
+
+// File preview endpoint
+exports.getFilePreview = async (req, res) => {
+  try {
+    // Build query - if user is authenticated, filter by user ID, otherwise just use the file ID
+    const query = req.user 
+      ? { _id: req.params.id, user: req.user._id }
+      : { _id: req.params.id };
+      
+    const file = await File.findOne(query);
+
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    let data;
+    if (file.type === 'text/csv') {
+      data = await parseCSV(file.path);
+    } else if (file.type === 'application/json') {
+      data = await parseJSON(file.path);
+    } else {
+      return res.status(400).json({ error: 'Unsupported file type' });
+    }
+
+    res.json({
+      success: true,
+      headers: data.columns || [],
+      rows: data.data || data.preview || [],
+      columns: data.columns || []
+    });
+  } catch (error) {
+    console.error('Error getting file preview:', error);
+    res.status(500).json({ error: 'Failed to fetch file preview' });
+  }
 }; 
