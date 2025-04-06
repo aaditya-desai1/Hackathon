@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const fileController = require('../controllers/fileController');
 const auth = require('../middleware/auth');
+const File = require('../models/File');
 
 // Configure multer for file upload
 const storage = multer.diskStorage({
@@ -58,6 +59,54 @@ router.get('/:id/preview', fileController.getFilePreview);
 router.get('/:id/analyze', fileController.analyzeFile);
 router.get('/:id/download', fileController.downloadFile);
 router.delete('/:id', fileController.deleteFile);
+
+// Database cleanup route
+router.delete('/cleanup-database', async (req, res) => {
+  try {
+    console.log('Database cleanup requested from API');
+    
+    // Delete all file records
+    const fileDeleteResult = await File.deleteMany({});
+    
+    // Get all files in the uploads directory
+    const uploadsDir = path.resolve(__dirname, '..', 'uploads');
+    try {
+      const files = await fs.readdir(uploadsDir);
+      
+      // Delete each file
+      for (const file of files) {
+        const filePath = path.join(uploadsDir, file);
+        try {
+          await fs.unlink(filePath);
+          console.log(`Deleted file: ${filePath}`);
+        } catch (unlinkError) {
+          console.error(`Failed to delete file ${filePath}:`, unlinkError);
+        }
+      }
+    } catch (fsError) {
+      console.error('Error accessing uploads directory:', fsError);
+    }
+    
+    // Try to clean up visualizations too if the model exists
+    let vizDeleteResult = { deletedCount: 0 };
+    try {
+      const Visualization = require('../models/Visualization');
+      vizDeleteResult = await Visualization.deleteMany({});
+    } catch (vizError) {
+      console.error('Error deleting visualizations:', vizError);
+    }
+    
+    res.json({
+      success: true,
+      message: 'Database cleanup completed',
+      filesDeleted: fileDeleteResult.deletedCount,
+      visualizationsDeleted: vizDeleteResult.deletedCount
+    });
+  } catch (error) {
+    console.error('Cleanup error:', error);
+    res.status(500).json({ error: 'Failed to clean up database' });
+  }
+});
 
 // Protected routes - require authentication (none left currently, placeholder for future protected routes)
 router.use(auth);
