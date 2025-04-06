@@ -3,6 +3,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { parseCSV, parseJSON, analyzeDataColumns } = require('../utils/dataParser');
 const dataAnalysisService = require('../services/dataAnalysisService');
+const mongoose = require('mongoose');
 
 // Upload file
 exports.uploadFile = async (req, res) => {
@@ -82,13 +83,21 @@ exports.uploadFile = async (req, res) => {
 // Get all files
 exports.getFiles = async (req, res) => {
   try {
+    console.log('[FileController] getFiles called');
+    
     // Build query - if user is authenticated, filter by user ID, otherwise show all
     const query = req.user ? { user: req.user._id } : {};
+    console.log('[FileController] Using query:', JSON.stringify(query));
+    
+    // Check MongoDB connection
+    console.log('[FileController] MongoDB connection state:', mongoose.connection.readyState);
     
     const files = await File.find(query)
       .sort({ createdAt: -1 })
       .select('-path'); // Don't send file paths to client
 
+    console.log('[FileController] Found files:', files.length);
+    
     res.json({
       success: true,
       files: files.map(file => ({
@@ -103,7 +112,8 @@ exports.getFiles = async (req, res) => {
       }))
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('[FileController] Error in getFiles:', error);
+    res.status(500).json({ error: error.message || 'Error fetching files' });
   }
 };
 
