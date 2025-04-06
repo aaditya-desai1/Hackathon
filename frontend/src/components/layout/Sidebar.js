@@ -18,6 +18,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HelpIcon from '@mui/icons-material/Help';
+import InfoIcon from '@mui/icons-material/Info';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import IconButton from '@mui/material/IconButton';
 
@@ -36,6 +37,7 @@ function Sidebar({ drawerOpen, toggleDrawer }) {
   const secondaryMenuItems = [
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
     { text: 'Help', icon: <HelpIcon />, path: '/help' },
+    { text: 'About Us', icon: <InfoIcon />, path: '/about' },
   ];
 
   const isActive = (path) => {
