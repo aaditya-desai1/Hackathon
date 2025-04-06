@@ -7,6 +7,7 @@ import FileManager from './pages/FileManager';
 import Visualizations from './pages/Visualizations';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
+import AboutUs from './pages/AboutUs';
 
 // Create Theme Context
 export const ColorModeContext = createContext({
@@ -114,6 +115,7 @@ function App() {
             <Route path="/visualizations" element={<Visualizations />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/help" element={<Help />} />
+            <Route path="/about" element={<AboutUs />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Layout>
