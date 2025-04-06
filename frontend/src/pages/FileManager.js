@@ -94,78 +94,27 @@ function FileManager() {
 
   const fetchFiles = async () => {
     try {
-      // In a real environment, this would fetch from the backend
-      // Since we're having issues with dates, we'll simulate the response
+      setLoading(true);
       
-      // For testing_data files
-      const testingDataFiles = [
-        { 
-          _id: '1', 
-          name: 'student_scores.csv', 
-          type: 'text/csv', 
-          size: 190,
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() // 2 days ago
-        },
-        { 
-          _id: '2', 
-          name: 'height_weight.json', 
-          type: 'application/json', 
-          size: 751,
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString() // 3 days ago
-        },
-        { 
-          _id: '3', 
-          name: 'car_performance.csv', 
-          type: 'text/csv', 
-          size: 303,
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() // 1 day ago
-        },
-        { 
-          _id: '4', 
-          name: 'housing_prices.json', 
-          type: 'application/json', 
-          size: 1000,
-          createdAt: new Date().toISOString() // Today
-        },
-        { 
-          _id: '5', 
-          name: 'website_metrics.json', 
-          type: 'application/json', 
-          size: 1151,
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString() // 5 days ago
-        },
-        { 
-          _id: '6', 
-          name: 'stock_performance.csv', 
-          type: 'text/csv', 
-          size: 486,
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString() // 12 hours ago
-        },
-        { 
-          _id: '7', 
-          name: 'sales_marketing.csv', 
-          type: 'text/csv', 
-          size: 303,
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString() // 36 hours ago
-        },
-        { 
-          _id: '8', 
-          name: 'laptop_specs.json', 
-          type: 'application/json', 
-          size: 1032,
-          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString() // 4 hours ago
-        }
-      ];
+      // Use the real API endpoint
+      const response = await fetch('/api/files');
+      if (!response.ok) {
+        throw new Error('Failed to fetch files');
+      }
       
-      // In a real app, this would come from the server
-      // const response = await fetch('/api/files');
-      // const data = await response.json();
-      // setFiles(data.files || []);
+      const data = await response.json();
+      console.log('Fetched files:', data);
       
-      // Instead, we'll use our mock data
-      setFiles(testingDataFiles);
+      if (data.success && Array.isArray(data.files)) {
+        setFiles(data.files);
+      } else {
+        // If there's an issue with the response format, use empty array
+        console.warn('Unexpected response format:', data);
+        setFiles([]);
+      }
     } catch (error) {
       console.error('Error fetching files:', error);
+      setFiles([]);
     } finally {
       setLoading(false);
     }
@@ -184,18 +133,24 @@ function FileManager() {
     try {
       setLoading(true);
       
-      // In a real app, this would be an API call
-      // const response = await fetch(`/api/files/${fileId}`, { 
-      //   method: 'DELETE',
-      //   headers: {
-      //     'Content-Type': 'application/json'
-      //   }
-      // });
+      // Make the real API call to delete a file
+      const response = await fetch(`/api/files/${fileId}`, { 
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       
-      // Instead, we'll just remove it from our local state
-      setFiles(prevFiles => prevFiles.filter(file => file._id !== fileId));
+      if (!response.ok) {
+        throw new Error('Failed to delete file');
+      }
       
-      // Close dialog and refresh file list
+      console.log('File deleted successfully:', fileId);
+      
+      // Refresh the file list
+      await fetchFiles();
+      
+      // Close dialog
       setOpenDeleteDialog(false);
       setFileToDelete(null);
     } catch (error) {
@@ -224,45 +179,35 @@ function FileManager() {
 
   const handleViewFile = async (fileId) => {
     try {
-      // Get the file from our local state
-      const file = files.find(f => f._id === fileId);
+      // Get the file from the API
+      const response = await fetch(`/api/files/${fileId}/preview`);
       
-      if (!file) {
-        throw new Error('File not found');
+      if (!response.ok) {
+        throw new Error('Failed to get file preview');
       }
       
-      // For demo purposes, create some mock data
-      const headers = file.type === 'text/csv' 
-        ? ['id', 'value1', 'value2'] 
-        : ['name', 'score', 'category'];
-        
-      const rows = file.type === 'text/csv'
-        ? [
-            [1, 10, 20],
-            [2, 15, 25],
-            [3, 20, 30],
-            [4, 25, 35],
-            [5, 30, 40]
-          ]
-        : [
-            { name: 'Item 1', score: 85, category: 'A' },
-            { name: 'Item 2', score: 72, category: 'B' },
-            { name: 'Item 3', score: 94, category: 'A' },
-            { name: 'Item 4', score: 61, category: 'C' },
-            { name: 'Item 5', score: 88, category: 'A' }
-          ];
+      const data = await response.json();
+      console.log('File preview data:', data);
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load preview');
+      }
       
       // Create the preview data structure
-      const combinedData = {
-        ...file,
+      const previewData = {
+        _id: fileId,
+        name: data.file?.name || 'Unknown file',
+        type: data.file?.type || 'text/plain',
+        size: data.file?.size || 0,
+        createdAt: data.file?.createdAt,
         data: {
-          headers: headers,
-          rows: rows
+          headers: data.headers || [],
+          rows: data.rows || []
         }
       };
       
       // Set preview data and open modal
-      setPreviewData(combinedData);
+      setPreviewData(previewData);
       setOpenPreviewDialog(true);
     } catch (error) {
       console.error('Error viewing file:', error);
@@ -300,19 +245,64 @@ function FileManager() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const handleDeleteAllFiles = async () => {
+    try {
+      if (!window.confirm('Are you sure you want to delete ALL files from the database? This action cannot be undone.')) {
+        return;
+      }
+      
+      setLoading(true);
+      
+      // Call the cleanup endpoint
+      const response = await fetch('/api/files/cleanup-database', { 
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to clean up database');
+      }
+      
+      const result = await response.json();
+      console.log('Cleanup result:', result);
+      
+      // Refresh the file list
+      await fetchFiles();
+      
+      alert(`Successfully removed ${result.filesDeleted} files from the database.`);
+    } catch (error) {
+      console.error('Error cleaning up database:', error);
+      alert(`Error cleaning up database: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" gutterBottom>
           File Manager
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => setOpenUploadDialog(true)}
-        >
-          Upload New File
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={handleDeleteAllFiles}
+            sx={{ display: files.length > 0 ? 'flex' : 'none' }}
+          >
+            Delete All Files
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setOpenUploadDialog(true)}
+          >
+            Upload New File
+          </Button>
+        </Box>
       </Box>
 
       {loading ? (
