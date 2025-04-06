@@ -7,7 +7,8 @@ const {
   analyzeData, 
   applyTransformation, 
   filterData, 
-  exportData 
+  exportData,
+  getChartData
 } = require('../controllers/dataController');
 
 // Routes for data analysis and processing
@@ -16,6 +17,7 @@ router.post('/analyze/:fileId', analyzeData);
 router.post('/transform/:fileId', applyTransformation);
 router.post('/filter/:fileId', filterData);
 router.get('/export/:fileId', exportData);
+router.get('/chart', getChartData);
 
 // Placeholder routes for data operations
 router.get('/', (req, res) => {

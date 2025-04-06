@@ -203,7 +203,6 @@ exports.exportData = async (req, res) => {
   try {
     const fileId = req.params.fileId;
     const format = req.query.format || 'csv';
-    const { filters, transformations } = req.body;
     
     // Find the file record
     const file = await File.findById(fileId);
@@ -230,41 +229,111 @@ exports.exportData = async (req, res) => {
       columns = result.columns;
     }
 
-    // Apply filters if provided
-    if (filters && Array.isArray(filters)) {
-      data = require('../utils/dataFilter').filterData(data, filters);
-    }
-
-    // Apply transformations if provided
-    if (transformations && Array.isArray(transformations)) {
-      data = transformData(data, transformations);
-    }
-
-    // Export the data in the requested format
     let exportedData;
     let contentType;
-    let filename;
+    let fileName;
     
-    if (format === 'csv') {
-      exportedData = exportToCSV(data);
-      contentType = 'text/csv';
-      filename = `${path.basename(file.originalname, path.extname(file.originalname))}_export.csv`;
-    } else if (format === 'json') {
+    if (format === 'json') {
       exportedData = exportToJSON(data);
       contentType = 'application/json';
-      filename = `${path.basename(file.originalname, path.extname(file.originalname))}_export.json`;
+      fileName = `${path.basename(file.name, path.extname(file.name))}_export.json`;
     } else {
-      return res.status(400).json({ success: false, message: 'Invalid export format' });
+      exportedData = exportToCSV(data, columns);
+      contentType = 'text/csv';
+      fileName = `${path.basename(file.name, path.extname(file.name))}_export.csv`;
     }
 
-    // Set response headers for download
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-    
-    // Send the exported data
+    res.set('Content-Type', contentType);
+    res.set('Content-Disposition', `attachment; filename="${fileName}"`);
     res.send(exportedData);
   } catch (error) {
     console.error('Export data error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Get data for chart visualization
+exports.getChartData = async (req, res) => {
+  try {
+    const { fileId, xAxis, yAxis } = req.query;
+    
+    if (!fileId || !xAxis || !yAxis) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required parameters: fileId, xAxis, and yAxis are required' 
+      });
+    }
+    
+    // Find the file record
+    const file = await File.findById(fileId);
+    if (!file) {
+      return res.status(404).json({ success: false, message: 'File not found' });
+    }
+
+    // Check authorization if needed
+    if (req.user && file.user && req.user.id !== file.user.toString()) {
+      return res.status(403).json({ success: false, message: 'Not authorized to access this file data' });
+    }
+
+    // Parse the data
+    let data = [];
+    
+    if (file.mimetype && file.mimetype.includes('csv')) {
+      const result = await parseCSV(file.path);
+      data = result.data;
+    } else if (file.mimetype && file.mimetype.includes('json')) {
+      const result = await parseJSON(file.path);
+      data = result.data;
+    } else {
+      return res.status(400).json({ success: false, message: 'Unsupported file type' });
+    }
+
+    // Process data for chart
+    // Extract unique labels for X-axis
+    const uniqueLabels = [...new Set(data.map(item => item[xAxis]))].filter(Boolean);
+    
+    // If too many labels, limit the number
+    const maxLabels = 20;
+    const labels = uniqueLabels.length > maxLabels ? uniqueLabels.slice(0, maxLabels) : uniqueLabels;
+    
+    // Prepare values based on labels
+    const values = [];
+    
+    // Calculate values based on chart type
+    // For each unique x-value, calculate corresponding y-value (sum, average, count)
+    labels.forEach(label => {
+      const matchingRows = data.filter(item => item[xAxis] === label);
+      const numericValues = matchingRows
+        .map(item => parseFloat(item[yAxis]))
+        .filter(val => !isNaN(val));
+      
+      // Calculate sum of y values for this label
+      const sum = numericValues.reduce((acc, val) => acc + val, 0);
+      
+      // For numeric Y values, use sum; for non-numeric, use count
+      values.push(numericValues.length > 0 ? sum : matchingRows.length);
+    });
+    
+    // For empty or invalid data, provide default
+    if (labels.length === 0 || values.length === 0) {
+      return res.status(200).json({
+        success: true,
+        chartData: {
+          labels: ['No Data', 'Available'],
+          values: [0, 0]
+        }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      chartData: {
+        labels: labels,
+        values: values
+      }
+    });
+  } catch (error) {
+    console.error('Chart data error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 }; 

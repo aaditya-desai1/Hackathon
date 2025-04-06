@@ -32,7 +32,8 @@ exports.uploadFile = async (req, res) => {
       path: req.file.path,
       size: req.file.size,
       type: req.file.mimetype,
-      user: req.user ? req.user._id : null // Make user optional
+      user: req.user ? req.user._id : null, // Make user optional
+      createdAt: new Date() // Explicitly set creation date
     };
 
     // Parse file to get initial data
@@ -65,7 +66,7 @@ exports.uploadFile = async (req, res) => {
         size: file.size,
         columns: file.dataColumns,
         preview: file.dataPreview,
-        uploadedAt: file.createdAt
+        createdAt: file.createdAt
       }
     });
   } catch (error) {
@@ -97,7 +98,7 @@ exports.getFiles = async (req, res) => {
         size: file.size,
         columns: file.dataColumns,
         preview: file.dataPreview,
-        uploadedAt: file.createdAt,
+        createdAt: file.createdAt,
         isAnalyzed: file.isAnalyzed
       }))
     });
@@ -129,7 +130,7 @@ exports.getFileById = async (req, res) => {
         size: file.size,
         columns: file.dataColumns,
         preview: file.dataPreview,
-        uploadedAt: file.createdAt,
+        createdAt: file.createdAt,
         isAnalyzed: file.isAnalyzed,
         dataStats: file.dataStats
       }
