@@ -1,5 +1,5 @@
 import React, { useState, useMemo, createContext, useContext, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
@@ -19,6 +19,13 @@ export const ColorModeContext = createContext({
 export const useColorMode = () => useContext(ColorModeContext);
 
 function App() {
+  const location = useLocation();
+
+  // Log current route for debugging
+  useEffect(() => {
+    console.log('Current route:', location.pathname);
+  }, [location]);
+
   // Initialize theme from localStorage or default to 'light'
   const [mode, setMode] = useState(() => {
     const savedMode = localStorage.getItem('themeMode');
@@ -117,6 +124,7 @@ function App() {
             <Route path="/help" element={<Help />} />
             <Route path="/about" element={<AboutUs />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Layout>
       </ThemeProvider>
