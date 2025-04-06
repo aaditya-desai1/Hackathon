@@ -48,6 +48,17 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Test route for debugging
+app.get('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API is working',
+    environment: process.env.NODE_ENV || 'development',
+    mongo_connection: mongoose.connection.readyState,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Global error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -79,9 +90,12 @@ app.use((err, req, res, next) => {
 
 // Connect to MongoDB with improved error handling
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/datavizpro';
+console.log(`Attempting to connect to MongoDB with ${MONGODB_URI ? 'provided connection string' : 'default localhost connection'}`);
+console.log(`NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+
 mongoose.connect(MONGODB_URI)
   .then(() => {
-    console.log('Connected to MongoDB');
+    console.log('Connected to MongoDB successfully');
     // Start server
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
@@ -89,7 +103,7 @@ mongoose.connect(MONGODB_URI)
     });
   })
   .catch((error) => {
-    console.error('MongoDB connection error:', error);
+    console.error('MongoDB connection error details:', error);
     // Don't exit in production - just log the error
     if (process.env.NODE_ENV !== 'production') {
       process.exit(1);

@@ -26,6 +26,9 @@ export const fetchApi = async (endpoint, options = {}) => {
     ? endpoint
     : `${API_BASE_URL}${endpoint}`;
     
+  console.log(`[API] Fetching: ${apiEndpoint} (${process.env.NODE_ENV} mode)`);
+  console.log(`[API] Base URL: ${API_BASE_URL}`);
+  
   try {
     const response = await fetch(apiEndpoint, {
       ...options,
@@ -39,15 +42,19 @@ export const fetchApi = async (endpoint, options = {}) => {
       // Try to parse error response
       try {
         const errorData = await response.json();
+        console.error(`[API] Request failed with status ${response.status}:`, errorData);
         throw new Error(errorData.error || `HTTP error ${response.status}`);
       } catch (e) {
+        console.error(`[API] Request failed with status ${response.status}`);
         throw new Error(`HTTP error ${response.status}`);
       }
     }
     
+    // Log success
+    console.log(`[API] Request succeeded: ${apiEndpoint}`);
     return response;
   } catch (error) {
-    console.error('API request failed:', error);
+    console.error(`[API] Request failed: ${apiEndpoint}`, error);
     throw error;
   }
 };
