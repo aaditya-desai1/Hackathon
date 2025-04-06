@@ -14,9 +14,9 @@ const visualizationRoutes = require('./routes/visualizationRoutes');
 
 const app = express();
 
-// CORS configuration
+// CORS configuration - allow all origins in production
 const corsOptions = {
-  origin: 'http://localhost:3000',
+  origin: process.env.NODE_ENV === 'production' ? '*' : 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -77,8 +77,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI)
+// Connect to MongoDB with improved error handling
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/datavizpro';
+mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('Connected to MongoDB');
     // Start server
@@ -89,5 +90,8 @@ mongoose.connect(process.env.MONGODB_URI)
   })
   .catch((error) => {
     console.error('MongoDB connection error:', error);
-    process.exit(1);
+    // Don't exit in production - just log the error
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
   }); 
