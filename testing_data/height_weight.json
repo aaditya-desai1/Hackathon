@@ -1,0 +1,14 @@
+[
+  {"id": 1, "height": 170, "weight": 65, "gender": "male"},
+  {"id": 2, "height": 155, "weight": 54, "gender": "female"},
+  {"id": 3, "height": 182, "weight": 80, "gender": "male"},
+  {"id": 4, "height": 165, "weight": 62, "gender": "female"},
+  {"id": 5, "height": 175, "weight": 78, "gender": "male"},
+  {"id": 6, "height": 160, "weight": 57, "gender": "female"},
+  {"id": 7, "height": 178, "weight": 76, "gender": "male"},
+  {"id": 8, "height": 168, "weight": 63, "gender": "female"},
+  {"id": 9, "height": 185, "weight": 85, "gender": "male"},
+  {"id": 10, "height": 158, "weight": 55, "gender": "female"},
+  {"id": 11, "height": 172, "weight": 68, "gender": "male"},
+  {"id": 12, "height": 162, "weight": 59, "gender": "female"}
+] 

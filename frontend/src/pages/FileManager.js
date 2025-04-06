@@ -48,6 +48,44 @@ function FileManager() {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [fileToDelete, setFileToDelete] = useState(null);
 
+  // Helper function to format dates
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown date';
+    
+    const date = new Date(dateString);
+    if (date.toString() === 'Invalid Date') return 'Unknown date';
+    
+    try {
+      return date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return 'Unknown date';
+    }
+  };
+
+  // Helper function to format date and time
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'Unknown date';
+    
+    const date = new Date(dateString);
+    if (date.toString() === 'Invalid Date') return 'Unknown date';
+    
+    try {
+      return date.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return 'Unknown date';
+    }
+  };
+
   useEffect(() => {
     // Check if we should open the upload dialog from navigation state
     if (location.state?.openUploadDialog) {
@@ -189,12 +227,30 @@ function FileManager() {
       const previewData = await previewResponse.json();
       console.log('File preview data:', previewData);
       
+      // Extract headers and rows, handling different formats
+      let headers = previewData.headers || previewData.columns || [];
+      let rows = previewData.rows || previewData.data || [];
+      
+      // If rows are objects but headers are empty, extract headers from first row
+      if (rows.length > 0 && typeof rows[0] === 'object' && !Array.isArray(rows[0]) && headers.length === 0) {
+        headers = Object.keys(rows[0]);
+      }
+      
+      // Normalize rows data format
+      const normalizedRows = rows.map(row => {
+        if (typeof row === 'object' && !Array.isArray(row)) {
+          // If row is an object, convert to array based on headers
+          return headers.map(header => row[header]);
+        }
+        return row; // Already an array or primitive
+      });
+      
       // Create the preview data structure
       const combinedData = {
         ...fileData.file,
         data: {
-          headers: previewData.headers || previewData.columns || [],
-          rows: previewData.rows || previewData.data || []
+          headers: headers,
+          rows: normalizedRows
         }
       };
       
@@ -279,16 +335,16 @@ function FileManager() {
                             label={file.type} 
                             size="small" 
                             color={
-                              file.type === 'csv' ? 'success' : 
-                              file.type === 'json' ? 'info' : 
-                              file.type === 'excel' ? 'primary' : 
+                              file.type === 'text/csv' ? 'success' : 
+                              file.type === 'application/json' ? 'info' : 
+                              file.type === 'text/excel' ? 'primary' : 
                               'default'
                             }
                             sx={{ fontWeight: 500 }}
                           />
                         </TableCell>
                         <TableCell>{file.size}</TableCell>
-                        <TableCell>{new Date(file.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>{formatDate(file.createdAt)}</TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 1 }}>
                             <IconButton
@@ -369,7 +425,7 @@ function FileManager() {
                   <Typography variant="body2">{previewData.size ? `${(previewData.size / 1024).toFixed(2)} KB` : 'Unknown'}</Typography>
                   
                   <Typography variant="body2" color="textSecondary">Uploaded:</Typography>
-                  <Typography variant="body2">{new Date(previewData.createdAt).toLocaleString()}</Typography>
+                  <Typography variant="body2">{formatDateTime(previewData.createdAt)}</Typography>
                 </Box>
               </Box>
 
@@ -383,27 +439,60 @@ function FileManager() {
                     borderRadius: 1,
                     '& .MuiTableCell-root': {
                       borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                      padding: '8px 16px',
+                      whiteSpace: 'nowrap'
+                    },
+                    '& .MuiTableCell-head': {
+                      fontWeight: 'bold',
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(30,30,30,0.95)' : 'rgba(255,255,255,0.95)',
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 10
                     }
                   }}>
-                    <Table size="small" stickyHeader>
+                    <Table size="small" stickyHeader={false}>
                       <TableHead>
                         <TableRow>
                           {previewData.data.headers.map((header, index) => (
-                            <TableCell key={index} sx={{ 
-                              fontWeight: 'bold',
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'
-                            }}>
+                            <TableCell 
+                              key={index} 
+                              align="left"
+                              sx={{ 
+                                minWidth: 80 
+                              }}
+                            >
                               {header}
                             </TableCell>
                           ))}
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {previewData.data.rows.map((row, rowIndex) => (
+                        {Array.isArray(previewData.data.rows) && previewData.data.rows.map((row, rowIndex) => (
                           <TableRow key={rowIndex} hover>
-                            {row.map((cell, cellIndex) => (
-                              <TableCell key={cellIndex}>{cell}</TableCell>
-                            ))}
+                            {Array.isArray(row) ? (
+                              // Handle array row format
+                              row.map((cell, cellIndex) => (
+                                <TableCell 
+                                  key={cellIndex}
+                                  align="left"
+                                >
+                                  {cell !== null && cell !== undefined ? String(cell) : ''}
+                                </TableCell>
+                              ))
+                            ) : typeof row === 'object' ? (
+                              // Handle object row format
+                              previewData.data.headers.map((header, cellIndex) => (
+                                <TableCell 
+                                  key={cellIndex}
+                                  align="left"
+                                >
+                                  {row[header] !== null && row[header] !== undefined ? String(row[header]) : ''}
+                                </TableCell>
+                              ))
+                            ) : (
+                              // Fallback for unexpected data format
+                              <TableCell align="left">{String(row)}</TableCell>
+                            )}
                           </TableRow>
                         ))}
                       </TableBody>
