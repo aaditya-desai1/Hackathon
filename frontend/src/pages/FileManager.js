@@ -125,8 +125,15 @@ function FileManager() {
   };
 
   const handleFileUploadSuccess = async (uploadedFile) => {
-    await fetchFiles(); // Refresh the file list
-    handleCloseUploadDialog();
+    console.log('Upload success callback triggered with file:', uploadedFile);
+    
+    // Refresh the file list immediately
+    await fetchFiles();
+    
+    // Wait a moment before closing the dialog to show success
+    setTimeout(() => {
+      handleCloseUploadDialog();
+    }, 1000);
   };
 
   const handleDeleteFile = async (fileId) => {
