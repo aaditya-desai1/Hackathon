@@ -96,16 +96,23 @@ function FileManager() {
     try {
       setLoading(true);
       
-      // Use the real API endpoint
-      const response = await fetch('/api/files');
+      // Use environment-aware API endpoint
+      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+      const url = `${API_BASE_URL}/api/files`;
+      
+      console.log('Fetching files from:', url);
+      
+      const response = await fetch(url);
       if (!response.ok) {
-        throw new Error('Failed to fetch files');
+        console.error(`Failed to fetch files: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch files: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
       console.log('Fetched files:', data);
       
       if (data.success && Array.isArray(data.files)) {
+        console.log(`Retrieved ${data.files.length} files successfully`);
         setFiles(data.files);
       } else {
         // If there's an issue with the response format, use empty array
@@ -140,8 +147,14 @@ function FileManager() {
     try {
       setLoading(true);
       
+      // Use environment-aware API endpoint
+      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+      const url = `${API_BASE_URL}/api/files/${fileId}`;
+      
+      console.log('Deleting file from:', url);
+      
       // Make the real API call to delete a file
-      const response = await fetch(`/api/files/${fileId}`, { 
+      const response = await fetch(url, { 
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
@@ -149,7 +162,8 @@ function FileManager() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to delete file');
+        console.error(`Failed to delete file: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to delete file: ${response.status} ${response.statusText}`);
       }
       
       console.log('File deleted successfully:', fileId);
@@ -186,11 +200,18 @@ function FileManager() {
 
   const handleViewFile = async (fileId) => {
     try {
+      // Use environment-aware API endpoint
+      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+      const url = `${API_BASE_URL}/api/files/${fileId}/preview`;
+      
+      console.log('Fetching file preview from:', url);
+      
       // Get the file from the API
-      const response = await fetch(`/api/files/${fileId}/preview`);
+      const response = await fetch(url);
       
       if (!response.ok) {
-        throw new Error('Failed to get file preview');
+        console.error(`Failed to get file preview: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to get file preview: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
@@ -260,8 +281,14 @@ function FileManager() {
       
       setLoading(true);
       
+      // Use environment-aware API endpoint
+      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+      const url = `${API_BASE_URL}/api/files/cleanup-database`;
+      
+      console.log('Cleaning up database from:', url);
+      
       // Call the cleanup endpoint
-      const response = await fetch('/api/files/cleanup-database', { 
+      const response = await fetch(url, { 
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
