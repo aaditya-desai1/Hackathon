@@ -13,66 +13,74 @@
   ],
   "routes": [
     {
-      "src": "/api/(.+)",
-      "dest": "backend/server.js"
+      "src": "/api/(.*)",
+      "headers": { "cache-control": "s-maxage=0" },
+      "dest": "/backend/server.js"
     },
     {
-      "src": "/uploads/(.+)",
-      "dest": "backend/server.js"
+      "src": "/uploads/(.*)",
+      "headers": { "cache-control": "s-maxage=0" },
+      "dest": "/backend/server.js"
     },
     {
       "src": "/health",
-      "dest": "backend/server.js"
+      "headers": { "cache-control": "s-maxage=0" },
+      "dest": "/backend/server.js"
     },
     {
       "src": "/static/(.*)",
+      "headers": { "cache-control": "s-maxage=31536000, immutable" },
       "dest": "/frontend/build/static/$1"
     },
     {
-      "src": "/favicon\\.ico",
+      "src": "/favicon.ico",
       "dest": "/frontend/build/favicon.ico"
     },
     {
-      "src": "/manifest\\.json",
+      "src": "/manifest.json",
       "dest": "/frontend/build/manifest.json"
     },
     {
-      "src": "/(.*)\\.(.+)",
-      "dest": "/frontend/build/$1.$2"
+      "src": "/logo192.png",
+      "dest": "/frontend/build/logo192.png"
     },
     {
-      "src": "/dashboard",
-      "status": 200,
-      "dest": "/frontend/build/index.html"
+      "src": "/logo512.png",
+      "dest": "/frontend/build/logo512.png"
     },
     {
-      "src": "/files",
-      "status": 200,
-      "dest": "/frontend/build/index.html"
+      "src": "/asset-manifest.json",
+      "dest": "/frontend/build/asset-manifest.json"
     },
     {
-      "src": "/visualizations",
-      "status": 200,
-      "dest": "/frontend/build/index.html"
+      "src": "/robots.txt",
+      "dest": "/frontend/build/robots.txt"
     },
     {
-      "src": "/settings",
-      "status": 200,
-      "dest": "/frontend/build/index.html"
+      "src": "/(.*).js",
+      "dest": "/frontend/build/$1.js"
     },
     {
-      "src": "/help",
-      "status": 200,
-      "dest": "/frontend/build/index.html"
+      "src": "/(.*).css",
+      "dest": "/frontend/build/$1.css"
     },
     {
-      "src": "/about",
-      "status": 200,
-      "dest": "/frontend/build/index.html"
+      "src": "/(.*).png",
+      "dest": "/frontend/build/$1.png"
+    },
+    {
+      "src": "/(.*).svg",
+      "dest": "/frontend/build/$1.svg"
+    },
+    {
+      "src": "/(.*).json",
+      "dest": "/frontend/build/$1.json"
+    },
+    {
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "status": 200,
       "dest": "/frontend/build/index.html"
     }
   ]

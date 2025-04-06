@@ -18,9 +18,42 @@
     <!-- LinkedIn Badge Script -->
     <script src="https://platform.linkedin.com/badges/js/profile.js" async defer type="text/javascript"></script>
     <title>DataViz Pro</title>
+    <script>
+      // Error handling for script loading
+      window.onerror = function(msg, url, line, col, error) {
+        console.error('Error caught by window.onerror:', msg, 'at', url, 'line', line, col, error);
+        return false;
+      };
+      // Check if root element exists
+      document.addEventListener('DOMContentLoaded', function() {
+        if (!document.getElementById('root')) {
+          console.error('Root element not found after DOM loaded!');
+        } else {
+          console.log('DOM loaded successfully, root element found');
+        }
+      });
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+    <div id="error-container" style="display:none; margin: 2rem; padding: 1rem; background-color: #fff8f8; border: 1px solid #ffcccb; border-radius: 4px; color: #d32f2f;">
+      <h2>Something went wrong</h2>
+      <p>The application failed to load correctly. Please try refreshing the page.</p>
+      <p id="error-details"></p>
+    </div>
+    <script>
+      // Additional error handling
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          // Check if the app rendered properly
+          const appContent = document.querySelector('#root > div');
+          if (!appContent) {
+            document.getElementById('error-container').style.display = 'block';
+            console.error('App did not render within 2 seconds of page load');
+          }
+        }, 2000);
+      });
+    </script>
   </body>
 </html> 

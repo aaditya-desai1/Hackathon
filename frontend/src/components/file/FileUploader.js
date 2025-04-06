@@ -37,8 +37,13 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       const formData = new FormData();
       formData.append('file', file);
       
-      // Important: Use the absolute URL for consistent behavior
-      const response = await fetch('/api/files/upload', {
+      // Use the absolute URL path for consistent behavior in all environments
+      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+      const url = `${API_BASE_URL}/api/files/upload`;
+      
+      console.log('Uploading file to:', url);
+      
+      const response = await fetch(url, {
         method: 'POST',
         body: formData,
         // Do not set Content-Type header for FormData
@@ -64,6 +69,7 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
         
         // Call the success callback with the file data
         if (onUploadSuccess && data.file) {
+          console.log('Calling onUploadSuccess with file:', data.file);
           onUploadSuccess(data.file);
         }
       }, 1500);
@@ -92,7 +98,7 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     
     // Upload the file immediately when dropped
     uploadFile(file);
-  }, [allowedTypes, onUploadSuccess]);
+  }, [allowedTypes, uploadFile]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
