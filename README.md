@@ -1,11 +1,6 @@
 # DataViz Pro
 
-<!-- ![DataVizPro Logo](https://via.placeholder.com/800x200?text=DataVizPro) -->
-
 A powerful web-based data visualization tool that automates the process of creating meaningful visualizations from your data. DataVizPro helps you transform raw data into insightful, interactive charts and graphs with AI-powered recommendations.
-
-[![GitHub license](https://img.shields.io/github/license/aaditya-desai1/hackathon)](https://github.com/aaditya-desai1/hackathon/blob/main/LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/aaditya-desai1/hackathon)](https://github.com/aaditya-desai1/hackathon/stargazers)
 
 ## ✨ Features
 
@@ -128,10 +123,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## 📧 Contact
 
-Project Link: [https://github.com/aaditya-desai1/hackathon.git](https://github.com/aaditya-desai1/hackathon.git) 
+Project Link: [https://github.com/aaditya-desai1/Hackathon.git](https://github.com/aaditya-desai1/Hackathon.git) 
