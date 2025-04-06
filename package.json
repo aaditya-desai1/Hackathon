@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "vercel-build": "bash ./build.sh"
+    "vercel-build": "cd frontend && npm install && npx react-scripts build"
   },
   "engines": {
     "node": ">=16.0.0"
