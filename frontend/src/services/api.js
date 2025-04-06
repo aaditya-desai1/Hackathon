@@ -5,8 +5,8 @@
 // Determine the API base URL based on the environment
 const getApiBaseUrl = () => {
   if (process.env.NODE_ENV === 'production') {
-    // In production (Vercel), use the same domain
-    return '';
+    // In production (Vercel), use the /api prefix
+    return '/api';
   }
   // In development, use the local backend
   return 'http://localhost:5000';
@@ -21,9 +21,19 @@ const API_BASE_URL = getApiBaseUrl();
  * @returns {Promise} - Fetch promise
  */
 export const fetchApi = async (endpoint, options = {}) => {
-  const url = `${API_BASE_URL}${endpoint}`;
+  // Remove /api prefix if it's already in the endpoint and we're in production
+  const apiEndpoint = process.env.NODE_ENV === 'production' && endpoint.startsWith('/api')
+    ? endpoint
+    : `${API_BASE_URL}${endpoint}`;
+    
   try {
-    const response = await fetch(url, options);
+    const response = await fetch(apiEndpoint, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
     
     if (!response.ok) {
       // Try to parse error response

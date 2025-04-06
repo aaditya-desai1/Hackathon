@@ -85,14 +85,34 @@ function Visualizations() {
     }
   }, [location]);
 
-  const fetchFiles = async () => {
+  const fetchFiles = async (retryCount = 0) => {
     try {
+      setFileNotFound(false);
+      setError(null);
+      
+      console.log('Fetching files...');
       const response = await fetchApi('/api/files');
       const data = await response.json();
-      setFiles(data.files || []);
+      console.log('Files fetched:', data);
+      
+      if (data.files && Array.isArray(data.files)) {
+        setFiles(data.files || []);
+      } else {
+        console.warn('Files data format unexpected:', data);
+        setFiles([]);
+      }
     } catch (error) {
       console.error('Error fetching files:', error);
+      
+      // Retry logic - attempt up to 3 retries with increasing delay
+      if (retryCount < 3) {
+        console.log(`Retrying fetch files (${retryCount + 1}/3) in ${(retryCount + 1) * 1000}ms...`);
+        setTimeout(() => fetchFiles(retryCount + 1), (retryCount + 1) * 1000);
+        return;
+      }
+      
       setError('Failed to fetch files');
+      setFileNotFound(true);
     }
   };
 

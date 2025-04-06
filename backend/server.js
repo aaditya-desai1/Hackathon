@@ -16,7 +16,7 @@ const app = express();
 
 // CORS configuration - allow all origins in production
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' ? '*' : 'http://localhost:3000',
+  origin: true, // Allow any origin
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
