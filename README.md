@@ -1,11 +1,11 @@
 # DataViz Pro
 
-![DataVizPro Logo](https://via.placeholder.com/800x200?text=DataVizPro)
+<!-- ![DataVizPro Logo](https://via.placeholder.com/800x200?text=DataVizPro) -->
 
 A powerful web-based data visualization tool that automates the process of creating meaningful visualizations from your data. DataVizPro helps you transform raw data into insightful, interactive charts and graphs with AI-powered recommendations.
 
-[![GitHub license](https://img.shields.io/github/license/yourusername/dataviz-pro)](https://github.com/yourusername/dataviz-pro/blob/main/LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/yourusername/dataviz-pro)](https://github.com/yourusername/dataviz-pro/stargazers)
+[![GitHub license](https://img.shields.io/github/license/aaditya-desai1/hackathon)](https://github.com/aaditya-desai1/hackathon/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/aaditya-desai1/hackathon)](https://github.com/aaditya-desai1/hackathon/stargazers)
 
 ## ✨ Features
 
@@ -23,13 +23,13 @@ A powerful web-based data visualization tool that automates the process of creat
 ![Dashboard](./screenshots/dashboard.png)
 
 ### Data Upload & Management
-![File Management](https://via.placeholder.com/800x450?text=File+Management+Screenshot)
+![File Management](./screenshots/file_manager.png)
 
 ### AI Chart Recommendations
-![AI Recommendations](https://via.placeholder.com/800x450?text=AI+Recommendations+Screenshot)
+![AI Recommendations](./screenshots/ai_recommendation.png)
 
 ### Visualization Workspace
-![Visualization Editor](https://via.placeholder.com/800x450?text=Visualization+Editor+Screenshot)
+![Visualization Editor](./screenshots/visualization_workplace.png)
 
 ## 🛠️ Tech Stack
 
@@ -50,8 +50,8 @@ A powerful web-based data visualization tool that automates the process of creat
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/yourusername/dataviz-pro.git
-   cd dataviz-pro
+   git clone https://github.com/aaditya-desai1/hackathon.git
+   cd hackathon
    ```
 
 2. Install dependencies:
@@ -134,6 +134,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 📧 Contact
 
-Your Name - [@yourtwitter](https://twitter.com/yourtwitter) - email@example.com
-
-Project Link: [https://github.com/yourusername/dataviz-pro](https://github.com/yourusername/dataviz-pro) 
+Project Link: [https://github.com/aaditya-desai1/hackathon.git](https://github.com/aaditya-desai1/hackathon.git) 

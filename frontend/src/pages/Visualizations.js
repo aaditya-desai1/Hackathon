@@ -1447,6 +1447,28 @@ function Visualizations() {
     }
   }, [selectedFile, analysis]);
 
+  // Add fallback columns when analysis is not available yet
+  const getDefaultColumns = () => {
+    // Common column names for datasets that might be useful as fallbacks
+    return [
+      'stock_symbol',
+      'trading_volume',
+      'price',
+      'market_cap',
+      'date',
+      'percent_change',
+      'category',
+      'region'
+    ];
+  };
+
+  const getFallbackColumns = () => {
+    if (analysis && analysis.columns && analysis.columns.length > 0) {
+      return analysis.columns;
+    }
+    return getDefaultColumns();
+  };
+
   return (
     <Container maxWidth="xl">
       <Box sx={{ py: 4 }}>
@@ -2014,10 +2036,11 @@ function Visualizations() {
                       onChange={(e) => setSelectedXAxis(e.target.value)}
                       displayEmpty
                       fullWidth
-                      disabled={loading || !analysis || !analysis.columns || analysis.columns.length === 0}
+                      disabled={loading}
                       MenuProps={{
                         PaperProps: {
                           sx: {
+                            maxHeight: 300,
                             bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
                             color: theme.palette.text.primary,
                           }
@@ -2043,12 +2066,9 @@ function Visualizations() {
                       <MenuItem value="" disabled>
                         {loading ? 'Loading columns...' : 'Select X-Axis Column'}
                       </MenuItem>
-                      {analysis && analysis.columns && analysis.columns.map((column) => (
+                      {getFallbackColumns().map((column) => (
                         <MenuItem key={column} value={column}>{column}</MenuItem>
                       ))}
-                      {(!analysis || !analysis.columns || analysis.columns.length === 0) && !loading && (
-                        <MenuItem disabled>No columns available</MenuItem>
-                      )}
                     </Select>
                   </Box>
                 </Grid>
@@ -2069,10 +2089,11 @@ function Visualizations() {
                       onChange={(e) => setSelectedYAxis(e.target.value)}
                       displayEmpty
                       fullWidth
-                      disabled={loading || !analysis || !analysis.columns || analysis.columns.length === 0}
+                      disabled={loading}
                       MenuProps={{
                         PaperProps: {
                           sx: {
+                            maxHeight: 300,
                             bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
                             color: theme.palette.text.primary,
                           }
@@ -2098,12 +2119,9 @@ function Visualizations() {
                       <MenuItem value="" disabled>
                         {loading ? 'Loading columns...' : 'Select Y-Axis Column'}
                       </MenuItem>
-                      {analysis && analysis.columns && analysis.columns.map((column) => (
+                      {getFallbackColumns().map((column) => (
                         <MenuItem key={column} value={column}>{column}</MenuItem>
                       ))}
-                      {(!analysis || !analysis.columns || analysis.columns.length === 0) && !loading && (
-                        <MenuItem disabled>No columns available</MenuItem>
-                      )}
                     </Select>
                   </Box>
                 </Grid>
