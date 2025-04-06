@@ -6,7 +6,7 @@
     "vercel-build": "cd frontend && npm install && npm run vercel-build"
   },
   "engines": {
-    "node": "14.x"
+    "node": "22.x"
   },
   "dependencies": {
     "fs-extra": "^11.1.1"
