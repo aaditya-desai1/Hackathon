@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "vercel-build": "cd frontend && npm install && cross-env DISABLE_ESLINT_PLUGIN=true CI=false npm run vercel-build"
+    "vercel-build": "cd frontend && npm install && cross-env DISABLE_ESLINT_PLUGIN=true CI=false npm run vercel-build && cd ../backend && npm install"
   },
   "engines": {
     "node": "22.x"
