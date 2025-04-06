@@ -1,0 +1,14 @@
+[
+  {"model": "LaptopA", "price": 899, "performance_score": 75, "battery_life": 6.5},
+  {"model": "LaptopB", "price": 1299, "performance_score": 85, "battery_life": 8.0},
+  {"model": "LaptopC", "price": 1699, "performance_score": 95, "battery_life": 9.5},
+  {"model": "LaptopD", "price": 599, "performance_score": 65, "battery_life": 5.5},
+  {"model": "LaptopE", "price": 1499, "performance_score": 90, "battery_life": 7.5},
+  {"model": "LaptopF", "price": 999, "performance_score": 80, "battery_life": 7.0},
+  {"model": "LaptopG", "price": 2099, "performance_score": 98, "battery_life": 10.0},
+  {"model": "LaptopH", "price": 799, "performance_score": 70, "battery_life": 6.0},
+  {"model": "LaptopI", "price": 1899, "performance_score": 96, "battery_life": 9.0},
+  {"model": "LaptopJ", "price": 699, "performance_score": 68, "battery_life": 5.8},
+  {"model": "LaptopK", "price": 1599, "performance_score": 92, "battery_life": 8.5},
+  {"model": "LaptopL", "price": 1099, "performance_score": 82, "battery_life": 7.2}
+] 
