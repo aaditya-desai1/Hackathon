@@ -550,6 +550,139 @@ function Visualizations() {
       // Ensure we have the right number of data points
       yAxisData = yAxisData.slice(0, xAxisLabels.length);
       
+      // Modern color palette for charts
+      const modernColors = [
+        'rgba(96, 165, 250, 0.8)',   // Blue
+        'rgba(167, 139, 250, 0.8)',  // Purple
+        'rgba(251, 146, 60, 0.8)',   // Orange
+        'rgba(52, 211, 153, 0.8)',   // Green
+        'rgba(248, 113, 113, 0.8)',  // Red
+        'rgba(251, 191, 36, 0.8)'    // Yellow
+      ];
+      
+      const modernBorderColors = [
+        'rgba(59, 130, 246, 1)',    // Blue border
+        'rgba(139, 92, 246, 1)',    // Purple border
+        'rgba(249, 115, 22, 1)',    // Orange border
+        'rgba(16, 185, 129, 1)',    // Green border
+        'rgba(239, 68, 68, 1)',     // Red border
+        'rgba(245, 158, 11, 1)'     // Yellow border
+      ];
+      
+      // Modern chart options
+      const modernChartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: chart.chartType === 'pie' ? 'right' : 'top',
+            labels: {
+              usePointStyle: true,
+              pointStyle: 'circle',
+              padding: 15,
+              color: theme.palette.text.primary,
+              font: {
+                family: theme.typography.fontFamily,
+                size: 12,
+                weight: '500'
+              }
+            }
+          },
+          title: {
+            display: true,
+            text: chart.title || `${chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart`,
+            color: theme.palette.text.primary,
+            font: {
+              family: theme.typography.fontFamily,
+              size: 16,
+              weight: '600'
+            },
+            padding: {
+              top: 10,
+              bottom: 20
+            }
+          },
+          tooltip: {
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(17, 25, 40, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+            titleColor: theme.palette.mode === 'dark' ? '#fff' : 'rgba(17, 24, 39, 1)',
+            bodyColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(55, 65, 81, 1)',
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 8,
+            boxPadding: 6,
+            titleFont: {
+              weight: '600',
+              family: theme.typography.fontFamily
+            },
+            bodyFont: {
+              family: theme.typography.fontFamily
+            },
+            displayColors: true,
+            boxWidth: 8,
+            boxHeight: 8,
+            usePointStyle: true
+          }
+        },
+        scales: chart.chartType === 'pie' ? undefined : {
+          x: {
+            title: {
+              display: true,
+              text: chart.xAxis || 'X Axis',
+              color: theme.palette.text.primary,
+              font: {
+                family: theme.typography.fontFamily,
+                size: 13,
+                weight: '500'
+              },
+              padding: { top: 10 }
+            },
+            ticks: {
+              color: theme.palette.text.secondary,
+              padding: 8,
+              font: {
+                family: theme.typography.fontFamily,
+                size: 11
+              }
+            },
+            grid: {
+              display: true,
+              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+              drawBorder: false,
+              drawTicks: false
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: chart.yAxis || 'Y Axis',
+              color: theme.palette.text.primary,
+              font: {
+                family: theme.typography.fontFamily,
+                size: 13,
+                weight: '500'
+              },
+              padding: { bottom: 10 }
+            },
+            ticks: {
+              color: theme.palette.text.secondary,
+              padding: 8,
+              font: {
+                family: theme.typography.fontFamily,
+                size: 11
+              }
+            },
+            grid: {
+              display: true,
+              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+              drawBorder: false,
+              drawTicks: false
+            },
+            beginAtZero: true
+          }
+        }
+      };
+      
       if (chart.chartType === 'scatter') {
         // Scatter chart data - create x-y coordinate pairs
         const scatterData = [];
@@ -567,10 +700,10 @@ function Visualizations() {
           datasets: [{
             label: chart.yAxis || 'Value',
             data: scatterData,
-            backgroundColor: 'rgba(75, 192, 192, 0.7)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            pointRadius: 6,
-            pointHoverRadius: 8
+            backgroundColor: modernColors[0],
+            borderColor: modernBorderColors[0],
+            pointRadius: 7,
+            pointHoverRadius: 9
           }]
         };
       } else if (chart.chartType === 'pie') {
@@ -579,21 +712,11 @@ function Visualizations() {
           labels: xAxisLabels,
           datasets: [{
             data: yAxisData,
-            backgroundColor: [
-              'rgba(255, 99, 132, 0.7)',
-              'rgba(54, 162, 235, 0.7)',
-              'rgba(255, 206, 86, 0.7)',
-              'rgba(75, 192, 192, 0.7)',
-              'rgba(153, 102, 255, 0.7)'
-            ],
-            borderColor: [
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(75, 192, 192, 1)',
-              'rgba(153, 102, 255, 1)'
-            ],
-            borderWidth: 1
+            backgroundColor: modernColors,
+            borderColor: modernBorderColors,
+            borderWidth: 1,
+            hoverOffset: 12,
+            borderRadius: 4
           }]
         };
       } else if (chart.chartType === 'line') {
@@ -603,10 +726,18 @@ function Visualizations() {
           datasets: [{
             label: chart.yAxis || 'Value',
             data: yAxisData,
-            fill: false,
-            backgroundColor: 'rgba(75, 192, 192, 0.7)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            tension: 0.1
+            fill: {
+              target: 'origin',
+              above: modernColors[0].replace('0.8', '0.1')
+            },
+            backgroundColor: modernColors[0],
+            borderColor: modernBorderColors[0],
+            tension: 0.3,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: modernBorderColors[0],
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6
           }]
         };
       } else {
@@ -616,94 +747,30 @@ function Visualizations() {
           datasets: [{
             label: chart.yAxis || 'Value',
             data: yAxisData,
-            backgroundColor: [
-              'rgba(255, 99, 132, 0.7)',
-              'rgba(54, 162, 235, 0.7)',
-              'rgba(255, 206, 86, 0.7)',
-              'rgba(75, 192, 192, 0.7)',
-              'rgba(153, 102, 255, 0.7)'
-            ],
-            borderColor: [
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(75, 192, 192, 1)',
-              'rgba(153, 102, 255, 1)'
-            ],
-            borderWidth: 1
+            backgroundColor: modernColors,
+            borderColor: modernBorderColors,
+            borderWidth: 1,
+            borderRadius: 6,
+            hoverBackgroundColor: modernColors.map(color => color.replace('0.8', '0.9')),
+            barPercentage: 0.7,
+            categoryPercentage: 0.8
           }]
         };
       }
       
-      // Configure the chart type and options
-      const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: {
-          duration: 1000,
-        },
-        plugins: {
-          legend: {
-            position: chart.chartType === 'pie' ? 'right' : 'top',
-            labels: {
-              color: theme.palette.text.primary,
-              font: {
-                size: 12
-              }
-            }
-          },
-          tooltip: {
-            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)',
-            titleColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)',
-            bodyColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)',
-            borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
-            borderWidth: 1
-          }
-        },
-        scales: chart.chartType === 'pie' ? undefined : {
-          x: {
-            title: {
-              display: true,
-              text: chart.xAxis,
-              color: theme.palette.text.primary
-            },
-            ticks: {
-              color: theme.palette.text.secondary
-            },
-            grid: {
-              color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
-            }
-          },
-          y: {
-            title: {
-              display: true,
-              text: chart.yAxis,
-              color: theme.palette.text.primary
-            },
-            ticks: {
-              color: theme.palette.text.secondary
-            },
-            grid: {
-              color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
-            },
-            beginAtZero: true
-          }
-        }
-      };
-
-      console.log(`Creating chart: ${chartKey}, type: ${chart.chartType}`);
-      
-      // Create the chart instance
-      const chartInstance = new Chart(ctx, {
+      // Create the chart based on the type
+      console.log('Creating new chart of type:', chart.chartType);
+      const newChart = new Chart(ctx, {
         type: chart.chartType,
         data: chartData,
-        options: options
+        options: modernChartOptions
       });
       
-      console.log(`Chart created successfully: ${chartKey}`);
+      console.log('Chart created successfully');
+      setChartInstance(newChart);
       
       // Store the instance
-      instancesObject[chartKey] = chartInstance;
+      instancesObject[chartKey] = newChart;
     } catch (error) {
       console.error(`Error creating chart ${chartKey}:`, error);
     }
@@ -1019,7 +1086,26 @@ function Visualizations() {
         return;
       }
 
-      // Configure chart options
+      // Modern color palette for charts
+      const modernColors = [
+        'rgba(96, 165, 250, 0.8)',   // Blue
+        'rgba(167, 139, 250, 0.8)',  // Purple
+        'rgba(251, 146, 60, 0.8)',   // Orange
+        'rgba(52, 211, 153, 0.8)',   // Green
+        'rgba(248, 113, 113, 0.8)',  // Red
+        'rgba(251, 191, 36, 0.8)'    // Yellow
+      ];
+      
+      const modernBorderColors = [
+        'rgba(59, 130, 246, 1)',    // Blue border
+        'rgba(139, 92, 246, 1)',    // Purple border
+        'rgba(249, 115, 22, 1)',    // Orange border
+        'rgba(16, 185, 129, 1)',    // Green border
+        'rgba(239, 68, 68, 1)',     // Red border
+        'rgba(245, 158, 11, 1)'     // Yellow border
+      ];
+
+      // Configure chart options with modern styling
       const options = {
         responsive: true,
         maintainAspectRatio: false,
@@ -1027,9 +1113,14 @@ function Visualizations() {
           legend: {
             position: visualization.chartType === 'pie' ? 'right' : 'top',
             labels: {
+              usePointStyle: true,
+              pointStyle: 'circle',
+              padding: 15,
               color: theme.palette.text.primary,
               font: {
                 family: theme.typography.fontFamily,
+                size: 12,
+                weight: '500'
               }
             }
           },
@@ -1039,17 +1130,34 @@ function Visualizations() {
             color: theme.palette.text.primary,
             font: {
               family: theme.typography.fontFamily,
-              size: 16,
-              weight: 'bold'
+              size: 18,
+              weight: '600'
+            },
+            padding: {
+              top: 10,
+              bottom: 20
             }
           },
           tooltip: {
-            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)',
-            titleColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)',
-            bodyColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)',
-            borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(17, 25, 40, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+            titleColor: theme.palette.mode === 'dark' ? '#fff' : 'rgba(17, 24, 39, 1)',
+            bodyColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(55, 65, 81, 1)',
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
             borderWidth: 1,
-            padding: 10
+            padding: 12,
+            cornerRadius: 8,
+            boxPadding: 6,
+            titleFont: {
+              weight: '600',
+              family: theme.typography.fontFamily
+            },
+            bodyFont: {
+              family: theme.typography.fontFamily
+            },
+            displayColors: true,
+            boxWidth: 8,
+            boxHeight: 8,
+            usePointStyle: true
           }
         },
         scales: visualization.chartType === 'pie' ? undefined : {
@@ -1057,26 +1165,54 @@ function Visualizations() {
             title: {
               display: true,
               text: visualization.xAxis || visualization.config?.xAxis?.label || 'X Axis',
-              color: theme.palette.text.primary
+              color: theme.palette.text.primary,
+              font: {
+                family: theme.typography.fontFamily,
+                size: 13,
+                weight: '500'
+              },
+              padding: { top: 10 }
             },
             ticks: {
-              color: theme.palette.text.secondary
+              color: theme.palette.text.secondary,
+              padding: 8,
+              font: {
+                family: theme.typography.fontFamily,
+                size: 11
+              }
             },
             grid: {
-              color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+              display: true,
+              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+              drawBorder: false,
+              drawTicks: false
             }
           },
           y: {
             title: {
               display: true,
               text: visualization.yAxis || visualization.config?.yAxis?.label || 'Y Axis',
-              color: theme.palette.text.primary
+              color: theme.palette.text.primary,
+              font: {
+                family: theme.typography.fontFamily,
+                size: 13,
+                weight: '500'
+              },
+              padding: { bottom: 10 }
             },
             ticks: {
-              color: theme.palette.text.secondary
+              color: theme.palette.text.secondary,
+              padding: 8,
+              font: {
+                family: theme.typography.fontFamily,
+                size: 11
+              }
             },
             grid: {
-              color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+              display: true,
+              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+              drawBorder: false,
+              drawTicks: false
             },
             beginAtZero: true
           }
@@ -1154,10 +1290,12 @@ function Visualizations() {
           datasets: [{
             label: yAxis || 'Value',
             data: scatterData,
-            backgroundColor: 'rgba(75, 192, 192, 0.7)',
-            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: modernColors[0],
+            borderColor: modernBorderColors[0],
             pointRadius: 7,
             pointHoverRadius: 9,
+            pointBackgroundColor: '#ffffff',
+            pointBorderWidth: 2
           }]
         };
       } else if (chartType === 'pie') {
@@ -1167,36 +1305,32 @@ function Visualizations() {
           datasets: [{
             label: yAxis || 'Value',
             data: yAxisData,
-            backgroundColor: [
-              'rgba(255, 99, 132, 0.7)',
-              'rgba(54, 162, 235, 0.7)',
-              'rgba(255, 206, 86, 0.7)',
-              'rgba(75, 192, 192, 0.7)',
-              'rgba(153, 102, 255, 0.7)',
-              'rgba(255, 159, 64, 0.7)'
-            ],
-            borderColor: [
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(75, 192, 192, 1)',
-              'rgba(153, 102, 255, 1)',
-              'rgba(255, 159, 64, 1)'
-            ],
-            borderWidth: 1
+            backgroundColor: modernColors,
+            borderColor: modernBorderColors,
+            borderWidth: 1,
+            hoverOffset: 12,
+            borderRadius: 4
           }]
         };
       } else if (chartType === 'line') {
-        // For line charts - use proper time series data if available
+        // For line charts
         data = {
           labels: isTimeSeriesData ? dateLabels : xAxisLabels,
           datasets: [{
             label: yAxis || 'Value',
             data: yAxisData,
-            fill: false,
-            backgroundColor: 'rgba(75, 192, 192, 0.7)',
-            borderColor: 'rgba(75, 192, 192, 1)',
-            tension: 0.1
+            fill: {
+              target: 'origin',
+              above: modernColors[0].replace('0.8', '0.1')
+            },
+            backgroundColor: modernColors[0],
+            borderColor: modernBorderColors[0],
+            tension: 0.3,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: modernBorderColors[0],
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6
           }]
         };
       } else {
@@ -1206,23 +1340,13 @@ function Visualizations() {
           datasets: [{
             label: yAxis || 'Value',
             data: yAxisData,
-            backgroundColor: [
-              'rgba(255, 99, 132, 0.7)',
-              'rgba(54, 162, 235, 0.7)',
-              'rgba(255, 206, 86, 0.7)',
-              'rgba(75, 192, 192, 0.7)',
-              'rgba(153, 102, 255, 0.7)',
-              'rgba(255, 159, 64, 0.7)'
-            ],
-            borderColor: chartType === 'line' ? 'rgba(75, 192, 192, 1)' : [
-              'rgba(255, 99, 132, 1)',
-              'rgba(54, 162, 235, 1)',
-              'rgba(255, 206, 86, 1)',
-              'rgba(75, 192, 192, 1)',
-              'rgba(153, 102, 255, 1)',
-              'rgba(255, 159, 64, 1)'
-            ],
-            borderWidth: 1
+            backgroundColor: modernColors,
+            borderColor: modernBorderColors,
+            borderWidth: 1,
+            borderRadius: 6,
+            hoverBackgroundColor: modernColors.map(color => color.replace('0.8', '0.9')),
+            barPercentage: 0.7,
+            categoryPercentage: 0.8
           }]
         };
       }
