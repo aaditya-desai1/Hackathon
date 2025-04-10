@@ -56,6 +56,47 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Diagnostic route for MongoDB connection
+app.get('/api/diagnostics/mongo', async (req, res) => {
+  try {
+    // Get MongoDB connection status
+    const mongoStatus = {
+      readyState: mongoose.connection.readyState,
+      // Convert readyState to human-readable status
+      status: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown',
+      host: mongoose.connection.host || 'not connected',
+      name: mongoose.connection.name || 'not connected',
+      environment: process.env.NODE_ENV || 'development',
+    };
+    
+    // Try to perform a simple operation to verify connection
+    if (mongoose.connection.readyState === 1) {
+      try {
+        // Try to fetch a single document from any collection
+        const collections = await mongoose.connection.db.listCollections().toArray();
+        mongoStatus.collections = collections.map(c => c.name);
+        mongoStatus.operationSuccess = true;
+      } catch (dbError) {
+        mongoStatus.operationSuccess = false;
+        mongoStatus.operationError = dbError.message;
+      }
+    }
+    
+    res.json({
+      success: true,
+      mongoStatus,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Diagnostics error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Test route for debugging
 app.get('/api/test', (req, res) => {
   res.json({
