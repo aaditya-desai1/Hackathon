@@ -52,120 +52,51 @@ exports.uploadFile = async (req, res) => {
       return res.status(500).json({ error: 'Uploaded file could not be processed' });
     }
 
-    // Validate and possibly fix file type
+    // Define the file type based on extension and mimetype
     const originalExt = path.extname(req.file.originalname).toLowerCase();
     let fileType = req.file.mimetype;
     
-    // Correct MIME type based on extension if needed
+    // Correct common MIME type issues but don't modify the file
     if (originalExt === '.csv' && fileType !== 'text/csv') {
       console.log(`[FileController] Correcting MIME type from ${fileType} to text/csv based on extension`);
       fileType = 'text/csv';
     } else if (originalExt === '.json' && fileType !== 'application/json') {
       console.log(`[FileController] Correcting MIME type from ${fileType} to application/json based on extension`);
       fileType = 'application/json';
-    } else if (fileType === 'text/plain') {
-      // Try to determine file type from content for text/plain files
-      try {
-        const sampleContent = await fs.readFile(req.file.path, { encoding: 'utf-8', flag: 'r' });
-        const cleanContent = sampleContent.trim().replace(/^\uFEFF/, '');
-        
-        if (cleanContent.startsWith('{') || cleanContent.startsWith('[')) {
-          console.log('[FileController] Detected JSON content in text/plain file');
-          fileType = 'application/json';
-        } else if (cleanContent.includes(',') || cleanContent.includes('\t') || cleanContent.includes(';')) {
-          console.log('[FileController] Detected CSV content in text/plain file');
-          fileType = 'text/csv';
-        }
-      } catch (error) {
-        console.error('[FileController] Error detecting file type from content:', error);
-      }
     }
     
-    // Validate file type after corrections
-    const allowedTypes = ['text/csv', 'application/json', 'text/plain'];
-    if (!allowedTypes.includes(fileType)) {
-      await fs.unlink(req.file.path).catch(err => {
-        console.error('[FileController] Error deleting invalid file:', err);
-      });
-      return res.status(400).json({ error: 'Invalid file type. Only CSV, JSON, and plain text files are allowed.' });
-    }
-
-    // Check if uploads directory exists and is writable
-    const uploadsDir = getUploadDir();
-    try {
-      await fs.access(uploadsDir, fs.constants.W_OK);
-      console.log(`[FileController] Upload directory ${uploadsDir} is writable`);
-    } catch (err) {
-      console.error(`[FileController] Upload directory error:`, err);
-      return res.status(500).json({ error: 'Server storage configuration error' });
-    }
-
-    // Read and validate file content
-    let fileContent;
-    try {
-      fileContent = await fs.readFile(req.file.path, 'utf-8');
-      console.log(`[FileController] Read file content, length: ${fileContent.length} characters`);
-      
-      // Simple sanity check for file content
-      if (fileContent.trim().length === 0) {
-        console.error('[FileController] File content is empty');
-        return res.status(400).json({ error: 'File content is empty' });
-      }
-    } catch (readErr) {
-      console.error('[FileController] Error reading file content:', readErr);
-      return res.status(500).json({ error: 'Error reading file content' });
-    }
-
     // Create file record
     const fileData = {
       name: req.file.originalname,
       path: req.file.path,
       size: req.file.size,
-      type: fileType, // Use potentially corrected file type
-      user: req.user ? req.user._id : null, // Make user optional
-      createdAt: new Date() // Explicitly set creation date
+      type: fileType,
+      user: req.user ? req.user._id : null,
+      createdAt: new Date()
     };
 
-    // Parse file to get initial data
+    // Parse file to get initial data (skip detailed validation, already done client-side)
     try {
       let parseResult;
       console.log(`[FileController] Parsing file as ${fileType}...`);
       
-      if (fileType === 'text/csv') {
+      if (fileType === 'text/csv' || originalExt === '.csv') {
         parseResult = await parseCSV(req.file.path);
-      } else if (fileType === 'application/json') {
+      } else if (fileType === 'application/json' || originalExt === '.json') {
         parseResult = await parseJSON(req.file.path);
       } else {
-        // For plain text, try both formats
-        try {
-          if (fileContent.trim().startsWith('{') || fileContent.trim().startsWith('[')) {
-            parseResult = await parseJSON(req.file.path);
-          } else {
-            parseResult = await parseCSV(req.file.path);
-          }
-        } catch (firstError) {
-          console.error('[FileController] First parse attempt failed:', firstError);
-          
-          // Try the other format
-          try {
-            parseResult = fileContent.trim().startsWith('{') || fileContent.trim().startsWith('[') 
-              ? await parseCSV(req.file.path) 
-              : await parseJSON(req.file.path);
-          } catch (secondError) {
-            console.error('[FileController] Second parse attempt failed:', secondError);
-            throw new Error('File could not be parsed as either CSV or JSON');
-          }
+        // For other types, try to detect format from first few bytes
+        const content = await fs.readFile(req.file.path, 'utf-8', { length: 50 });
+        if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
+          parseResult = await parseJSON(req.file.path);
+        } else {
+          parseResult = await parseCSV(req.file.path);
         }
       }
 
       console.log('[FileController] File parsed successfully');
-      
-      if (!parseResult.columns || parseResult.columns.length === 0) {
-        throw new Error('No columns found in the parsed data');
-      }
-      
-      fileData.dataColumns = parseResult.columns;
-      fileData.dataPreview = parseResult.preview;
+      fileData.dataColumns = parseResult.columns || [];
+      fileData.dataPreview = parseResult.preview || [];
     } catch (parseError) {
       console.error('[FileController] File parsing error:', parseError);
       return res.status(400).json({ 
@@ -174,41 +105,38 @@ exports.uploadFile = async (req, res) => {
       });
     }
 
+    // Save to database
     console.log('[FileController] Creating file record in database');
     const file = new File(fileData);
+    await file.save();
     
-    try {
-      await file.save();
-      console.log('[FileController] File saved to database with ID:', file._id);
-      
-      // File uploaded and saved successfully, return response
-      res.status(201).json({
-        success: true,
-        file: {
-          _id: file._id,
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          columns: file.dataColumns,
-          preview: file.dataPreview,
-          createdAt: file.createdAt
-        }
-      });
-    } catch (dbError) {
-      console.error('[FileController] Database error when saving file:', dbError);
-      throw new Error(`Database error: ${dbError.message}`);
-    }
+    console.log('[FileController] File saved to database with ID:', file._id);
+    
+    // Return success response
+    res.status(201).json({
+      success: true,
+      file: {
+        _id: file._id,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        columns: file.dataColumns,
+        preview: file.dataPreview,
+        createdAt: file.createdAt
+      }
+    });
   } catch (error) {
     console.error('[FileController] Upload error:', error);
     
     // Clean up uploaded file if there was an error
     if (tempFilePath) {
-      await fs.unlink(tempFilePath).catch(err => {
+      try {
+        await fs.unlink(tempFilePath);
+      } catch (err) {
         console.error('[FileController] Error deleting file after upload failure:', err);
-      });
+      }
     }
     
-    // Send error response if not already sent
     if (!res.headersSent) {
       res.status(500).json({ error: error.message || 'Error uploading file' });
     }
