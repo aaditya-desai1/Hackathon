@@ -6,12 +6,14 @@ import {
   LinearProgress,
   Alert,
   Paper,
+  Button,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 function FileUploader({ onUploadSuccess, allowedTypes }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
+  const [errorDetails, setErrorDetails] = useState(null);
   const [success, setSuccess] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileName, setFileName] = useState('');
@@ -22,6 +24,7 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     
     setUploading(true);
     setError(null);
+    setErrorDetails(null);
     setSuccess(false);
     setUploadProgress(0);
     
@@ -61,15 +64,19 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       if (!response.ok) {
         console.error('Upload failed with status:', response.status);
         let errorMessage = `Upload failed with status ${response.status}`;
+        let details = null;
         
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
+          details = errorData;
           console.error('Error details:', errorData);
         } catch (parseError) {
           console.error('Could not parse error response:', parseError);
+          details = { parseError: parseError.message };
         }
         
+        setErrorDetails(details);
         throw new Error(errorMessage);
       }
       
@@ -115,7 +122,7 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     
     // Upload the file immediately when dropped
     uploadFile(file);
-  }, [allowedTypes, uploadFile]);
+  }, [allowedTypes]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -126,11 +133,28 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     multiple: false,
   });
 
+  // Add retry functionality
+  const handleRetry = () => {
+    if (selectedFile) {
+      uploadFile(selectedFile);
+    }
+  };
+
   return (
     <Box sx={{ width: '100%' }}>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
+          {errorDetails && (
+            <Box component="pre" sx={{ mt: 1, fontSize: '0.8rem', maxHeight: '100px', overflow: 'auto' }}>
+              {JSON.stringify(errorDetails, null, 2)}
+            </Box>
+          )}
+          {selectedFile && (
+            <Button variant="outlined" size="small" sx={{ mt: 1 }} onClick={handleRetry}>
+              Try Again
+            </Button>
+          )}
         </Alert>
       )}
       
