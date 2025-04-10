@@ -5,6 +5,13 @@ const { parseCSV, parseJSON, analyzeDataColumns } = require('../utils/dataParser
 const dataAnalysisService = require('../services/dataAnalysisService');
 const mongoose = require('mongoose');
 
+// Helper function to handle file paths
+const getUploadDir = () => {
+  return process.env.NODE_ENV === 'production' 
+    ? '/tmp' 
+    : path.join(__dirname, '..', 'uploads');
+};
+
 // Upload file
 exports.uploadFile = async (req, res) => {
   try {
@@ -17,7 +24,8 @@ exports.uploadFile = async (req, res) => {
     console.log('File received:', { 
       name: req.file.originalname, 
       type: req.file.mimetype, 
-      size: req.file.size 
+      size: req.file.size,
+      path: req.file.path
     });
 
     // Validate file type
