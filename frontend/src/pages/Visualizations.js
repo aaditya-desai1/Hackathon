@@ -488,21 +488,52 @@ function Visualizations() {
       
       console.log(`Setting up chart: ${chartKey}`);
       
-      // Schedule creation of chart instance after DOM update
+      // For debugging, log all canvas elements currently in the refs
+      console.log('Current canvas refs:', Object.keys(chartPreviewRefs.current));
+      
+      // For debugging, log all DOM canvas elements immediately
       setTimeout(() => {
-        if (chartPreviewRefs.current[chartKey]) {
-          console.log(`Creating chart instance for ${chartKey}`);
+        const allCanvases = document.querySelectorAll('canvas');
+        console.log(`Found ${allCanvases.length} canvas elements on the page:`, 
+          Array.from(allCanvases).map(c => c.id || 'unnamed'));
+      }, 500);
+      
+      // Schedule creation of chart instance after DOM update with increased delay for reliability
+      setTimeout(() => {
+        // Double-check canvas existence before creating instance
+        const canvasElement = getCanvasElement(chartKey);
+        
+        if (canvasElement) {
+          console.log(`Creating chart instance for ${chartKey} with canvas:`, canvasElement);
           createChartInstance(chartKey, chart, newInstances);
         } else {
-          console.warn(`Canvas reference not found for ${chartKey}`);
+          console.warn(`Canvas reference not found for ${chartKey}. Attempting direct DOM query...`);
+          
+          // Try direct DOM query as a fallback
+          const allCanvases = document.querySelectorAll('canvas');
+          console.log(`Found ${allCanvases.length} total canvases on the page`);
+          
+          // Try to match any canvas containing parts of our chart key
+          const matchingCanvas = Array.from(allCanvases).find(c => 
+            c.id && (c.id.includes(chart.chartType) && 
+            (chart.isAIRecommended || (c.id.includes(chart.xAxis) || c.id.includes(chart.yAxis)))));
+          
+          if (matchingCanvas) {
+            console.log(`Found matching canvas by DOM search:`, matchingCanvas.id);
+            // Store the reference for future use
+            chartPreviewRefs.current[chartKey] = matchingCanvas;
+            createChartInstance(chartKey, chart, newInstances);
+          } else {
+            console.error(`Could not find any matching canvas for ${chartKey}`);
+          }
         }
-      }, 1000); // Increased timeout to ensure DOM is ready
+      }, 1200); // Increased timeout to ensure DOM is ready
     });
     
     // Update state after all chart instances are created
     setTimeout(() => {
       setChartPreviewInstances(newInstances);
-    }, 1500);
+    }, 2000);
   };
   
   // Modified createChartInstance function to include fileId validation
@@ -534,162 +565,171 @@ function Visualizations() {
         return;
       }
       
+      // Show loading state on the chart container
+      const chartContainer = canvasElement.parentElement;
+      if (chartContainer) {
+        // Create loading overlay
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.id = `loading-${chartKey}`;
+        loadingOverlay.style.position = 'absolute';
+        loadingOverlay.style.top = '0';
+        loadingOverlay.style.left = '0';
+        loadingOverlay.style.width = '100%';
+        loadingOverlay.style.height = '100%';
+        loadingOverlay.style.display = 'flex';
+        loadingOverlay.style.justifyContent = 'center';
+        loadingOverlay.style.alignItems = 'center';
+        loadingOverlay.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+        loadingOverlay.style.zIndex = '10';
+        loadingOverlay.innerHTML = `
+          <div style="text-align: center;">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <div style="margin-top: 1rem; font-weight: bold;">Loading chart data...</div>
+          </div>
+        `;
+        
+        // Make chart container position relative if not already
+        if (chartContainer.style.position !== 'relative') {
+          chartContainer.style.position = 'relative';
+        }
+        
+        chartContainer.appendChild(loadingOverlay);
+      }
+      
       const ctx = canvasElement.getContext('2d');
       if (!ctx) {
         console.error(`Could not get 2D context for canvas ${chartKey}`);
         return;
       }
       
-      // Try fetching actual data in the background after rendering the fallback
-      setTimeout(() => {
-        fetchChartData(chart, ctx, instancesObject, chartKey);
-      }, 1000);
+      // If there's an existing chart instance, destroy it
+      if (instancesObject[chartKey]) {
+        console.log(`Destroying existing chart for ${chartKey}`);
+        instancesObject[chartKey].destroy();
+      }
+      
+      // Skip the placeholder chart and directly fetch the real data
+      fetchChartData(chart, ctx, instancesObject, chartKey);
     } catch (error) {
       console.error(`Error creating chart ${chartKey}:`, error);
     }
   };
 
-  // Separated fetch logic to a standalone function 
+  // Fetch chart data and render it directly without showing fallback first
   const fetchChartData = async (chart, ctx, instancesObject, chartKey) => {
     try {
-      // Special handling for scatter plots with index as x-axis
+      // Check if chart data is valid
+      if (!chart || !chart.fileId || !chart.xAxis || !chart.yAxis) {
+        console.error('Invalid chart configuration:', chart);
+        removeLoadingOverlay(chartKey);
+        return;
+      }
+
+      // Determine if we're using index as x-axis (special case for scatter plots)
       const useIndexAsXAxis = chart.chartType === 'scatter' && chart.xAxis === 'index';
       
-      // Use the data API to get actual values from the file
+      // Prepare API URL
       const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
       let dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${chart.fileId}&yAxis=${chart.yAxis}`;
       
-      // Only add xAxis param if we're not using index as x-axis
       if (!useIndexAsXAxis) {
         dataUrl += `&xAxis=${chart.xAxis}`;
       }
       
       console.log(`Fetching chart data from: ${dataUrl}`);
       
-      const dataResponse = await fetch(dataUrl);
-      console.log(`Data response status: ${dataResponse.status} ${dataResponse.statusText}`);
+      // Set up the axis labels
+      const axisLabels = {
+        xAxis: useIndexAsXAxis ? 'Index' : chart.xAxis,
+        yAxis: chart.yAxis
+      };
       
-      if (!dataResponse.ok) {
-        const errorText = await dataResponse.text();
-        console.error(`Failed to fetch chart data: ${dataResponse.status} ${dataResponse.statusText}`);
-        console.error(`Error response: ${errorText}`);
+      // Fetch the data
+      let chartData = null;
+      
+      try {
+        const response = await fetch(dataUrl);
         
-        // Create fallback chart when API call fails
-        console.log(`Creating fallback chart for ${chart.chartType}`);
-        if (instancesObject[chartKey]) {
-          instancesObject[chartKey].destroy();
-        }
-        updateChartWithRealData(ctx, chart.chartType, null, null, chart.yAxis, instancesObject, chartKey);
-        return;
-      }
-      
-      const dataResult = await dataResponse.json();
-      
-      if (!dataResult.success) {
-        console.error('Data fetch was not successful:', dataResult.message);
-        
-        // Create fallback chart when data isn't successfully returned
-        console.log(`Creating fallback chart for ${chart.chartType} due to unsuccessful data result`);
-        if (instancesObject[chartKey]) {
-          instancesObject[chartKey].destroy();
-        }
-        updateChartWithRealData(ctx, chart.chartType, null, null, chart.yAxis, instancesObject, chartKey);
-        return;
-      }
-      
-      // Validate the data structure
-      if (!dataResult.chartData || !dataResult.chartData.values ||
-          !Array.isArray(dataResult.chartData.values)) {
-        console.error('Invalid chart data structure:', dataResult);
-        
-        if (instancesObject[chartKey]) {
-          instancesObject[chartKey].destroy();
-        }
-        updateChartWithRealData(ctx, chart.chartType, null, null, chart.yAxis, instancesObject, chartKey);
-        return;
-      }
-      
-      // Handle special case for 'index' x-axis in scatter plots
-      if (useIndexAsXAxis && chart.chartType === 'scatter') {
-        console.log('Using indices as x-axis values for scatter plot');
-        
-        // Create sequential indices as x-axis values
-        const labels = Array.from({ length: dataResult.chartData.values.length }, (_, i) => i + 1);
-        dataResult.chartData.labels = labels;
-        
-        console.log('Generated index-based labels:', labels.slice(0, 5), '...');
-      }
-      
-      // Make sure we have labels array
-      if (!dataResult.chartData.labels) {
-        console.log('No labels provided in chart data, generating default labels');
-        dataResult.chartData.labels = Array.from(
-          { length: dataResult.chartData.values.length }, 
-          (_, i) => `Item ${i+1}`
-        );
-      }
-      
-      console.log('Chart data received:', {
-        chartType: chart.chartType,
-        labels: dataResult.chartData.labels.slice(0, 5),
-        values: dataResult.chartData.values.slice(0, 5),
-        labelCount: dataResult.chartData.labels.length,
-        valueCount: dataResult.chartData.values.length
-      });
-      
-      // Pre-process data for scatter charts - ensure numeric values 
-      if (chart.chartType === 'scatter') {
-        const { labels, values } = dataResult.chartData;
-        
-        // Try to convert string data to numbers for scatter plot
-        const scatterData = labels.map((label, index) => {
-          let xValue = label;
+        if (response.ok) {
+          const result = await response.json();
           
-          // If the label is a string, try to extract a numeric value
-          if (typeof label === 'string') {
-            const numericValue = parseFloat(label.replace(/[^0-9.-]+/g, ''));
-            xValue = isNaN(numericValue) ? index + 1 : numericValue;
+          if (result.success && 
+              result.chartData && 
+              result.chartData.values && 
+              Array.isArray(result.chartData.values) &&
+              result.chartData.values.length > 0) {
+            
+            // Handle special case for index-based x-axis
+            if (useIndexAsXAxis) {
+              result.chartData.labels = Array.from(
+                { length: result.chartData.values.length }, 
+                (_, i) => i + 1
+              );
+            }
+            
+            // Ensure we have labels
+            if (!result.chartData.labels || !Array.isArray(result.chartData.labels)) {
+              result.chartData.labels = Array.from(
+                { length: result.chartData.values.length }, 
+                (_, i) => `Item ${i+1}`
+              );
+            }
+            
+            // Store valid chart data
+            chartData = result.chartData;
+            
+            console.log('Chart data received:', {
+              chartType: chart.chartType,
+              sampleLabels: chartData.labels.slice(0, 3),
+              sampleValues: chartData.values.slice(0, 3),
+              count: chartData.values.length
+            });
+          } else {
+            console.error('Invalid data structure or unsuccessful response:', result);
           }
-          
-          return {
-            x: xValue,
-            y: values[index] || 0
-          };
-        });
-        
-        console.log('Processed scatter data samples:', scatterData.slice(0, 5));
-        
-        // Check if we have at least 2 data points for a meaningful chart
-        if (scatterData.length < 2) {
-          console.warn('Not enough data points for scatter chart, using fallback');
-          if (instancesObject[chartKey]) {
-            instancesObject[chartKey].destroy();
-          }
-          updateChartWithRealData(ctx, chart.chartType, null, null, chart.yAxis, instancesObject, chartKey);
-          return;
+        } else {
+          console.error(`API error: ${response.status} ${response.statusText}`);
         }
+      } catch (fetchError) {
+        console.error('Error fetching chart data:', fetchError);
       }
       
+      // Destroy any existing chart instance
       if (instancesObject[chartKey]) {
         instancesObject[chartKey].destroy();
+        instancesObject[chartKey] = null;
       }
       
-      updateChartWithRealData(ctx, chart.chartType, dataResult.chartData.labels, 
-        dataResult.chartData.values, chart.yAxis, instancesObject, chartKey);
+      // Render the chart with real data or fallback if needed
+      updateChartWithRealData(
+        ctx, 
+        chart.chartType, 
+        chartData ? chartData.labels : null, 
+        chartData ? chartData.values : null, 
+        axisLabels.yAxis, 
+        instancesObject, 
+        chartKey, 
+        axisLabels.xAxis
+      );
+      
+      // Remove loading overlay
+      removeLoadingOverlay(chartKey);
     } catch (error) {
-      console.error('Error fetching chart data:', error);
-      
-      // Create fallback chart on any error
-      if (instancesObject[chartKey]) {
-        try {
-          instancesObject[chartKey].destroy();
-        } catch (e) {
-          console.error('Error destroying chart instance:', e);
-        }
-      }
-      
-      updateChartWithRealData(ctx, chart.chartType, null, null, chart.yAxis, instancesObject, chartKey);
+      console.error('Error in chart creation process:', error);
+      removeLoadingOverlay(chartKey);
     }
+  };
+  
+  // Helper function to remove loading overlay
+  const removeLoadingOverlay = (chartKey) => {
+    setTimeout(() => {
+      const loadingOverlay = document.getElementById(`loading-${chartKey}`);
+      if (loadingOverlay) {
+        loadingOverlay.remove();
+      }
+    }, 300);
   };
 
   // Create a chart with real data
@@ -1052,22 +1092,42 @@ function Visualizations() {
 
   // Attempt to get canvas element with a more resilient approach
   const getCanvasElement = (chartKey) => {
+    // Try direct ID match first
     const canvasId = `chart-${chartKey}`;
-    const directCanvas = document.getElementById(canvasId);
+    let canvas = document.getElementById(canvasId);
     
-    if (directCanvas) {
+    if (canvas) {
       console.log(`Found canvas element with ID ${canvasId} directly`);
-      return directCanvas;
+      return canvas;
+    }
+    
+    // If chartKey is for a custom chart, try additional formats to handle potential ID discrepancies
+    if (chartKey.startsWith('custom-')) {
+      // Try finding by chart key without the xAxis and yAxis parts
+      const parts = chartKey.split('-');
+      if (parts.length >= 2) {
+        const baseKey = parts.slice(0, 2).join('-'); // 'custom-chartType'
+        
+        // Try all canvases on the page and look for partial matches
+        const allCanvases = document.querySelectorAll('canvas');
+        
+        for (let canvas of allCanvases) {
+          if (canvas.id && canvas.id.includes(baseKey)) {
+            console.log(`Found custom chart canvas with partial ID match: ${canvas.id}`);
+            return canvas;
+          }
+        }
+      }
     }
     
     // Try alternative selector approaches
-    const canvasByQuery = document.querySelector(`#${canvasId}`);
-    if (canvasByQuery) {
+    canvas = document.querySelector(`#${canvasId}`);
+    if (canvas) {
       console.log(`Found canvas element with query selector #${canvasId}`);
-      return canvasByQuery;
+      return canvas;
     }
     
-    // Look for canvas by partial ID match
+    // Look for any canvas that contains the chartKey
     const allCanvases = document.querySelectorAll('canvas');
     for (let canvas of allCanvases) {
       if (canvas.id && canvas.id.includes(chartKey)) {
@@ -1076,7 +1136,9 @@ function Visualizations() {
       }
     }
     
+    // As a last resort, log all canvases found
     console.error(`Could not find canvas element with ID ${canvasId} using any method`);
+    console.log('Available canvases:', Array.from(document.querySelectorAll('canvas')).map(c => c.id));
     return null;
   };
 
@@ -2304,7 +2366,7 @@ function Visualizations() {
                       <canvas 
                         ref={el => chartPreviewRefs.current[`custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`] = el}
                         style={{ width: '100%', height: '100%' }}
-                        id={`chart-custom-${chart.chartType}-${index}`}
+                        id={`chart-custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`}
                       />
                     </Box>
                     <Box sx={{ p: 2, mt: 'auto' }}>
