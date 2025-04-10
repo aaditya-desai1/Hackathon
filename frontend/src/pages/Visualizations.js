@@ -507,12 +507,6 @@ function Visualizations() {
         return;
       }
       
-      // Create fallback visualization with static data
-      console.log('Creating fallback visualization with static data for demo');
-      createFallbackChart(ctx, chart.chartType, chart.xAxis, chart.yAxis, 
-        ['rgba(53, 162, 235, 0.8)'], ['rgba(53, 162, 235, 1)'], 
-        instancesObject, chartKey);
-      
       // Try fetching actual data in the background after rendering the fallback
       setTimeout(() => {
         fetchChartData(chart, ctx, instancesObject, chartKey);
@@ -1274,221 +1268,16 @@ function Visualizations() {
         } catch (dataError) {
           console.error('Error fetching or rendering chart data:', dataError);
           
-          // Fallback to placeholder data
-          createFallbackChart(ctx, chartType, xAxis, yAxis, modernColors, modernBorderColors);
+          // Show error message on canvas
+          showErrorMessage(ctx, 'Could not load chart data. Please try again.');
         }
       })();
     } catch (error) {
       console.error('Error rendering visualization:', error);
+      showErrorMessage(ctx, 'Error rendering visualization. Please try again.');
     }
   };
   
-  // Create a fallback chart with demo data
-  const createFallbackChart = (ctx, chartType, xAxis, yAxis, modernColors, modernBorderColors, instancesObject, chartKey) => {
-    console.log('Creating fallback chart with demo data:', { chartType, xAxis, yAxis });
-    
-    // Generate demo data based on chart type and axis names
-      let xAxisLabels = [];
-    let yAxisData = [];
-    
-    // Stock symbols and date labels for demo data
-    let stockSymbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'META'];
-    let dateLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
-    
-    // Map specific column names to appropriate data
-    const isStockData = xAxis === 'stock_symbol' || xAxis.includes('stock');
-    const isTimeSeriesData = xAxis.includes('date') || xAxis.includes('month') || xAxis.includes('time');
-      
-      // Generate appropriate X-axis labels based on column name
-      if (isStockData && xAxis === 'stock_symbol') {
-      xAxisLabels = stockSymbols;
-      } else if (isTimeSeriesData) {
-        xAxisLabels = dateLabels;
-    } else if (xAxis.includes('page') || xAxis.includes('id')) {
-      xAxisLabels = ['page_id_1', 'page_id_2', 'page_id_3', 'page_id_4', 'page_id_5'];
-      } else if (xAxis.includes('category') || xAxis.includes('type')) {
-        xAxisLabels = ['Category A', 'Category B', 'Category C', 'Category D', 'Category E'];
-      } else if (xAxis.includes('region') || xAxis.includes('location')) {
-        xAxisLabels = ['North', 'South', 'East', 'West', 'Central'];
-      } else {
-        xAxisLabels = [`${xAxis} 1`, `${xAxis} 2`, `${xAxis} 3`, `${xAxis} 4`, `${xAxis} 5`];
-      }
-      
-      // Generate appropriate Y-axis data based on column name
-    if (yAxis.includes('load_time') || yAxis.includes('seconds')) {
-      yAxisData = [0.45, 0.62, 0.53, 0.48, 0.71];
-    } else if (yAxis.includes('volume') || yAxis.includes('amount')) {
-      yAxisData = [12543, 8754, 15876, 9432, 7654];
-      } else if (yAxis.includes('price') || yAxis.includes('cost')) {
-      yAxisData = [154.23, 187.56, 143.89, 172.45, 168.33];
-      } else if (yAxis.includes('percent') || yAxis.includes('rate')) {
-      yAxisData = [4.5, 3.2, 5.7, 2.8, 6.1];
-      } else {
-      yAxisData = [65, 59, 80, 81, 56];
-      }
-      
-    let chartData;
-      
-      if (chartType === 'scatter') {
-      // For scatter charts, create paired x-y coordinates
-        const scatterData = [];
-        for (let i = 0; i < Math.min(xAxisLabels.length, yAxisData.length); i++) {
-          scatterData.push({
-            x: (i + 1) * 10,
-            y: yAxisData[i]
-          });
-        }
-        
-      chartData = {
-          datasets: [{
-            label: yAxis || 'Value',
-            data: scatterData,
-            backgroundColor: modernColors[0],
-            borderColor: modernBorderColors[0],
-            pointRadius: 7,
-          pointHoverRadius: 9
-          }]
-        };
-      } else if (chartType === 'pie') {
-        // For pie charts
-      chartData = {
-          labels: xAxisLabels,
-          datasets: [{
-            data: yAxisData,
-            backgroundColor: modernColors,
-            borderColor: modernBorderColors,
-            borderWidth: 1,
-            hoverOffset: 12,
-            borderRadius: 4
-          }]
-        };
-      } else if (chartType === 'line') {
-        // For line charts
-      chartData = {
-        labels: xAxisLabels,
-          datasets: [{
-            label: yAxis || 'Value',
-            data: yAxisData,
-            fill: {
-              target: 'origin',
-              above: modernColors[0].replace('0.8', '0.1')
-            },
-            backgroundColor: modernColors[0],
-            borderColor: modernBorderColors[0],
-            tension: 0.3,
-            pointBackgroundColor: '#ffffff',
-            pointBorderColor: modernBorderColors[0],
-            pointBorderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 6
-          }]
-        };
-      } else {
-        // For bar charts (default)
-      chartData = {
-          labels: xAxisLabels,
-          datasets: [{
-            label: yAxis || 'Value',
-            data: yAxisData,
-            backgroundColor: modernColors,
-            borderColor: modernBorderColors,
-            borderWidth: 1,
-            borderRadius: 6,
-            hoverBackgroundColor: modernColors.map(color => color.replace('0.8', '0.9')),
-            barPercentage: 0.7,
-            categoryPercentage: 0.8
-          }]
-        };
-      }
-      
-    // Chart options
-    const modernChartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: chartType === 'pie',
-          position: 'top',
-          labels: {
-            usePointStyle: true,
-            padding: 20,
-            font: {
-              size: 12
-            }
-          }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          padding: 12,
-          titleColor: '#ffffff',
-          titleFont: {
-            size: 14,
-            weight: 'bold'
-          },
-          bodyFont: {
-            size: 13
-          },
-          cornerRadius: 6,
-          boxPadding: 6
-        }
-      },
-      animation: {
-        duration: 1000,
-        easing: 'easeOutQuart'
-      },
-      scales: chartType !== 'pie' && chartType !== 'scatter' ? {
-        x: {
-          grid: {
-            display: false
-          },
-          ticks: {
-            font: {
-              size: 12
-            },
-            maxRotation: 45,
-            minRotation: 0
-          }
-        },
-        y: {
-          beginAtZero: true,
-          grid: {
-            borderDash: [4, 4]
-          },
-          ticks: {
-            font: {
-              size: 12
-            }
-          }
-        }
-      } : {}
-    };
-    
-    // Create the demo chart
-    try {
-      console.log('Creating fallback chart of type:', chartType);
-      
-      // If there's an existing chart, destroy it first
-      if (instancesObject && instancesObject[chartKey]) {
-        instancesObject[chartKey].destroy();
-      }
-      
-      const newChart = new Chart(ctx, {
-        type: chartType,
-        data: chartData,
-        options: modernChartOptions
-      });
-      
-      console.log('Fallback chart created successfully');
-      
-      // Store the chart instance
-      if (instancesObject) {
-        instancesObject[chartKey] = newChart;
-      }
-    } catch (error) {
-      console.error('Error creating fallback chart:', error);
-    }
-  };
-
   // Add a separate useEffect to render the chart when visualization changes
   useEffect(() => {
     if (currentVisualization && openViewDialog) {
