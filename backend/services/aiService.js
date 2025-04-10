@@ -11,24 +11,28 @@
  */
 exports.recommendChartType = async (data, columns, stats) => {
   try {
-    // Analyze the dataset characteristics
+    // Analyze the dataset characteristics using the DAT algorithm
     const datasetCharacteristics = analyzeDatasetCharacteristics(data, columns, stats);
     
-    // Identify the most suitable chart type
-    const chartTypeAndReason = identifyChartType(datasetCharacteristics);
+    // Identify the most suitable chart types and rank them
+    const chartRecommendations = identifyChartTypes(datasetCharacteristics);
+    
+    // Get the best chart type (first in the ranked list)
+    const bestChartType = chartRecommendations[0];
     
     // Configure the chart parameters
-    const config = configureChart(chartTypeAndReason.chartType, datasetCharacteristics, columns, stats);
+    const config = configureChart(bestChartType.chartType, datasetCharacteristics, columns, stats);
     
     return {
-      chartType: chartTypeAndReason.chartType,
+      chartType: bestChartType.chartType,
       config,
-      explanation: chartTypeAndReason.reason
+      explanation: bestChartType.reason,
+      recommendations: chartRecommendations
     };
   } catch (error) {
     console.error('AI chart recommendation error:', error);
     
-    // Fallback to a sensible default
+    // Fallback to a sensible default with dynamic chart recommendations
     return {
       chartType: 'bar',
       config: {
@@ -36,13 +40,19 @@ exports.recommendChartType = async (data, columns, stats) => {
         yAxis: { field: columns[1] || columns[0], label: columns[1] || columns[0] },
         title: 'Data Visualization'
       },
-      explanation: 'Using default bar chart due to error in analysis. Try adjusting your dataset for better recommendations.'
+      explanation: 'Using default bar chart due to error in analysis. Try adjusting your dataset for better recommendations.',
+      recommendations: [
+        { chartType: 'bar', confidence: 70, reason: 'Default recommendation (bar chart)' },
+        { chartType: 'line', confidence: 60, reason: 'Alternative visualization option' },
+        { chartType: 'pie', confidence: 50, reason: 'Alternative visualization option' },
+        { chartType: 'scatter', confidence: 40, reason: 'Alternative visualization option' }
+      ]
     };
   }
 };
 
 /**
- * Analyze dataset characteristics
+ * Analyze dataset characteristics using the DAT algorithm
  * @param {Array} data - The dataset
  * @param {Array} columns - The columns in the dataset
  * @param {Object} stats - Statistics for each column
@@ -67,13 +77,19 @@ function analyzeDatasetCharacteristics(data, columns, stats) {
     distributionData: false
   };
   
-  // Classify columns
+  // 🅳 - DETECT DATA TYPES: Parse columns and infer data types
   columns.forEach(column => {
     const columnStats = stats[column];
     if (!columnStats) return;
     
+    // Classify column based on its type
     if (columnStats.type === 'number') {
-      characteristics.numericColumns.push(column);
+      characteristics.numericColumns.push({
+        name: column,
+        uniqueCount: columnStats.uniqueCount || 0,
+        min: columnStats.min,
+        max: columnStats.max
+      });
       
       // Check if it looks like a distribution
       if (columnStats.histogram && 
@@ -82,11 +98,20 @@ function analyzeDatasetCharacteristics(data, columns, stats) {
         characteristics.distributionData = true;
       }
     } else if (columnStats.type === 'string') {
-      if (columnStats.isCategorical) {
-        characteristics.categoricalColumns.push(column);
+      // 🅰 - ANALYZE PATTERNS: Count unique values per column
+      const uniqueCount = columnStats.uniqueCount || 0;
+      const uniqueRatio = uniqueCount / characteristics.rowCount;
+      
+      // If unique values < 10 → Categorical
+      // If > 90% values are unique → Likely not categorical
+      if (uniqueCount < 10 || uniqueRatio < 0.1) {
+        characteristics.categoricalColumns.push({
+          name: column,
+          uniqueCount: uniqueCount
+        });
         
         // Check if there are many categories
-        if (columnStats.uniqueCount > 10) {
+        if (uniqueCount > 10) {
           characteristics.hasManyCategories = true;
         }
         
@@ -99,14 +124,20 @@ function analyzeDatasetCharacteristics(data, columns, stats) {
           characteristics.hierarchicalData = true;
         }
       } else if (columnStats.couldBeDate) {
-        characteristics.dateColumns.push(column);
+        characteristics.dateColumns.push({
+          name: column,
+          uniqueCount: uniqueCount
+        });
         
-        // Check if this looks like time series data
-        if (data.length > 5 && columnStats.uniqueCount > data.length * 0.8) {
+        // Check for time series patterns (e.g., monotonic Date)
+        if (data.length > 5 && uniqueCount > data.length * 0.8) {
           characteristics.timeSeriesData = true;
         }
       } else {
-        characteristics.textColumns.push(column);
+        characteristics.textColumns.push({
+          name: column,
+          uniqueCount: uniqueCount
+        });
       }
       
       // Check for possible geospatial data
@@ -117,14 +148,16 @@ function analyzeDatasetCharacteristics(data, columns, stats) {
         characteristics.geospatialData = true;
       }
     } else if (columnStats.type === 'boolean') {
-      characteristics.booleanColumns.push(column);
+      characteristics.booleanColumns.push({
+        name: column
+      });
     }
   });
   
-  // Check for correlations between numeric columns
-  const numericColumns = characteristics.numericColumns;
-  for (let i = 0; i < numericColumns.length; i++) {
-    const column = numericColumns[i];
+  // Check for correlations between numeric columns (part of analyzing patterns)
+  const numericColNames = characteristics.numericColumns.map(col => col.name);
+  for (let i = 0; i < numericColNames.length; i++) {
+    const column = numericColNames[i];
     if (stats[column].correlations) {
       for (const [otherColumn, correlation] of Object.entries(stats[column].correlations)) {
         if (Math.abs(correlation) > 0.7) {  // Strong correlation
@@ -136,9 +169,9 @@ function analyzeDatasetCharacteristics(data, columns, stats) {
   }
   
   // Check if this could be compositional data (parts of a whole)
-  if (numericColumns.length > 1 && categoricalColumns.length > 0) {
+  if (numericColNames.length > 1 && characteristics.categoricalColumns.length > 0) {
     const sums = data.map(row => 
-      numericColumns.reduce((sum, col) => sum + (Number(row[col]) || 0), 0)
+      numericColNames.reduce((sum, col) => sum + (Number(row[col]) || 0), 0)
     );
     
     // If the sums are close to 100 or 1, it might be compositional
@@ -152,11 +185,12 @@ function analyzeDatasetCharacteristics(data, columns, stats) {
 }
 
 /**
- * Identify the best chart type based on dataset characteristics
+ * Identify and rank the best chart types based on dataset characteristics
+ * 🆃 - TAG COMMON USE CASES: Based on combinations of data types
  * @param {Object} characteristics - Dataset characteristics
- * @returns {Object} - Recommended chart type and reason
+ * @returns {Array} - Ranked chart type recommendations with confidence scores
  */
-function identifyChartType(characteristics) {
+function identifyChartTypes(characteristics) {
   const {
     rowCount,
     columnCount,
@@ -173,97 +207,126 @@ function identifyChartType(characteristics) {
     distributionData
   } = characteristics;
   
-  // Time Series Data
+  // Array to hold chart recommendations with confidence scores
+  let recommendations = [];
+  
+  // [Time vs Number] → Line Chart
   if (timeSeriesData && numericColumns.length >= 1) {
-    return {
+    recommendations.push({
       chartType: 'line',
+      confidence: 95,
       reason: 'Line chart recommended for time series data to show trends over time.'
-    };
+    });
   }
   
-  // Correlation Analysis
+  // [Two Numbers] and [Correlation] → Scatter Plot
   if (hasCorrelation && correlatedColumns.length > 0) {
-    return {
+    recommendations.push({
       chartType: 'scatter',
+      confidence: 90,
       reason: 'Scatter plot recommended to visualize correlation between numeric variables.'
-    };
+    });
+  } else if (numericColumns.length >= 2) {
+    recommendations.push({
+      chartType: 'scatter',
+      confidence: 75,
+      reason: 'Scatter plot can show relationship between two numeric variables.'
+    });
   }
   
-  // Distribution Analysis
-  if (distributionData && numericColumns.length >= 1) {
-    return {
-      chartType: 'histogram',
-      reason: 'Histogram recommended to visualize distribution of numeric values.'
-    };
-  }
-  
-  // Compositional Data
-  if (compositionalData) {
-    if (categoricalColumns.length === 1 && categoricalColumns[0].uniqueCount <= 7) {
-      return {
-        chartType: 'pie',
-        reason: 'Pie chart recommended for compositional data with few categories.'
-      };
-    } else {
-      return {
-        chartType: 'bar',
-        reason: 'Stacked bar chart recommended for compositional data with multiple categories.'
-      };
-    }
-  }
-  
-  // Categorical Comparison
+  // [Category vs Number] → Bar Chart
   if (categoricalColumns.length >= 1 && numericColumns.length >= 1) {
-    if (hasManyCategories) {
-      return {
+    const confidence = hasManyCategories ? 85 : 90;
+    recommendations.push({
+      chartType: 'bar',
+      confidence: confidence,
+      reason: hasManyCategories 
+        ? 'Bar chart recommended for comparing many categories.' 
+        : 'Bar chart recommended for comparing values across categories.'
+    });
+  }
+  
+  // [One Categorical only] → Pie Chart
+  if (categoricalColumns.length >= 1 && categoricalColumns[0].uniqueCount <= 7 && compositionalData) {
+    recommendations.push({
+      chartType: 'pie',
+      confidence: 80,
+      reason: 'Pie chart recommended for showing proportions with few categories.'
+    });
+  } else if (categoricalColumns.length >= 1 && categoricalColumns[0].uniqueCount <= 10) {
+    recommendations.push({
+      chartType: 'pie',
+      confidence: 65,
+      reason: 'Pie chart can show distribution across limited categories.'
+    });
+  }
+  
+  // Add default recommendations if none found yet
+  if (recommendations.length === 0) {
+    if (numericColumns.length >= 1 && categoricalColumns.length >= 1) {
+      recommendations.push({
         chartType: 'bar',
-        reason: 'Horizontal bar chart recommended for comparing many categories.'
-      };
+        confidence: 70,
+        reason: 'Bar chart recommended as default for categorical and numerical data.'
+      });
+    } else if (numericColumns.length >= 2) {
+      recommendations.push({
+        chartType: 'scatter',
+        confidence: 65,
+        reason: 'Scatter plot recommended as default for multiple numeric columns.'
+      });
+    } else if (dateColumns.length >= 1 && numericColumns.length >= 1) {
+      recommendations.push({
+        chartType: 'line',
+        confidence: 70,
+        reason: 'Line chart recommended as default for date and numeric data.'
+      });
     } else {
-      return {
+      recommendations.push({
         chartType: 'bar',
-        reason: 'Bar chart recommended for comparing categories.'
-      };
+        confidence: 60,
+        reason: 'Bar chart recommended as a general visualization for your data.'
+      });
     }
   }
   
-  // Hierarchical Data
-  if (hierarchicalData) {
-    return {
-      chartType: 'heatmap',
-      reason: 'Heatmap recommended for hierarchical data structure.'
-    };
-  }
+  // Make sure we have recommendations for all supported chart types
+  const chartTypes = recommendations.map(rec => rec.chartType);
   
-  // Multiple Numeric Comparisons
-  if (numericColumns.length >= 2 && categoricalColumns.length >= 1) {
-    return {
-      chartType: 'radar',
-      reason: 'Radar chart recommended for comparing multiple numeric metrics across categories.'
-    };
-  }
-  
-  // Simple Time Series
-  if (dateColumns.length >= 1 && numericColumns.length >= 1) {
-    return {
-      chartType: 'line',
-      reason: 'Line chart recommended for time-based data.'
-    };
-  }
-  
-  // Fallback for other scenarios
-  if (numericColumns.length >= 1) {
-    return {
+  if (!chartTypes.includes('bar')) {
+    recommendations.push({
       chartType: 'bar',
-      reason: 'Bar chart recommended as a default visualization for your data structure.'
-    };
+      confidence: 50,
+      reason: 'Bar chart alternative for your data.'
+    });
   }
   
-  // If nothing else fits
-  return {
-    chartType: 'bar',
-    reason: 'Bar chart recommended as a general visualization for your data.'
-  };
+  if (!chartTypes.includes('line')) {
+    recommendations.push({
+      chartType: 'line',
+      confidence: 45,
+      reason: 'Line chart alternative for your data.'
+    });
+  }
+  
+  if (!chartTypes.includes('pie')) {
+    recommendations.push({
+      chartType: 'pie',
+      confidence: 40,
+      reason: 'Pie chart alternative for your data.'
+    });
+  }
+  
+  if (!chartTypes.includes('scatter')) {
+    recommendations.push({
+      chartType: 'scatter',
+      confidence: 35,
+      reason: 'Scatter plot alternative for your data.'
+    });
+  }
+  
+  // Sort by confidence score (highest first)
+  return recommendations.sort((a, b) => b.confidence - a.confidence);
 }
 
 /**
@@ -289,18 +352,23 @@ function configureChart(chartType, characteristics, columns, stats) {
     colors: generateColorPalette(5)
   };
   
+  // Extract column names from the objects
+  const numericColNames = numericColumns.map(col => col.name);
+  const categoricalColNames = categoricalColumns.map(col => col.name);
+  const dateColNames = dateColumns.map(col => col.name);
+  
   switch (chartType) {
     case 'bar':
-      if (categoricalColumns.length > 0) {
-        config.xAxis = { field: categoricalColumns[0], label: formatLabel(categoricalColumns[0]) };
-      } else if (dateColumns.length > 0) {
-        config.xAxis = { field: dateColumns[0], label: formatLabel(dateColumns[0]) };
+      if (categoricalColNames.length > 0) {
+        config.xAxis = { field: categoricalColNames[0], label: formatLabel(categoricalColNames[0]) };
+      } else if (dateColNames.length > 0) {
+        config.xAxis = { field: dateColNames[0], label: formatLabel(dateColNames[0]) };
       } else {
         config.xAxis = { field: columns[0], label: formatLabel(columns[0]) };
       }
       
-      if (numericColumns.length > 0) {
-        config.yAxis = { field: numericColumns[0], label: formatLabel(numericColumns[0]) };
+      if (numericColNames.length > 0) {
+        config.yAxis = { field: numericColNames[0], label: formatLabel(numericColNames[0]) };
       } else {
         config.yAxis = { field: columns[1] || columns[0], label: formatLabel(columns[1] || columns[0]) };
       }
@@ -311,29 +379,29 @@ function configureChart(chartType, characteristics, columns, stats) {
       }
       
       // Suggest grouping if we have multiple numeric columns
-      if (numericColumns.length > 1 && categoricalColumns.length > 0) {
-        config.groupBy = numericColumns[1];
+      if (numericColNames.length > 1 && categoricalColNames.length > 0) {
+        config.groupBy = numericColNames[1];
       }
       break;
       
     case 'line':
-      if (dateColumns.length > 0) {
-        config.xAxis = { field: dateColumns[0], label: formatLabel(dateColumns[0]) };
-      } else if (categoricalColumns.length > 0) {
-        config.xAxis = { field: categoricalColumns[0], label: formatLabel(categoricalColumns[0]) };
+      if (dateColNames.length > 0) {
+        config.xAxis = { field: dateColNames[0], label: formatLabel(dateColNames[0]) };
+      } else if (categoricalColNames.length > 0) {
+        config.xAxis = { field: categoricalColNames[0], label: formatLabel(categoricalColNames[0]) };
       } else {
         config.xAxis = { field: columns[0], label: formatLabel(columns[0]) };
       }
       
-      if (numericColumns.length > 0) {
-        config.yAxis = { field: numericColumns[0], label: formatLabel(numericColumns[0]) };
+      if (numericColNames.length > 0) {
+        config.yAxis = { field: numericColNames[0], label: formatLabel(numericColNames[0]) };
       } else {
         config.yAxis = { field: columns[1] || columns[0], label: formatLabel(columns[1] || columns[0]) };
       }
       
       // Multi-line chart if we have multiple numeric columns
-      if (numericColumns.length > 1) {
-        config.series = numericColumns.map(col => ({ 
+      if (numericColNames.length > 1) {
+        config.series = numericColNames.map(col => ({ 
           field: col, 
           label: formatLabel(col) 
         }));
@@ -346,10 +414,10 @@ function configureChart(chartType, characteristics, columns, stats) {
         const [col1, col2] = correlatedColumns[0];
         config.xAxis = { field: col1, label: formatLabel(col1) };
         config.yAxis = { field: col2, label: formatLabel(col2) };
-      } else if (numericColumns.length >= 2) {
+      } else if (numericColNames.length >= 2) {
         // Use the first two numeric columns
-        config.xAxis = { field: numericColumns[0], label: formatLabel(numericColumns[0]) };
-        config.yAxis = { field: numericColumns[1], label: formatLabel(numericColumns[1]) };
+        config.xAxis = { field: numericColNames[0], label: formatLabel(numericColNames[0]) };
+        config.yAxis = { field: numericColNames[1], label: formatLabel(numericColNames[1]) };
       } else {
         // Fallback
         config.xAxis = { field: columns[0], label: formatLabel(columns[0]) };
@@ -357,75 +425,27 @@ function configureChart(chartType, characteristics, columns, stats) {
       }
       
       // If we have a third numeric column, use it for bubble size
-      if (numericColumns.length >= 3) {
-        config.bubbleSize = { field: numericColumns[2], label: formatLabel(numericColumns[2]) };
+      if (numericColNames.length >= 3) {
+        config.bubbleSize = { field: numericColNames[2], label: formatLabel(numericColNames[2]) };
       }
       
       // If we have categories, use them for color coding
-      if (categoricalColumns.length > 0) {
-        config.colorBy = { field: categoricalColumns[0], label: formatLabel(categoricalColumns[0]) };
+      if (categoricalColNames.length > 0) {
+        config.colorBy = { field: categoricalColNames[0], label: formatLabel(categoricalColNames[0]) };
       }
       break;
       
     case 'pie':
-      if (categoricalColumns.length > 0) {
-        config.segments = { field: categoricalColumns[0], label: formatLabel(categoricalColumns[0]) };
+      if (categoricalColNames.length > 0) {
+        config.segments = { field: categoricalColNames[0], label: formatLabel(categoricalColNames[0]) };
       } else {
         config.segments = { field: columns[0], label: formatLabel(columns[0]) };
       }
       
-      if (numericColumns.length > 0) {
-        config.values = { field: numericColumns[0], label: formatLabel(numericColumns[0]) };
+      if (numericColNames.length > 0) {
+        config.values = { field: numericColNames[0], label: formatLabel(numericColNames[0]) };
       } else {
         config.values = { field: columns[1] || columns[0], label: formatLabel(columns[1] || columns[0]) };
-      }
-      break;
-      
-    case 'histogram':
-      if (numericColumns.length > 0) {
-        config.xAxis = { field: numericColumns[0], label: formatLabel(numericColumns[0]) };
-        config.bins = 10; // Default number of bins
-      } else {
-        config.xAxis = { field: columns[0], label: formatLabel(columns[0]) };
-        config.bins = 5;
-      }
-      
-      config.yAxis = { label: 'Frequency' };
-      break;
-      
-    case 'heatmap':
-      if (categoricalColumns.length >= 2) {
-        config.xAxis = { field: categoricalColumns[0], label: formatLabel(categoricalColumns[0]) };
-        config.yAxis = { field: categoricalColumns[1], label: formatLabel(categoricalColumns[1]) };
-      } else if (categoricalColumns.length >= 1 && dateColumns.length >= 1) {
-        config.xAxis = { field: dateColumns[0], label: formatLabel(dateColumns[0]) };
-        config.yAxis = { field: categoricalColumns[0], label: formatLabel(categoricalColumns[0]) };
-      } else {
-        config.xAxis = { field: columns[0], label: formatLabel(columns[0]) };
-        config.yAxis = { field: columns[1] || columns[0], label: formatLabel(columns[1] || columns[0]) };
-      }
-      
-      if (numericColumns.length > 0) {
-        config.values = { field: numericColumns[0], label: formatLabel(numericColumns[0]) };
-      } else {
-        config.values = { field: 'count', label: 'Count' };
-      }
-      break;
-      
-    case 'radar':
-      if (categoricalColumns.length > 0) {
-        config.categories = { field: categoricalColumns[0], label: formatLabel(categoricalColumns[0]) };
-      } else {
-        config.categories = { field: columns[0], label: formatLabel(columns[0]) };
-      }
-      
-      if (numericColumns.length > 0) {
-        config.metrics = numericColumns.map(col => ({ 
-          field: col, 
-          label: formatLabel(col) 
-        }));
-      } else {
-        config.metrics = [{ field: columns[1] || columns[0], label: formatLabel(columns[1] || columns[0]) }];
       }
       break;
       
@@ -443,12 +463,12 @@ function configureChart(chartType, characteristics, columns, stats) {
  * @param {string} columnName - The column name
  * @returns {string} - Formatted label
  */
-function formatLabel(columnName) {
-  // Replace underscores and camelCase with spaces
-  return columnName
+function formatLabel(text) {
+  if (!text) return '';
+  return text
     .replace(/_/g, ' ')
     .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, str => str.toUpperCase());
+    .replace(/^./, match => match.toUpperCase());
 }
 
 /**
@@ -457,25 +477,23 @@ function formatLabel(columnName) {
  * @returns {Array} - Array of color hex codes
  */
 function generateColorPalette(count) {
-  // Some predefined color palettes
-  const palettes = {
-    qualitative: [
-      '#4e79a7', '#f28e2c', '#e15759', '#76b7b2', '#59a14f',
-      '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab'
-    ],
-    sequential: [
-      '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5',
-      '#08519c', '#08306b'
-    ],
-    diverging: [
-      '#d73027', '#f46d43', '#fdae61', '#fee090', '#ffffbf',
-      '#e0f3f8', '#abd9e9', '#74add1', '#4575b4'
-    ]
-  };
+  // Modern color palette
+  const baseColors = [
+    '#3b82f6', // blue
+    '#ef4444', // red
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#8b5cf6', // purple
+    '#ec4899', // pink
+    '#14b8a6', // teal
+    '#f97316', // orange
+    '#6366f1'  // indigo
+  ];
   
-  // Choose a palette based on the chart type and data
-  const palette = palettes.qualitative;
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    result.push(baseColors[i % baseColors.length]);
+  }
   
-  // Return the requested number of colors
-  return palette.slice(0, count);
+  return result;
 } 
