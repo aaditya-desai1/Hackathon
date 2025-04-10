@@ -15,13 +15,15 @@ const getUploadDir = () => {
 // Upload file
 exports.uploadFile = async (req, res) => {
   try {
-    console.log('Upload request received');
+    console.log('[FileController] Upload request received');
+    console.log('[FileController] Environment:', process.env.NODE_ENV);
+    console.log('[FileController] MongoDB connection state:', mongoose.connection.readyState);
     
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    console.log('File received:', { 
+    console.log('[FileController] File received:', { 
       name: req.file.originalname, 
       type: req.file.mimetype, 
       size: req.file.size,
@@ -31,8 +33,20 @@ exports.uploadFile = async (req, res) => {
     // Validate file type
     const allowedTypes = ['text/csv', 'application/json'];
     if (!allowedTypes.includes(req.file.mimetype)) {
-      await fs.unlink(req.file.path);
+      await fs.unlink(req.file.path).catch(err => {
+        console.error('[FileController] Error deleting invalid file:', err);
+      });
       return res.status(400).json({ error: 'Invalid file type' });
+    }
+
+    // Check if uploads directory exists and is writable
+    const uploadsDir = getUploadDir();
+    try {
+      await fs.access(uploadsDir, fs.constants.W_OK);
+      console.log(`[FileController] Upload directory ${uploadsDir} is writable`);
+    } catch (err) {
+      console.error(`[FileController] Upload directory error:`, err);
+      return res.status(500).json({ error: 'Server storage configuration error' });
     }
 
     // Create file record
@@ -48,23 +62,27 @@ exports.uploadFile = async (req, res) => {
     // Parse file to get initial data
     try {
       let parseResult;
+      console.log('[FileController] Parsing file...');
+      
       if (req.file.mimetype === 'text/csv') {
         parseResult = await parseCSV(req.file.path);
       } else {
         parseResult = await parseJSON(req.file.path);
       }
 
+      console.log('[FileController] File parsed successfully');
       fileData.dataColumns = parseResult.columns;
       fileData.dataPreview = parseResult.preview;
     } catch (parseError) {
-      console.error('File parsing error:', parseError);
+      console.error('[FileController] File parsing error:', parseError);
       // Continue even if parsing fails - we'll handle it during analysis
     }
 
+    console.log('[FileController] Creating file record in database');
     const file = new File(fileData);
     await file.save();
     
-    console.log('File saved to database with ID:', file._id);
+    console.log('[FileController] File saved to database with ID:', file._id);
 
     res.status(201).json({
       success: true,
@@ -79,10 +97,12 @@ exports.uploadFile = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('[FileController] Upload error:', error);
     // Clean up uploaded file if database save fails
     if (req.file) {
-      await fs.unlink(req.file.path).catch(console.error);
+      await fs.unlink(req.file.path).catch(err => {
+        console.error('[FileController] Error deleting file after upload failure:', err);
+      });
     }
     res.status(500).json({ error: error.message || 'Error uploading file' });
   }
