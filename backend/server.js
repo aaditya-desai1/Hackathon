@@ -9,8 +9,8 @@ const multer = require('multer');
 // Import routes
 const fileRoutes = require('./routes/fileRoutes');
 const userRoutes = require('./routes/userRoutes');
+const vizRoutes = require('./routes/visualizationRoutes');
 const dataRoutes = require('./routes/dataRoutes');
-const visualizationRoutes = require('./routes/visualizationRoutes');
 
 const app = express();
 
@@ -43,8 +43,8 @@ app.use('/uploads', express.static(uploadsDir));
 // Routes
 app.use('/api/files', fileRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/visualizations', vizRoutes);
 app.use('/api/data', dataRoutes);
-app.use('/api/visualizations', visualizationRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {

@@ -257,6 +257,8 @@ exports.getChartData = async (req, res) => {
   try {
     const { fileId, xAxis, yAxis } = req.query;
     
+    console.log('Chart data request params:', { fileId, xAxis, yAxis });
+    
     if (!fileId || !xAxis || !yAxis) {
       return res.status(400).json({ 
         success: false, 
@@ -267,8 +269,17 @@ exports.getChartData = async (req, res) => {
     // Find the file record
     const file = await File.findById(fileId);
     if (!file) {
+      console.log('File not found with ID:', fileId);
       return res.status(404).json({ success: false, message: 'File not found' });
     }
+    
+    console.log('Found file:', {
+      id: file._id,
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      columns: file.dataColumns
+    });
 
     // Check authorization if needed
     if (req.user && file.user && req.user.id !== file.user.toString()) {
@@ -278,19 +289,32 @@ exports.getChartData = async (req, res) => {
     // Parse the data
     let data = [];
     
-    if (file.mimetype && file.mimetype.includes('csv')) {
+    // Get file type (handle both type and mimetype fields)
+    const fileType = file.type || file.mimetype;
+    console.log('Detected file type:', fileType);
+    
+    if (fileType && (fileType.includes('csv') || fileType === 'text/csv')) {
+      console.log('Parsing CSV file at path:', file.path);
       const result = await parseCSV(file.path);
       data = result.data;
-    } else if (file.mimetype && file.mimetype.includes('json')) {
+      console.log('Parsed CSV data, row count:', data.length);
+    } else if (fileType && (fileType.includes('json') || fileType === 'application/json')) {
+      console.log('Parsing JSON file at path:', file.path);
       const result = await parseJSON(file.path);
       data = result.data;
+      console.log('Parsed JSON data, row count:', data.length);
     } else {
+      console.log('Unsupported file type:', fileType);
       return res.status(400).json({ success: false, message: 'Unsupported file type' });
     }
+    
+    console.log('Data sample:', data.slice(0, 2));
+    console.log('Looking for x-axis:', xAxis, 'and y-axis:', yAxis);
 
     // Process data for chart
     // Extract unique labels for X-axis
     const uniqueLabels = [...new Set(data.map(item => item[xAxis]))].filter(Boolean);
+    console.log('Extracted unique labels:', uniqueLabels);
     
     // If too many labels, limit the number
     const maxLabels = 20;
@@ -303,9 +327,13 @@ exports.getChartData = async (req, res) => {
     // For each unique x-value, calculate corresponding y-value (sum, average, count)
     labels.forEach(label => {
       const matchingRows = data.filter(item => item[xAxis] === label);
+      console.log(`Matching rows for "${label}":`, matchingRows.length);
+      
       const numericValues = matchingRows
         .map(item => parseFloat(item[yAxis]))
         .filter(val => !isNaN(val));
+      
+      console.log(`Numeric values for "${label}":`, numericValues.length);
       
       // Calculate sum of y values for this label
       const sum = numericValues.reduce((acc, val) => acc + val, 0);
@@ -314,8 +342,11 @@ exports.getChartData = async (req, res) => {
       values.push(numericValues.length > 0 ? sum : matchingRows.length);
     });
     
+    console.log('Final label-value pairs:', labels.map((label, i) => ({ label, value: values[i] })));
+    
     // For empty or invalid data, provide default
     if (labels.length === 0 || values.length === 0) {
+      console.log('No valid data found, returning default values');
       return res.status(200).json({
         success: true,
         chartData: {
@@ -325,13 +356,16 @@ exports.getChartData = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    const response = {
       success: true,
       chartData: {
         labels: labels,
         values: values
       }
-    });
+    };
+    
+    console.log('Sending chart data response');
+    res.status(200).json(response);
   } catch (error) {
     console.error('Chart data error:', error);
     res.status(500).json({ success: false, message: error.message });
