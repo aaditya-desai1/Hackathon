@@ -299,6 +299,16 @@ function checkIfCouldBeDate(values) {
   const sampleSize = Math.min(values.length, 100); // Check at most 100 values
   let dateCount = 0;
   
+  // For detecting month names
+  const monthNames = [
+    'january', 'february', 'march', 'april', 'may', 'june', 
+    'july', 'august', 'september', 'october', 'november', 'december',
+    'jan', 'feb', 'mar', 'apr', 'may', 'jun', 
+    'jul', 'aug', 'sep', 'oct', 'nov', 'dec'
+  ];
+  
+  let monthNameCount = 0;
+  
   for (let i = 0; i < sampleSize; i++) {
     const value = String(values[i]);
     const date = new Date(value);
@@ -307,8 +317,13 @@ function checkIfCouldBeDate(values) {
     if (!isNaN(date.getTime()) && value.length > 4) {
       dateCount++;
     }
+    
+    // Check if the value is a month name
+    if (monthNames.includes(value.toLowerCase())) {
+      monthNameCount++;
+    }
   }
   
-  // Return true if at least 80% of sampled values could be dates
-  return (dateCount / sampleSize) >= 0.8;
+  // Return true if at least 80% of sampled values could be dates or month names
+  return (dateCount / sampleSize) >= 0.8 || (monthNameCount / sampleSize) >= 0.8;
 } 

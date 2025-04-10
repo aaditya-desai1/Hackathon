@@ -415,11 +415,31 @@ function Visualizations() {
     
     // Check for date/time columns
     const dateColumns = [];
+    const monthColumns = [];
+    const monthNamePatterns = [
+      /^month$/i,
+      /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i
+    ];
+    
     if (analysisData && analysisData.basicAnalysis) {
       Object.keys(analysisData.basicAnalysis).forEach(colName => {
         const colData = analysisData.basicAnalysis[colName];
+        
+        // Check if column is a date column
         if (colData.couldBeDate) {
           dateColumns.push(colName);
+        }
+        
+        // Check if column contains month names or is named 'month'
+        if (colData.type === 'string' && 
+            (colName.toLowerCase() === 'month' || 
+             (colData.sampleValues && colData.sampleValues.some(val => 
+               monthNamePatterns.some(pattern => pattern.test(String(val))))))) {
+          monthColumns.push(colName);
+          // Also add to date columns if not already there
+          if (!dateColumns.includes(colName)) {
+            dateColumns.push(colName);
+          }
         }
       });
     }
@@ -505,8 +525,13 @@ function Visualizations() {
       // Update confidence based on data characteristics
       if (categoricalColumnNames.length > 10) {
         barChartConfidence = 85;
-        } else {
+      } else {
         barChartConfidence = 90;
+      }
+      
+      // If we have month columns, lower the bar chart confidence
+      if (monthColumns.length > 0) {
+        barChartConfidence = 70; // Lower confidence for bar charts with month data
       }
       
       // Find a good categorical column for the x-axis
@@ -606,16 +631,21 @@ function Visualizations() {
     }
     
     // [Time/Sequential vs Number] → Line Chart
-    if (dateColumns.length > 0 && numericColumnNames.length > 0) {
-      // If we have date columns, use those for line charts
-      lineChartConfidence = 85;
-        previewData.push({
+    if ((dateColumns.length > 0 || monthColumns.length > 0) && numericColumnNames.length > 0) {
+      // If we have date or month columns, use those for line charts
+      // Prioritize month columns
+      const dateColumn = monthColumns.length > 0 ? monthColumns[0] : dateColumns[0];
+      
+      // For month data, we want line charts to have higher priority
+      lineChartConfidence = monthColumns.length > 0 ? 98 : 95;
+      
+      previewData.push({
         chartType: 'line',
         name: `${file.name} - Line Chart`,
-        description: `AI Recommended: ${numericColumnNames[0]} over time (${dateColumns[0]})`,
+        description: `AI Recommended: ${numericColumnNames[0]} over time (${dateColumn})`,
           fileId: file._id,
         confidence: lineChartConfidence,
-        xAxis: dateColumns[0],
+        xAxis: dateColumn,
         yAxis: numericColumnNames[0],
         file: file,
         isAIRecommended: true

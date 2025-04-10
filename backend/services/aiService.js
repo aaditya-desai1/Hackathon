@@ -145,6 +145,35 @@ function detectDataTypes(data, columns, stats) {
 }
 
 /**
+ * Check if values could be month names
+ * @param {Array} values - Array of values to check
+ * @returns {boolean} - True if column contains month names
+ */
+function isMonthNameColumn(values) {
+  if (!values || values.length === 0) return false;
+  
+  const monthNames = [
+    'january', 'february', 'march', 'april', 'may', 'june', 
+    'july', 'august', 'september', 'october', 'november', 'december',
+    'jan', 'feb', 'mar', 'apr', 'may', 'jun', 
+    'jul', 'aug', 'sep', 'oct', 'nov', 'dec'
+  ];
+  
+  const sampleSize = Math.min(values.length, 12); // Check at most 12 values
+  let monthCount = 0;
+  
+  for (let i = 0; i < sampleSize; i++) {
+    const value = String(values[i]).toLowerCase();
+    if (monthNames.includes(value)) {
+      monthCount++;
+    }
+  }
+  
+  // Return true if most values are month names
+  return (monthCount / sampleSize) >= 0.5;
+}
+
+/**
  * 🅰 - Analyze patterns and relationships between columns
  * @param {Array} data - Dataset
  * @param {Object} columnTypes - Column type data
@@ -173,8 +202,32 @@ function analyzePatterns(data, columnTypes, stats) {
     }
   });
   
+  // First check for month columns - they should be treated as datetime
+  Object.entries(columnTypes).forEach(([column, info]) => {
+    if (info.type === 'categorical') {
+      const values = data.map(row => row[column]);
+      if (isMonthNameColumn(values)) {
+        // Add this to datetime columns even though it's categorized as categorical
+        columnsByType.datetime.push(column);
+        
+        // Mark it as a time series column with special handling
+        patterns.timeSeriesColumns.push({
+          column,
+          isMonotonic: true,
+          hasRegularIntervals: true,
+          isMonthColumn: true
+        });
+      }
+    }
+  });
+  
   // Detect time series patterns in datetime columns
   columnsByType.datetime.forEach(column => {
+    // Skip if we already detected this as a month column
+    if (patterns.timeSeriesColumns.some(ts => ts.column === column && ts.isMonthColumn)) {
+      return;
+    }
+    
     // Extract datetime values
     const dateValues = data
       .map(row => row[column])
@@ -344,7 +397,7 @@ function tagRecommendations(patterns, columnTypes) {
       recommendations.push({
         chart: "line",
         columns: [col1, col2],
-        confidence: isTimeSeries ? 0.95 : 0.85,
+        confidence: isTimeSeries ? 0.98 : 0.85,
         reason: `Show trend of ${formatColumnName(col2)} over time (${formatColumnName(col1)})`
       });
     }
