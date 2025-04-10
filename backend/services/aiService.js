@@ -11,23 +11,41 @@
  */
 exports.recommendChartType = async (data, columns, stats) => {
   try {
-    // Analyze the dataset characteristics using the DAT algorithm
-    const datasetCharacteristics = analyzeDatasetCharacteristics(data, columns, stats);
+    // 🅳 - Detect data types for each column
+    const columnTypes = detectDataTypes(data, columns, stats);
     
-    // Identify the most suitable chart types and rank them
-    const chartRecommendations = identifyChartTypes(datasetCharacteristics);
+    // 🅰 - Analyze patterns and relationships between columns
+    const patterns = analyzePatterns(data, columnTypes, stats);
+    
+    // 🆃 - Tag and recommend visualizations
+    const recommendations = tagRecommendations(patterns, columnTypes);
     
     // Get the best chart type (first in the ranked list)
-    const bestChartType = chartRecommendations[0];
+    const bestRecommendation = recommendations[0] || {
+      chart: 'bar',
+      columns: columns.slice(0, 2),
+      confidence: 0.7,
+      reason: 'Default recommendation based on available data'
+    };
     
     // Configure the chart parameters
-    const config = configureChart(bestChartType.chartType, datasetCharacteristics, columns, stats);
+    const config = configureChart(
+      bestRecommendation.chart, 
+      bestRecommendation.columns, 
+      columnTypes, 
+      data
+    );
     
     return {
-      chartType: bestChartType.chartType,
+      chartType: bestRecommendation.chart,
       config,
-      explanation: bestChartType.reason,
-      recommendations: chartRecommendations
+      explanation: bestRecommendation.reason,
+      recommendations: recommendations.map(rec => ({
+        chartType: rec.chart,
+        confidence: Math.round(rec.confidence * 100),
+        reason: rec.reason,
+        columns: rec.columns
+      }))
     };
   } catch (error) {
     console.error('AI chart recommendation error:', error);
@@ -52,299 +70,488 @@ exports.recommendChartType = async (data, columns, stats) => {
 };
 
 /**
- * Analyze dataset characteristics using the DAT algorithm
- * @param {Array} data - The dataset
- * @param {Array} columns - The columns in the dataset
- * @param {Object} stats - Statistics for each column
- * @returns {Object} - Dataset characteristics
+ * 🅳 - Detect data types for each column
+ * @param {Array} data - Dataset
+ * @param {Array} columns - Column names
+ * @param {Object} stats - Column statistics
+ * @returns {Object} - Column type mappings with confidence
  */
-function analyzeDatasetCharacteristics(data, columns, stats) {
-  const characteristics = {
-    rowCount: data.length,
-    columnCount: columns.length,
-    numericColumns: [],
-    categoricalColumns: [],
-    dateColumns: [],
-    textColumns: [],
-    booleanColumns: [],
-    timeSeriesData: false,
-    hasManyCategories: false,
-    hasCorrelation: false,
+function detectDataTypes(data, columns, stats) {
+  const columnTypes = {};
+  const sampleSize = Math.min(100, data.length);
+  
+  columns.forEach(column => {
+    // Get sample values
+    const sampleValues = data
+      .slice(0, sampleSize)
+      .map(row => row[column])
+      .filter(val => val !== null && val !== undefined);
+    
+    if (sampleValues.length === 0) {
+      columnTypes[column] = { 
+        type: 'unknown',
+        confidence: 0
+      };
+      return;
+    }
+    
+    // Numeric detection
+    const numericCount = sampleValues.filter(val => !isNaN(parseFloat(val)) && isFinite(val)).length;
+    const numericPercentage = numericCount / sampleValues.length;
+    
+    // Date detection
+    const dateCount = sampleValues.filter(val => isValidDate(val)).length;
+    const datePercentage = dateCount / sampleValues.length;
+    
+    // Unique values analysis
+    const uniqueValues = new Set(sampleValues);
+    const uniqueCount = uniqueValues.size;
+    const uniqueRatio = uniqueCount / data.length;
+    
+    // Determine column type based on the detection criteria
+    let detectedType;
+    let confidence;
+    
+    if (numericPercentage > 0.9) {
+      // If >90% values are numeric → type is "numerical"
+      detectedType = "numerical";
+      confidence = numericPercentage;
+    } else if (datePercentage > 0.8) {
+      // If values are parsable as valid dates → type is "datetime"
+      detectedType = "datetime";
+      confidence = datePercentage;
+    } else if (uniqueRatio > 0.9) {
+      // If column has unique values ≈ total rows → consider it as "identifier"
+      detectedType = "identifier";
+      confidence = uniqueRatio;
+    } else {
+      // If <15 unique values or mostly text → type is "categorical"
+      detectedType = "categorical";
+      confidence = uniqueCount <= 15 ? 
+        0.9 : 
+        Math.max(0.6, 1 - (uniqueCount / 50)); // Lower confidence as unique count increases
+    }
+    
+    columnTypes[column] = {
+      type: detectedType,
+      confidence: confidence,
+      uniqueCount: uniqueCount,
+      uniqueRatio: uniqueRatio,
+      values: Array.from(uniqueValues).slice(0, 20) // Store sample of unique values
+    };
+  });
+  
+  return columnTypes;
+}
+
+/**
+ * 🅰 - Analyze patterns and relationships between columns
+ * @param {Array} data - Dataset
+ * @param {Object} columnTypes - Column type data
+ * @param {Object} stats - Column statistics
+ * @returns {Object} - Detected patterns and relationships
+ */
+function analyzePatterns(data, columnTypes, stats) {
+  const patterns = {
+    timeSeriesColumns: [],
     correlatedColumns: [],
-    hierarchicalData: false,
-    geospatialData: false,
-    compositionalData: false,
-    distributionData: false
+    columnPairs: [],
+    columnTrios: []
   };
   
-  // 🅳 - DETECT DATA TYPES: Parse columns and infer data types
-  columns.forEach(column => {
-    const columnStats = stats[column];
-    if (!columnStats) return;
+  // Group columns by type
+  const columnsByType = {
+    numerical: [],
+    categorical: [],
+    datetime: [],
+    identifier: []
+  };
+  
+  Object.entries(columnTypes).forEach(([column, info]) => {
+    if (info.type in columnsByType) {
+      columnsByType[info.type].push(column);
+    }
+  });
+  
+  // Detect time series patterns in datetime columns
+  columnsByType.datetime.forEach(column => {
+    // Extract datetime values
+    const dateValues = data
+      .map(row => row[column])
+      .filter(val => val !== null && val !== undefined)
+      .map(val => new Date(val))
+      .filter(date => !isNaN(date.getTime()));
     
-    // Classify column based on its type
-    if (columnStats.type === 'number') {
-      characteristics.numericColumns.push({
-        name: column,
-        uniqueCount: columnStats.uniqueCount || 0,
-        min: columnStats.min,
-        max: columnStats.max
+    if (dateValues.length >= 5) {
+      // Sort dates
+      dateValues.sort((a, b) => a - b);
+      
+      // Check for monotonic increase
+      let isMonotonic = true;
+      for (let i = 1; i < dateValues.length; i++) {
+        if (dateValues[i] <= dateValues[i-1]) {
+          isMonotonic = false;
+          break;
+        }
+      }
+      
+      // Check for regular intervals
+      let hasRegularIntervals = false;
+      if (dateValues.length >= 3) {
+        const intervals = [];
+        for (let i = 1; i < dateValues.length; i++) {
+          intervals.push(dateValues[i] - dateValues[i-1]);
+        }
+        
+        const avgInterval = intervals.reduce((sum, val) => sum + val, 0) / intervals.length;
+        const variance = intervals.reduce((sum, val) => sum + Math.pow(val - avgInterval, 2), 0) / intervals.length;
+        const stdDev = Math.sqrt(variance);
+        
+        // If standard deviation is less than 25% of the average, consider it regular
+        if (stdDev / avgInterval < 0.25) {
+          hasRegularIntervals = true;
+        }
+      }
+      
+      if (isMonotonic || hasRegularIntervals) {
+        patterns.timeSeriesColumns.push({
+          column,
+          isMonotonic,
+          hasRegularIntervals
+        });
+      }
+    }
+  });
+  
+  // Find correlations between numeric columns
+  if (columnsByType.numerical.length >= 2) {
+    for (let i = 0; i < columnsByType.numerical.length; i++) {
+      for (let j = i + 1; j < columnsByType.numerical.length; j++) {
+        const col1 = columnsByType.numerical[i];
+        const col2 = columnsByType.numerical[j];
+        
+        // Check if correlation data exists in stats
+        let correlation = 0;
+        if (stats[col1]?.correlations && stats[col1].correlations[col2]) {
+          correlation = stats[col1].correlations[col2];
+        } else {
+          // Calculate basic correlation if not provided in stats
+          correlation = calculateCorrelation(data, col1, col2);
+        }
+        
+        patterns.correlatedColumns.push({
+          columns: [col1, col2],
+          correlation: correlation,
+          strength: Math.abs(correlation)
+        });
+      }
+    }
+    
+    // Sort by correlation strength
+    patterns.correlatedColumns.sort((a, b) => b.strength - a.strength);
+  }
+  
+  // Build valid column pairs for charts
+  // Categorical + Numerical
+  columnsByType.categorical.forEach(catCol => {
+    columnsByType.numerical.forEach(numCol => {
+      patterns.columnPairs.push({
+        columns: [catCol, numCol],
+        types: ["categorical", "numerical"]
       });
-      
-      // Check if it looks like a distribution
-      if (columnStats.histogram && 
-          columnStats.histogram.length > 5 && 
-          Math.abs(columnStats.skewness) < 0.5) {
-        characteristics.distributionData = true;
-      }
-    } else if (columnStats.type === 'string') {
-      // 🅰 - ANALYZE PATTERNS: Count unique values per column
-      const uniqueCount = columnStats.uniqueCount || 0;
-      const uniqueRatio = uniqueCount / characteristics.rowCount;
-      
-      // If unique values < 10 → Categorical
-      // If > 90% values are unique → Likely not categorical
-      if (uniqueCount < 10 || uniqueRatio < 0.1) {
-        characteristics.categoricalColumns.push({
-          name: column,
-          uniqueCount: uniqueCount
-        });
-        
-        // Check if there are many categories
-        if (uniqueCount > 10) {
-          characteristics.hasManyCategories = true;
+    });
+  });
+  
+  // Datetime + Numerical
+  columnsByType.datetime.forEach(dateCol => {
+    columnsByType.numerical.forEach(numCol => {
+      patterns.columnPairs.push({
+        columns: [dateCol, numCol],
+        types: ["datetime", "numerical"],
+        isTimeSeries: patterns.timeSeriesColumns.some(ts => ts.column === dateCol)
+      });
+    });
+  });
+  
+  // Numerical + Numerical (using correlations)
+  patterns.correlatedColumns.forEach(pair => {
+    patterns.columnPairs.push({
+      columns: pair.columns,
+      types: ["numerical", "numerical"],
+      correlation: pair.correlation
+    });
+  });
+  
+  // Build valid column trios (Datetime + Categorical + Numerical)
+  if (columnsByType.datetime.length > 0 && 
+      columnsByType.categorical.length > 0 && 
+      columnsByType.numerical.length > 0) {
+    
+    columnsByType.datetime.forEach(dateCol => {
+      columnsByType.categorical.forEach(catCol => {
+        // Only consider categories with reasonable number of values for grouping
+        if (columnTypes[catCol].uniqueCount <= 10) {
+          columnsByType.numerical.forEach(numCol => {
+            patterns.columnTrios.push({
+              columns: [dateCol, catCol, numCol],
+              types: ["datetime", "categorical", "numerical"]
+            });
+          });
         }
-        
-        // Check if it could be hierarchical (contains delimiters)
-        if (columnStats.mostCommon && 
-            columnStats.mostCommon.some(item => 
-              String(item.value).includes('/') || 
-              String(item.value).includes('>') || 
-              String(item.value).includes('->'))) {
-          characteristics.hierarchicalData = true;
-        }
-      } else if (columnStats.couldBeDate) {
-        characteristics.dateColumns.push({
-          name: column,
-          uniqueCount: uniqueCount
-        });
-        
-        // Check for time series patterns (e.g., monotonic Date)
-        if (data.length > 5 && uniqueCount > data.length * 0.8) {
-          characteristics.timeSeriesData = true;
-        }
-      } else {
-        characteristics.textColumns.push({
-          name: column,
-          uniqueCount: uniqueCount
+      });
+    });
+  }
+  
+  return patterns;
+}
+
+/**
+ * 🆃 - Tag and recommend visualizations based on patterns
+ * @param {Object} patterns - Detected patterns
+ * @param {Object} columnTypes - Column type data
+ * @returns {Array} - Ranked chart recommendations
+ */
+function tagRecommendations(patterns, columnTypes) {
+  const recommendations = [];
+  
+  // Process column pairs
+  patterns.columnPairs.forEach(pair => {
+    // Skip pairs with identifier columns
+    if (pair.columns.some(col => columnTypes[col].type === "identifier")) {
+      return;
+    }
+    
+    const [col1, col2] = pair.columns;
+    const [type1, type2] = pair.types;
+    
+    // Categorical + Numerical -> Bar Chart
+    if (type1 === "categorical" && type2 === "numerical") {
+      const uniqueCount = columnTypes[col1].uniqueCount;
+      // Only consider reasonable number of categories
+      if (uniqueCount <= 30) {
+        recommendations.push({
+          chart: "bar",
+          columns: [col1, col2],
+          confidence: calculateConfidence("bar", uniqueCount),
+          reason: `Compare ${formatColumnName(col2)} values across different ${formatColumnName(col1)} categories`
         });
       }
-      
-      // Check for possible geospatial data
-      if (column.toLowerCase().includes('country') || 
-          column.toLowerCase().includes('state') || 
-          column.toLowerCase().includes('city') || 
-          column.toLowerCase().includes('region')) {
-        characteristics.geospatialData = true;
-      }
-    } else if (columnStats.type === 'boolean') {
-      characteristics.booleanColumns.push({
-        name: column
+    }
+    
+    // Datetime + Numerical -> Line Chart
+    if (type1 === "datetime" && type2 === "numerical") {
+      const isTimeSeries = pair.isTimeSeries;
+      recommendations.push({
+        chart: "line",
+        columns: [col1, col2],
+        confidence: isTimeSeries ? 0.95 : 0.85,
+        reason: `Show trend of ${formatColumnName(col2)} over time (${formatColumnName(col1)})`
+      });
+    }
+    
+    // Numerical + Numerical -> Scatter Plot
+    if (type1 === "numerical" && type2 === "numerical") {
+      recommendations.push({
+        chart: "scatter",
+        columns: [col1, col2],
+        confidence: 0.5 + (Math.abs(pair.correlation || 0) * 0.4), // Scale correlation to confidence
+        reason: `Show relationship between ${formatColumnName(col1)} and ${formatColumnName(col2)}` +
+               (pair.correlation && Math.abs(pair.correlation) > 0.5 ? 
+                ` (correlation: ${pair.correlation.toFixed(2)})` : '')
       });
     }
   });
   
-  // Check for correlations between numeric columns (part of analyzing patterns)
-  const numericColNames = characteristics.numericColumns.map(col => col.name);
-  for (let i = 0; i < numericColNames.length; i++) {
-    const column = numericColNames[i];
-    if (stats[column].correlations) {
-      for (const [otherColumn, correlation] of Object.entries(stats[column].correlations)) {
-        if (Math.abs(correlation) > 0.7) {  // Strong correlation
-          characteristics.hasCorrelation = true;
-          characteristics.correlatedColumns.push([column, otherColumn, correlation]);
-        }
+  // Process single categorical columns for pie charts
+  Object.entries(columnTypes).forEach(([column, info]) => {
+    if (info.type === "categorical" && info.type !== "identifier") {
+      const uniqueCount = info.uniqueCount;
+      // Only recommend pie charts if there are not too many categories (<10)
+      if (uniqueCount <= 10) {
+        recommendations.push({
+          chart: "pie",
+          columns: [column],
+          confidence: calculateConfidence("pie", uniqueCount),
+          reason: `Show distribution of ${formatColumnName(column)} values as parts of a whole`
+        });
+      }
+    }
+  });
+  
+  // Process column trios for multi-series charts
+  patterns.columnTrios.forEach(trio => {
+    // Skip trios with identifier columns
+    if (trio.columns.some(col => columnTypes[col].type === "identifier")) {
+      return;
+    }
+    
+    const [dateCol, catCol, numCol] = trio.columns;
+    
+    recommendations.push({
+      chart: "line", // Multi-line chart
+      columns: [dateCol, catCol, numCol],
+      confidence: 0.85,
+      reason: `Compare ${formatColumnName(numCol)} across different ${formatColumnName(catCol)} categories over time (${formatColumnName(dateCol)})`
+    });
+  });
+  
+  // Sort by confidence (highest first)
+  recommendations.sort((a, b) => b.confidence - a.confidence);
+  
+  // Return top recommendations (max 3 per chart type)
+  const topRecommendations = [];
+  const chartCounts = { bar: 0, line: 0, scatter: 0, pie: 0 };
+  
+  recommendations.forEach(rec => {
+    if (chartCounts[rec.chart] < 3) {
+      topRecommendations.push(rec);
+      chartCounts[rec.chart]++;
+    }
+  });
+  
+  // Ensure we return at least one recommendation of each type if available
+  for (const chartType of ['bar', 'line', 'scatter', 'pie']) {
+    if (chartCounts[chartType] === 0) {
+      const rec = recommendations.find(r => r.chart === chartType);
+      if (rec) {
+        topRecommendations.push(rec);
       }
     }
   }
   
-  // Check if this could be compositional data (parts of a whole)
-  if (numericColNames.length > 1 && characteristics.categoricalColumns.length > 0) {
-    const sums = data.map(row => 
-      numericColNames.reduce((sum, col) => sum + (Number(row[col]) || 0), 0)
-    );
-    
-    // If the sums are close to 100 or 1, it might be compositional
-    const avgSum = sums.reduce((sum, val) => sum + val, 0) / sums.length;
-    if (Math.abs(avgSum - 100) < 5 || Math.abs(avgSum - 1) < 0.1) {
-      characteristics.compositionalData = true;
-    }
-  }
-  
-  return characteristics;
+  // Return top recommendations overall (up to 10 total)
+  return topRecommendations.slice(0, 10);
 }
 
 /**
- * Identify and rank the best chart types based on dataset characteristics
- * 🆃 - TAG COMMON USE CASES: Based on combinations of data types
- * @param {Object} characteristics - Dataset characteristics
- * @returns {Array} - Ranked chart type recommendations with confidence scores
+ * Calculate confidence score for chart type based on characteristics
+ * @param {string} chartType - Type of chart
+ * @param {number} uniqueCount - Number of unique values
+ * @returns {number} - Confidence score between 0 and 1
  */
-function identifyChartTypes(characteristics) {
-  const {
-    rowCount,
-    columnCount,
-    numericColumns,
-    categoricalColumns,
-    dateColumns,
-    timeSeriesData,
-    hasManyCategories,
-    hasCorrelation,
-    correlatedColumns,
-    hierarchicalData,
-    geospatialData,
-    compositionalData,
-    distributionData
-  } = characteristics;
-  
-  // Array to hold chart recommendations with confidence scores
-  let recommendations = [];
-  
-  // [Time vs Number] → Line Chart
-  if (timeSeriesData && numericColumns.length >= 1) {
-    recommendations.push({
-      chartType: 'line',
-      confidence: 95,
-      reason: 'Line chart recommended for time series data to show trends over time.'
-    });
+function calculateConfidence(chartType, uniqueCount) {
+  switch (chartType) {
+    case 'bar':
+      // Ideal: 5-15 categories
+      if (uniqueCount <= 15) {
+        return 0.9;
+      } else if (uniqueCount <= 20) {
+        return 0.8;
+      } else if (uniqueCount <= 30) {
+        return 0.7;
+      } else {
+        return 0.5;
+      }
+    
+    case 'pie':
+      // Ideal: 3-7 categories
+      if (uniqueCount <= 7) {
+        return 0.85;
+      } else if (uniqueCount <= 10) {
+        return 0.65;
+      } else {
+        return 0.4; // Low confidence for many categories
+      }
+      
+    default:
+      return 0.7;
   }
+}
+
+/**
+ * Check if a value can be parsed as a valid date
+ * @param {*} value - Value to check
+ * @returns {boolean} - True if value is a valid date
+ */
+function isValidDate(value) {
+  if (!value) return false;
   
-  // [Two Numbers] and [Correlation] → Scatter Plot
-  if (hasCorrelation && correlatedColumns.length > 0) {
-    recommendations.push({
-      chartType: 'scatter',
-      confidence: 90,
-      reason: 'Scatter plot recommended to visualize correlation between numeric variables.'
-    });
-  } else if (numericColumns.length >= 2) {
-    recommendations.push({
-      chartType: 'scatter',
-      confidence: 75,
-      reason: 'Scatter plot can show relationship between two numeric variables.'
-    });
-  }
+  // If already a Date object
+  if (value instanceof Date) return !isNaN(value);
   
-  // [Category vs Number] → Bar Chart
-  if (categoricalColumns.length >= 1 && numericColumns.length >= 1) {
-    const confidence = hasManyCategories ? 85 : 90;
-    recommendations.push({
-      chartType: 'bar',
-      confidence: confidence,
-      reason: hasManyCategories 
-        ? 'Bar chart recommended for comparing many categories.' 
-        : 'Bar chart recommended for comparing values across categories.'
-    });
-  }
-  
-  // [One Categorical only] → Pie Chart
-  if (categoricalColumns.length >= 1 && categoricalColumns[0].uniqueCount <= 7 && compositionalData) {
-    recommendations.push({
-      chartType: 'pie',
-      confidence: 80,
-      reason: 'Pie chart recommended for showing proportions with few categories.'
-    });
-  } else if (categoricalColumns.length >= 1 && categoricalColumns[0].uniqueCount <= 10) {
-    recommendations.push({
-      chartType: 'pie',
-      confidence: 65,
-      reason: 'Pie chart can show distribution across limited categories.'
-    });
-  }
-  
-  // Add default recommendations if none found yet
-  if (recommendations.length === 0) {
-    if (numericColumns.length >= 1 && categoricalColumns.length >= 1) {
-      recommendations.push({
-        chartType: 'bar',
-        confidence: 70,
-        reason: 'Bar chart recommended as default for categorical and numerical data.'
-      });
-    } else if (numericColumns.length >= 2) {
-      recommendations.push({
-        chartType: 'scatter',
-        confidence: 65,
-        reason: 'Scatter plot recommended as default for multiple numeric columns.'
-      });
-    } else if (dateColumns.length >= 1 && numericColumns.length >= 1) {
-      recommendations.push({
-        chartType: 'line',
-        confidence: 70,
-        reason: 'Line chart recommended as default for date and numeric data.'
-      });
-    } else {
-      recommendations.push({
-        chartType: 'bar',
-        confidence: 60,
-        reason: 'Bar chart recommended as a general visualization for your data.'
-      });
+  // Try to parse string to date
+  if (typeof value === 'string') {
+    // Common date formats
+    const datePatterns = [
+      /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD
+      /^\d{2}\/\d{2}\/\d{4}$/, // MM/DD/YYYY
+      /^\d{1,2}\/\d{1,2}\/\d{2,4}$/, // M/D/YY or M/D/YYYY
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/ // ISO format
+    ];
+    
+    if (datePatterns.some(pattern => pattern.test(value))) {
+      const date = new Date(value);
+      return !isNaN(date.getTime());
     }
+    
+    return false;
   }
   
-  // Make sure we have recommendations for all supported chart types
-  const chartTypes = recommendations.map(rec => rec.chartType);
+  return false;
+}
+
+/**
+ * Format column name to be more readable
+ * @param {string} column - Original column name
+ * @returns {string} - Formatted column name
+ */
+function formatColumnName(column) {
+  return column
+    .replace(/_/g, ' ')
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, match => match.toUpperCase());
+}
+
+/**
+ * Calculate basic correlation between two numeric columns
+ * @param {Array} data - Dataset
+ * @param {string} col1 - First column name
+ * @param {string} col2 - Second column name
+ * @returns {number} - Correlation coefficient
+ */
+function calculateCorrelation(data, col1, col2) {
+  // Extract numeric values
+  const values = data
+    .map(row => ({
+      x: parseFloat(row[col1]),
+      y: parseFloat(row[col2])
+    }))
+    .filter(pair => !isNaN(pair.x) && !isNaN(pair.y));
   
-  if (!chartTypes.includes('bar')) {
-    recommendations.push({
-      chartType: 'bar',
-      confidence: 50,
-      reason: 'Bar chart alternative for your data.'
-    });
-  }
+  if (values.length < 5) return 0;
   
-  if (!chartTypes.includes('line')) {
-    recommendations.push({
-      chartType: 'line',
-      confidence: 45,
-      reason: 'Line chart alternative for your data.'
-    });
-  }
+  // Calculate means
+  const sumX = values.reduce((sum, pair) => sum + pair.x, 0);
+  const sumY = values.reduce((sum, pair) => sum + pair.y, 0);
+  const meanX = sumX / values.length;
+  const meanY = sumY / values.length;
   
-  if (!chartTypes.includes('pie')) {
-    recommendations.push({
-      chartType: 'pie',
-      confidence: 40,
-      reason: 'Pie chart alternative for your data.'
-    });
-  }
+  // Calculate correlation coefficient
+  let numerator = 0;
+  let denominatorX = 0;
+  let denominatorY = 0;
   
-  if (!chartTypes.includes('scatter')) {
-    recommendations.push({
-      chartType: 'scatter',
-      confidence: 35,
-      reason: 'Scatter plot alternative for your data.'
-    });
-  }
+  values.forEach(pair => {
+    const diffX = pair.x - meanX;
+    const diffY = pair.y - meanY;
+    numerator += diffX * diffY;
+    denominatorX += diffX * diffX;
+    denominatorY += diffY * diffY;
+  });
   
-  // Sort by confidence score (highest first)
-  return recommendations.sort((a, b) => b.confidence - a.confidence);
+  const denominator = Math.sqrt(denominatorX * denominatorY);
+  return denominator === 0 ? 0 : numerator / denominator;
 }
 
 /**
  * Configure the chart based on the selected chart type
  * @param {string} chartType - The selected chart type
- * @param {Object} characteristics - Dataset characteristics
- * @param {Array} columns - Available columns
- * @param {Object} stats - Column statistics
+ * @param {Array} columns - Columns to use for the chart
+ * @param {Object} columnTypes - Column type data
+ * @param {Array} data - Dataset for additional analysis
  * @returns {Object} - Chart configuration
  */
-function configureChart(chartType, characteristics, columns, stats) {
-  const {
-    numericColumns,
-    categoricalColumns,
-    dateColumns,
-    correlatedColumns
-  } = characteristics;
-  
+function configureChart(chartType, columns, columnTypes, data) {
   let config = {
     title: 'Data Visualization',
     subtitle: '',
@@ -352,123 +559,85 @@ function configureChart(chartType, characteristics, columns, stats) {
     colors: generateColorPalette(5)
   };
   
-  // Extract column names from the objects
-  const numericColNames = numericColumns.map(col => col.name);
-  const categoricalColNames = categoricalColumns.map(col => col.name);
-  const dateColNames = dateColumns.map(col => col.name);
-  
   switch (chartType) {
-    case 'bar':
-      if (categoricalColNames.length > 0) {
-        config.xAxis = { field: categoricalColNames[0], label: formatLabel(categoricalColNames[0]) };
-      } else if (dateColNames.length > 0) {
-        config.xAxis = { field: dateColNames[0], label: formatLabel(dateColNames[0]) };
-      } else {
-        config.xAxis = { field: columns[0], label: formatLabel(columns[0]) };
-      }
+    case 'bar': {
+      // For bar charts: categorical column as x-axis, numerical as y-axis
+      const categoryCol = columns.find(col => columnTypes[col].type === 'categorical') || columns[0];
+      const numericCol = columns.find(col => columnTypes[col].type === 'numerical') || columns[1] || columns[0];
       
-      if (numericColNames.length > 0) {
-        config.yAxis = { field: numericColNames[0], label: formatLabel(numericColNames[0]) };
-      } else {
-        config.yAxis = { field: columns[1] || columns[0], label: formatLabel(columns[1] || columns[0]) };
-      }
+      config.xAxis = { field: categoryCol, label: formatColumnName(categoryCol) };
+      config.yAxis = { field: numericCol, label: formatColumnName(numericCol) };
       
       // If we have many categories, suggest a horizontal bar chart
-      if (characteristics.hasManyCategories) {
+      if (columnTypes[categoryCol].uniqueCount > 10) {
         config.orientation = 'horizontal';
       }
+      break;
+    }
+    
+    case 'line': {
+      // For line charts: datetime or categorical as x-axis, numerical as y-axis
+      const timeCol = columns.find(col => columnTypes[col].type === 'datetime');
+      const categoryCol = columns.find(col => columnTypes[col].type === 'categorical');
+      const numericCol = columns.find(col => columnTypes[col].type === 'numerical');
       
-      // Suggest grouping if we have multiple numeric columns
-      if (numericColNames.length > 1 && categoricalColNames.length > 0) {
-        config.groupBy = numericColNames[1];
+      const xAxisCol = timeCol || categoryCol || columns[0];
+      const yAxisCol = numericCol || columns[1] || columns[0];
+      
+      config.xAxis = { field: xAxisCol, label: formatColumnName(xAxisCol) };
+      config.yAxis = { field: yAxisCol, label: formatColumnName(yAxisCol) };
+      
+      // If we have 3 columns, set up multi-line chart with grouping
+      if (columns.length >= 3) {
+        const groupCol = columns.find(col => 
+          col !== xAxisCol && col !== yAxisCol && columnTypes[col].type === 'categorical');
+        
+        if (groupCol) {
+          config.groupBy = { field: groupCol, label: formatColumnName(groupCol) };
+        }
       }
       break;
+    }
+    
+    case 'scatter': {
+      // For scatter plots: both axes should be numerical
+      const numericCols = columns.filter(col => columnTypes[col].type === 'numerical');
       
-    case 'line':
-      if (dateColNames.length > 0) {
-        config.xAxis = { field: dateColNames[0], label: formatLabel(dateColNames[0]) };
-      } else if (categoricalColNames.length > 0) {
-        config.xAxis = { field: categoricalColNames[0], label: formatLabel(categoricalColNames[0]) };
-      } else {
-        config.xAxis = { field: columns[0], label: formatLabel(columns[0]) };
-      }
+      config.xAxis = { 
+        field: numericCols[0] || columns[0], 
+        label: formatColumnName(numericCols[0] || columns[0]) 
+      };
       
-      if (numericColNames.length > 0) {
-        config.yAxis = { field: numericColNames[0], label: formatLabel(numericColNames[0]) };
-      } else {
-        config.yAxis = { field: columns[1] || columns[0], label: formatLabel(columns[1] || columns[0]) };
-      }
+      config.yAxis = { 
+        field: numericCols[1] || numericCols[0] || columns[1] || columns[0], 
+        label: formatColumnName(numericCols[1] || numericCols[0] || columns[1] || columns[0]) 
+      };
       
-      // Multi-line chart if we have multiple numeric columns
-      if (numericColNames.length > 1) {
-        config.series = numericColNames.map(col => ({ 
-          field: col, 
-          label: formatLabel(col) 
-        }));
+      // If we have a third column that's categorical, use it for color coding
+      const categoryCol = columns.find(col => columnTypes[col].type === 'categorical');
+      if (categoryCol) {
+        config.colorBy = { field: categoryCol, label: formatColumnName(categoryCol) };
       }
       break;
+    }
+    
+    case 'pie': {
+      // For pie charts: categorical for segments, optional numeric for values
+      const categoryCol = columns.find(col => columnTypes[col].type === 'categorical') || columns[0];
+      const numericCol = columns.find(col => columnTypes[col].type === 'numerical');
       
-    case 'scatter':
-      if (correlatedColumns.length > 0) {
-        // Use the correlated columns
-        const [col1, col2] = correlatedColumns[0];
-        config.xAxis = { field: col1, label: formatLabel(col1) };
-        config.yAxis = { field: col2, label: formatLabel(col2) };
-      } else if (numericColNames.length >= 2) {
-        // Use the first two numeric columns
-        config.xAxis = { field: numericColNames[0], label: formatLabel(numericColNames[0]) };
-        config.yAxis = { field: numericColNames[1], label: formatLabel(numericColNames[1]) };
+      config.segments = { field: categoryCol, label: formatColumnName(categoryCol) };
+      
+      if (numericCol) {
+        config.values = { field: numericCol, label: formatColumnName(numericCol) };
       } else {
-        // Fallback
-        config.xAxis = { field: columns[0], label: formatLabel(columns[0]) };
-        config.yAxis = { field: columns[1] || columns[0], label: formatLabel(columns[1] || columns[0]) };
-      }
-      
-      // If we have a third numeric column, use it for bubble size
-      if (numericColNames.length >= 3) {
-        config.bubbleSize = { field: numericColNames[2], label: formatLabel(numericColNames[2]) };
-      }
-      
-      // If we have categories, use them for color coding
-      if (categoricalColNames.length > 0) {
-        config.colorBy = { field: categoricalColNames[0], label: formatLabel(categoricalColNames[0]) };
+        config.values = { field: 'count', label: 'Count' };
       }
       break;
-      
-    case 'pie':
-      if (categoricalColNames.length > 0) {
-        config.segments = { field: categoricalColNames[0], label: formatLabel(categoricalColNames[0]) };
-      } else {
-        config.segments = { field: columns[0], label: formatLabel(columns[0]) };
-      }
-      
-      if (numericColNames.length > 0) {
-        config.values = { field: numericColNames[0], label: formatLabel(numericColNames[0]) };
-      } else {
-        config.values = { field: columns[1] || columns[0], label: formatLabel(columns[1] || columns[0]) };
-      }
-      break;
-      
-    default:
-      // Default configuration for other chart types
-      config.xAxis = { field: columns[0], label: formatLabel(columns[0]) };
-      config.yAxis = { field: columns[1] || columns[0], label: formatLabel(columns[1] || columns[0]) };
+    }
   }
   
   return config;
-}
-
-/**
- * Format a column name as a friendly label
- * @param {string} columnName - The column name
- * @returns {string} - Formatted label
- */
-function formatLabel(text) {
-  if (!text) return '';
-  return text
-    .replace(/_/g, ' ')
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, match => match.toUpperCase());
 }
 
 /**
