@@ -218,16 +218,27 @@ exports.generateAIVisualization = async (req, res) => {
       data = result.data;
     }
 
-    // Get AI recommendation
-    const recommendation = await recommendChartType(data, file.dataColumns, file.dataStats);
+    // Get AI recommendation with all chart type recommendations
+    const aiRecommendation = await recommendChartType(data, file.dataColumns, file.dataStats);
+    
+    // Extract the ordered recommendations with confidence scores
+    const chartRecommendations = aiRecommendation.recommendations || [];
+    
+    // Get the primary (best) recommendation
+    const primaryRecommendation = chartRecommendations[0] || {
+      chartType: 'bar',
+      confidence: 70,
+      reason: 'Default bar chart recommendation'
+    };
 
     // Create new visualization with AI recommendation
     const visualization = new Visualization({
       name: `${file.originalname.split('.')[0]} - AI Recommended Visualization`,
       description: 'Automatically generated visualization based on data analysis',
       fileId: file._id,
-      chartType: recommendation.chartType,
-      config: recommendation.config,
+      chartType: primaryRecommendation.chartType,
+      config: aiRecommendation.config,
+      confidence: primaryRecommendation.confidence,
       isAIGenerated: true,
       user: req.user ? req.user.id : null
     });
@@ -237,7 +248,8 @@ exports.generateAIVisualization = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'AI visualization created successfully',
-      recommendation: recommendation.explanation,
+      recommendation: primaryRecommendation.reason,
+      chartRecommendations: chartRecommendations,
       visualization: {
         _id: visualization._id,
         name: visualization.name,
@@ -245,6 +257,7 @@ exports.generateAIVisualization = async (req, res) => {
         fileId: visualization.fileId,
         chartType: visualization.chartType,
         config: visualization.config,
+        confidence: visualization.confidence,
         isAIGenerated: visualization.isAIGenerated,
         createdAt: visualization.createdAt
       }

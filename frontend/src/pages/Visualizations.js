@@ -41,6 +41,7 @@ import {
   Edit as EditIcon,
   CheckCircle as CheckCircleIcon,
   ArrowBack as ArrowBackIcon,
+  Star as StarIcon,
 } from '@mui/icons-material';
 import PageHeader from '../components/common/PageHeader';
 import { Chart, registerables } from 'chart.js/auto';
@@ -297,44 +298,169 @@ function Visualizations() {
     
     console.log('Numeric columns for scatter plot:', numericColumns);
     
-    // Create AI recommendations for different chart types
-    ['bar', 'line', 'pie', 'scatter'].forEach(chartType => {
-      let xAxis = recommendedAxes[chartType].x;
-      let yAxis = recommendedAxes[chartType].y;
-      
-      // For scatter charts, ensure we have numeric columns for both axes
-      if (chartType === 'scatter') {
-        if (numericColumns.length >= 2) {
-          // Use the first two numeric columns for scatter
-          xAxis = numericColumns[0];
-          yAxis = numericColumns[1];
-          console.log(`Using numeric columns for scatter plot: x=${xAxis}, y=${yAxis}`);
-        } else if (numericColumns.length === 1) {
-          // If only one numeric column, use it for y-axis and an index for x-axis
-          xAxis = 'index';
-          yAxis = numericColumns[0];
-          console.log(`Only one numeric column available. Using index for x-axis and ${yAxis} for y-axis`);
-        } else {
-          // Skip scatter chart if no suitable numeric columns
-          console.log('No suitable numeric columns for scatter chart, skipping');
-          return;
+    // Apply the DAT algorithm to determine chart suitability
+    // (Detect Data Types, Analyze Patterns, Tag Common Use Cases)
+    const chartRecommendations = [];
+    
+    // Check for categorical columns
+    const categoricalColumns = [];
+    if (analysisData && analysisData.basicAnalysis) {
+      Object.keys(analysisData.basicAnalysis).forEach(colName => {
+        const colData = analysisData.basicAnalysis[colName];
+        const uniqueCount = colData.uniqueCount || 0;
+        const uniqueRatio = uniqueCount / (analysisData.summary?.totalRows || 1);
+        
+        // If unique values < 10 or less than 10% of total rows → likely Categorical
+        if ((colData.type === 'string' && (uniqueCount < 10 || uniqueRatio < 0.1))) {
+          categoricalColumns.push(colName);
         }
+      });
+    }
+    
+    console.log('Categorical columns:', categoricalColumns);
+    
+    // Check for date/time columns
+    const dateColumns = [];
+    if (analysisData && analysisData.basicAnalysis) {
+      Object.keys(analysisData.basicAnalysis).forEach(colName => {
+        const colData = analysisData.basicAnalysis[colName];
+        if (colData.couldBeDate) {
+          dateColumns.push(colName);
+        }
+      });
+    }
+    
+    console.log('Date columns:', dateColumns);
+    
+    // Calculate chart confidence scores based on data characteristics
+    let barChartConfidence = 60;
+    let lineChartConfidence = 55;
+    let pieChartConfidence = 50;
+    let scatterChartConfidence = 45;
+    
+    // [Category vs Number] → Bar Chart
+    if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+      barChartConfidence = categoricalColumns.length > 10 ? 85 : 90;
+      chartRecommendations.push({
+        chartType: 'bar',
+        confidence: barChartConfidence,
+        xAxis: categoricalColumns[0],
+        yAxis: numericColumns[0],
+        description: `${numericColumns[0]} by ${categoricalColumns[0]}`
+      });
+    }
+    
+    // [Time vs Number] → Line Chart
+    if (dateColumns.length > 0 && numericColumns.length > 0) {
+      lineChartConfidence = 85;
+      chartRecommendations.push({
+        chartType: 'line',
+        confidence: lineChartConfidence,
+        xAxis: dateColumns[0],
+        yAxis: numericColumns[0],
+        description: `${numericColumns[0]} by ${dateColumns[0]}`
+      });
+    } else if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+      lineChartConfidence = 70;
+      chartRecommendations.push({
+        chartType: 'line',
+        confidence: lineChartConfidence,
+        xAxis: categoricalColumns[0],
+        yAxis: numericColumns[0],
+        description: `${numericColumns[0]} by ${categoricalColumns[0]}`
+      });
+    }
+    
+    // [Two Numbers] → Scatter Plot
+    if (numericColumns.length >= 2) {
+      scatterChartConfidence = 80;
+      chartRecommendations.push({
+        chartType: 'scatter',
+        confidence: scatterChartConfidence,
+        xAxis: numericColumns[0],
+        yAxis: numericColumns[1],
+        description: `${numericColumns[1]} by ${numericColumns[0]}`
+      });
+    }
+    
+    // [One Categorical only] → Pie Chart
+    if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+      const uniqueCount = analysisData.basicAnalysis[categoricalColumns[0]]?.uniqueCount || 0;
+      if (uniqueCount <= 7) {
+        pieChartConfidence = 75;
+      } else if (uniqueCount <= 15) {
+        pieChartConfidence = 65;
+      } else {
+        pieChartConfidence = 50;
       }
       
-      if (xAxis && yAxis) {
+      chartRecommendations.push({
+        chartType: 'pie',
+        confidence: pieChartConfidence,
+        xAxis: categoricalColumns[0],
+        yAxis: numericColumns[0],
+        description: `${numericColumns[0]} by ${categoricalColumns[0]}`
+      });
+    }
+    
+    // Sort recommendations by confidence score (highest first)
+    chartRecommendations.sort((a, b) => b.confidence - a.confidence);
+    
+    // If we have no recommendations, use default axes
+    if (chartRecommendations.length === 0) {
+      ['bar', 'line', 'pie', 'scatter'].forEach((chartType, index) => {
+        let xAxis = recommendedAxes[chartType].x;
+        let yAxis = recommendedAxes[chartType].y;
+        
+        // For scatter charts, ensure we have numeric columns for both axes
+        if (chartType === 'scatter') {
+          if (numericColumns.length >= 2) {
+            // Use the first two numeric columns for scatter
+            xAxis = numericColumns[0];
+            yAxis = numericColumns[1];
+          } else if (numericColumns.length === 1) {
+            // If only one numeric column, use it for y-axis and an index for x-axis
+            xAxis = 'index';
+            yAxis = numericColumns[0];
+          } else {
+            // Skip scatter chart if no suitable numeric columns
+            return;
+          }
+        }
+        
+        if (xAxis && yAxis) {
+          previewData.push({
+            chartType,
+            name: `${file.name} - ${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`,
+            description: `AI Recommended: ${yAxis} by ${xAxis}`,
+            fileId: file._id,
+            confidence: chartType === 'bar' ? 65 : chartType === 'line' ? 60 : chartType === 'pie' ? 55 : 50,
+            xAxis: xAxis,
+            yAxis: yAxis,
+            file: file,
+            isAIRecommended: true
+          });
+        }
+      });
+    } else {
+      // Use our calculated recommendations
+      chartRecommendations.forEach(recommendation => {
         previewData.push({
-          chartType,
-          name: `${file.name} - ${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`,
-          description: `AI Recommended: ${yAxis} by ${xAxis}`,
+          chartType: recommendation.chartType,
+          name: `${file.name} - ${recommendation.chartType.charAt(0).toUpperCase() + recommendation.chartType.slice(1)} Chart`,
+          description: `AI Recommended: ${recommendation.description}`,
           fileId: file._id,
-          confidence: chartType === 'bar' ? 85 : chartType === 'line' ? 75 : chartType === 'pie' ? 65 : 60,
-          xAxis: xAxis,
-          yAxis: yAxis,
+          confidence: recommendation.confidence,
+          xAxis: recommendation.xAxis,
+          yAxis: recommendation.yAxis,
           file: file,
           isAIRecommended: true
         });
-      }
-    });
+      });
+    }
+    
+    // Sort preview data by confidence (highest first)
+    previewData.sort((a, b) => b.confidence - a.confidence);
     
     setPreviewFile(file);
     setPreviewCharts(previewData);
@@ -2238,82 +2364,88 @@ function Visualizations() {
               Based on your data structure, here are the most effective visualizations for {previewFile?.name}
             </Typography>
             
+            {/* Sort the filtered charts by confidence score */}
             <Grid container spacing={3}>
-              {previewCharts.filter(chart => chart.isAIRecommended).map((chart, index) => (
-                <Grid item xs={12} sm={6} key={`ai-${chart.chartType}-${index}`}>
-                  <Card sx={{ 
-                    height: '100%',
-                    bgcolor: 'background.paper',
-                    backgroundImage: 'none',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                  }}>
-                    <Box sx={{ 
-                      bgcolor: 'primary.main', 
-                      color: 'white',
-                      p: 2,
+              {previewCharts
+                .filter(chart => chart.isAIRecommended)
+                .sort((a, b) => b.confidence - a.confidence)
+                .map((chart, index) => (
+                  <Grid item xs={12} sm={6} key={`ai-${chart.chartType}-${index}`}>
+                    <Card sx={{ 
+                      height: '100%',
+                      bgcolor: 'background.paper',
+                      backgroundImage: 'none',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between'
+                      flexDirection: 'column',
+                      boxShadow: index === 0 ? '0 6px 12px rgba(25, 118, 210, 0.3)' : '0 4px 8px rgba(0,0,0,0.1)',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      border: index === 0 ? '2px solid #1976d2' : 'none',
+                      transform: index === 0 ? 'scale(1.02)' : 'scale(1)',
+                      transition: 'transform 0.2s ease-in-out',
+                      zIndex: index === 0 ? 1 : 'auto'
                     }}>
-                      <Typography variant="h6" component="div">
-                        {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                      <Box sx={{ 
+                        bgcolor: index === 0 ? '#1976d2' : 'primary.main', 
+                        color: 'white',
+                        p: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}>
+                        <Typography variant="h6" component="div">
+                          {index === 0 && <StarIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: '0.9em' }} />}
+                          {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                        </Typography>
+                        <Chip 
+                          label={`${chart.confidence}% match`} 
+                          color={chart.confidence > 80 ? 'success' : chart.confidence > 70 ? 'primary' : 'default'} 
+                          size="small"
+                          sx={{ 
+                            fontWeight: 'bold', 
+                            color: 'white', 
+                            bgcolor: chart.confidence > 80 ? '#2e7d32' : chart.confidence > 70 ? '#1976d2' : '#757575'
+                          }}
+                        />
+                      </Box>
+                      <Typography variant="subtitle2" sx={{ 
+                        px: 2, 
+                        py: 1, 
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)',
+                        fontWeight: index === 0 ? 'bold' : 'normal'
+                      }}>
+                        {chart.description}
+                        {index === 0 && (
+                          <Box component="span" sx={{ display: 'block', color: 'primary.main', mt: 0.5, fontSize: '0.85em' }}>
+                            Best visualization for your data!
+                          </Box>
+                        )}
                       </Typography>
-                      <Chip 
-                        label={`${chart.confidence}% match`} 
-                        color={chart.confidence > 80 ? 'success' : chart.confidence > 70 ? 'primary' : 'default'} 
-                        size="small"
-                        sx={{ fontWeight: 'bold', color: 'white', bgcolor: chart.confidence > 80 ? '#2e7d32' : chart.confidence > 70 ? '#1976d2' : '#757575' }}
-                      />
-                    </Box>
-                    <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
-                      {chart.description}
-                    </Typography>
-                    <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
-                      <canvas 
-                        ref={el => chartPreviewRefs.current[`ai-${chart.chartType}`] = el}
-                        style={{ width: '100%', height: '100%' }}
-                        id={`chart-ai-${chart.chartType}-${index}`}
-                      />
-                    </Box>
-                    <Box sx={{ p: 2, mt: 'auto' }}>
-                      <Button 
-                        variant="contained" 
-                        fullWidth
-                        onClick={() => handleSaveChart(chart)}
-                        disabled={fileNotFound}
-                      >
-                        Save Visualization
-                      </Button>
-                    </Box>
-                  </Card>
-                </Grid>
-              ))}
+                      <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
+                        <canvas 
+                          ref={el => chartPreviewRefs.current[`ai-${chart.chartType}`] = el}
+                          style={{ width: '100%', height: '100%' }}
+                          id={`chart-ai-${chart.chartType}-${index}`}
+                        />
+                      </Box>
+                      <Box sx={{ p: 2, mt: 'auto' }}>
+                        <Button 
+                          variant={index === 0 ? "contained" : "outlined"}
+                          color={index === 0 ? "primary" : "inherit"}
+                          fullWidth
+                          onClick={() => handleSaveChart(chart)}
+                          disabled={fileNotFound}
+                          sx={{
+                            boxShadow: index === 0 ? 2 : 0
+                          }}
+                        >
+                          {index === 0 ? 'Save Best Visualization' : 'Save Visualization'}
+                        </Button>
+                      </Box>
+                    </Card>
+                  </Grid>
+                ))}
             </Grid>
-            
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Button 
-                variant="outlined" 
-                color="primary"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  if (previewFile) {
-                    // If we already have a file selected, skip file selection and go straight to axis selection
-                    setSelectedFile(previewFile);
-                    setAxisSelectionOpen(true);
-                  } else {
-                    // Otherwise show file selection first
-                    setOpenDialog(true);
-                    setAxisSelectionOpen(true);
-                  }
-                }}
-              >
-                Create Custom Chart
-              </Button>
-            </Box>
           </Paper>
         )}
         
