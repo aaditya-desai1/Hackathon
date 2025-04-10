@@ -163,59 +163,72 @@ exports.parseCSV = async (filePath) => {
  */
 exports.parseJSON = async (filePath) => {
   try {
-    const content = await fs.readFile(filePath, 'utf-8');
     console.log('[dataParser] Reading JSON file:', filePath);
     
-    // Try to safely parse the JSON with error handling
+    // Read the raw content first
+    const content = await fs.readFile(filePath, 'utf-8');
+    const contentLength = content.length;
+    console.log('[dataParser] JSON raw content length:', contentLength);
+    
+    if (contentLength === 0) {
+      console.log('[dataParser] Empty JSON file');
+      return {
+        data: [],
+        columns: [],
+        preview: []
+      };
+    }
+    
+    // Show the first 100 chars for debugging
+    console.log('[dataParser] Content start (first 100 chars):', 
+      content.substring(0, 100).replace(/\n/g, '\\n').replace(/\r/g, '\\r'));
+    
+    // Create a sanitized version of the JSON file
+    const sanitizedPath = `${filePath}.sanitized`;
     let data;
+    
     try {
-      // First, attempt to clean the content of any BOM or unwanted characters
-      const contentLength = content.length;
-      console.log('[dataParser] JSON raw content length:', contentLength);
-      
-      if (contentLength === 0) {
-        console.log('[dataParser] Empty JSON file');
-        return {
-          data: [],
-          columns: [],
-          preview: []
-        };
-      }
-      
-      // Show the first 100 chars for debugging
-      console.log('[dataParser] Content start (first 100 chars):', 
-        content.substring(0, 100).replace(/\n/g, '\\n').replace(/\r/g, '\\r'));
-      
+      // First try to convert/clean the JSON directly
       // Remove BOM and whitespace
       let cleanContent = content.replace(/^\uFEFF/, '').trim();
       
-      // Remove any leading garbage before { or [
-      const firstBrace = cleanContent.indexOf('{');
-      const firstBracket = cleanContent.indexOf('[');
-      
-      if (firstBrace === -1 && firstBracket === -1) {
-        throw new Error('JSON file must contain an object or array');
-      }
-      
-      const startIndex = firstBrace !== -1 && firstBracket !== -1
-        ? Math.min(firstBrace, firstBracket)
-        : Math.max(firstBrace, firstBracket);
-        
-      if (startIndex > 0) {
-        console.log(`[dataParser] Removing ${startIndex} characters of non-JSON prefix`);
-        cleanContent = cleanContent.substring(startIndex);
-      }
-      
-      // Find where the JSON actually ends (in case there's trailing garbage)
-      let endIndex = cleanContent.length;
-      
-      // Gradually try parsing smaller portions if initial parse fails
+      // Try to parse and automatically fix the content by re-stringifying it
       try {
-        data = JSON.parse(cleanContent);
+        const parsed = JSON.parse(cleanContent);
+        // Re-stringify to ensure proper format
+        const properJson = JSON.stringify(parsed);
+        
+        // Write the sanitized version to disk
+        await fs.writeFile(sanitizedPath, properJson, 'utf-8');
+        console.log('[dataParser] Written sanitized JSON to:', sanitizedPath);
+        
+        // Use the parsed data
+        data = parsed;
       } catch (initialError) {
         console.log('[dataParser] Initial JSON parse failed, trying to fix content...');
         
-        // Try to find a valid JSON substring
+        // Attempt to extract valid JSON from potentially invalid content
+        // Remove any leading garbage before { or [
+        const firstBrace = cleanContent.indexOf('{');
+        const firstBracket = cleanContent.indexOf('[');
+        
+        if (firstBrace === -1 && firstBracket === -1) {
+          throw new Error('JSON file must contain an object or array');
+        }
+        
+        const startIndex = firstBrace !== -1 && firstBracket !== -1
+          ? Math.min(firstBrace, firstBracket)
+          : Math.max(firstBrace, firstBracket);
+          
+        if (startIndex > 0) {
+          console.log(`[dataParser] Removing ${startIndex} characters of non-JSON prefix`);
+          cleanContent = cleanContent.substring(startIndex);
+        }
+        
+        // Find where the JSON actually ends (in case there's trailing garbage)
+        let endIndex = cleanContent.length;
+        
+        // Try to find valid JSON substring
         if (cleanContent.startsWith('{')) {
           // For objects, find matching closing brace
           let braceCount = 0;
@@ -247,14 +260,13 @@ exports.parseJSON = async (filePath) => {
           cleanContent = cleanContent.substring(0, endIndex);
         }
         
-        // Try parsing again with the fixed content
-        try {
-          data = JSON.parse(cleanContent);
-          console.log('[dataParser] Successfully parsed after fixing content');
-        } catch (error) {
-          console.error('[dataParser] Final JSON parse error:', error.message);
-          throw error;
-        }
+        // Try parsing the fixed content and save it
+        data = JSON.parse(cleanContent);
+        const properJson = JSON.stringify(data);
+        
+        // Write the sanitized version to disk
+        await fs.writeFile(sanitizedPath, properJson, 'utf-8');
+        console.log('[dataParser] Written repaired JSON to:', sanitizedPath);
       }
     } catch (parseError) {
       console.error('[dataParser] JSON parse error:', parseError.message);
@@ -291,6 +303,13 @@ exports.parseJSON = async (filePath) => {
         columns = Object.keys(item);
         if (columns.length > 0) break;
       }
+    }
+    
+    // Cleanup the temporary sanitized file
+    try {
+      await fs.unlink(sanitizedPath);
+    } catch (err) {
+      console.warn('[dataParser] Could not delete sanitized file:', err.message);
     }
     
     return {
