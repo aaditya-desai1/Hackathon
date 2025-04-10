@@ -472,249 +472,148 @@ function Visualizations() {
     }, 1500);
   };
   
+  // Modified createChartInstance function to include fileId validation
   const createChartInstance = async (chartKey, chart, instancesObject) => {
     try {
-      // Destroy existing chart if any
+      console.log(`Creating chart instance for ${chartKey}:`, chart);
+      
+      // Validate chart data
+      if (!chart || !chart.fileId) {
+        console.error('Missing required chart data:', { chart });
+        return;
+      }
+      
+      if (!chart.xAxis || !chart.yAxis) {
+        console.error('Missing axis configuration:', { xAxis: chart.xAxis, yAxis: chart.yAxis });
+        return;
+      }
+      
+      // Attempt to get canvas element with a more resilient approach
+      const canvasElement = getCanvasElement(chartKey);
+      
+      if (!canvasElement) {
+        console.error(`Could not find canvas element for chart ${chartKey}`);
+        
+        // Try to find any canvas elements on the page for debugging
+        const allCanvases = document.querySelectorAll('canvas');
+        console.log(`Found ${allCanvases.length} canvas elements on the page:`, 
+          Array.from(allCanvases).map(c => c.id || 'unnamed'));
+        return;
+      }
+      
+      const ctx = canvasElement.getContext('2d');
+      if (!ctx) {
+        console.error(`Could not get 2D context for canvas ${chartKey}`);
+        return;
+      }
+      
+      // Create fallback visualization with static data
+      console.log('Creating fallback visualization with static data for demo');
+      createFallbackChart(ctx, chart.chartType, chart.xAxis, chart.yAxis, 
+        ['rgba(53, 162, 235, 0.8)'], ['rgba(53, 162, 235, 1)'], 
+        instancesObject, chartKey);
+      
+      // Try fetching actual data in the background after rendering the fallback
+      setTimeout(() => {
+        fetchChartData(chart, ctx, instancesObject, chartKey);
+      }, 1000);
+    } catch (error) {
+      console.error(`Error creating chart ${chartKey}:`, error);
+    }
+  };
+
+  // Separated fetch logic to a standalone function 
+  const fetchChartData = async (chart, ctx, instancesObject, chartKey) => {
+    try {
+      // Use the data API to get actual values from the file
+      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+      const dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${chart.fileId}&xAxis=${chart.xAxis}&yAxis=${chart.yAxis}`;
+      
+      console.log(`Fetching chart data from: ${dataUrl}`);
+      
+      const dataResponse = await fetch(dataUrl);
+      console.log(`Data response status: ${dataResponse.status} ${dataResponse.statusText}`);
+      
+      if (!dataResponse.ok) {
+        const errorText = await dataResponse.text();
+        console.error(`Failed to fetch chart data: ${dataResponse.status} ${dataResponse.statusText}`);
+        console.error(`Error response: ${errorText}`);
+        // Don't throw, we're already showing a fallback chart
+        return;
+      }
+      
+      const dataResult = await dataResponse.json();
+      
+      if (!dataResult.success) {
+        console.error('Data fetch was not successful:', dataResult.message);
+        return;
+      }
+      
+      console.log('Chart data received, updating chart');
+      
       if (instancesObject[chartKey]) {
         instancesObject[chartKey].destroy();
-        delete instancesObject[chartKey];
       }
       
-      // Get the canvas element
-      const canvas = chartPreviewRefs.current[chartKey];
-      if (!canvas) {
-        console.error(`Canvas element not found for ${chartKey}`);
-        return;
-      }
-      
-      // Clear any existing Chart instances attached to this canvas
-      let existingChart;
-      try {
-        existingChart = Chart.getChart(canvas);
-        if (existingChart) {
-          existingChart.destroy();
-        }
-      } catch (err) {
-        console.log(`No existing chart found for canvas ${chartKey} or error destroying it:`, err);
-      }
-      
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        console.error(`Could not get 2d context for canvas ${chartKey}`);
-        return;
-      }
-      
-      // Set up mock data for charts - dynamically generate realistic data based on column names
-      let chartData;
-      let stockSymbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'META', 'TSLA', 'NFLX'];
-      let dateLabels = ['2023-01', '2023-02', '2023-03', '2023-04', '2023-05', '2023-06'];
-      
-      // Map specific column names to appropriate data
-      const isStockData = chart.xAxis === 'stock_symbol' || chart.xAxis.includes('stock') || chart.yAxis.includes('trading_volume');
-      const isTimeSeriesData = chart.xAxis.includes('date') || chart.xAxis.includes('month') || chart.xAxis.includes('time');
-      
-      let xAxisLabels = [];
-      
-      // Generate appropriate X-axis labels based on column name
-      if (isStockData && chart.xAxis === 'stock_symbol') {
-        // Use stock symbols for x-axis
-        xAxisLabels = stockSymbols.slice(0, 5);
-      } else if (isTimeSeriesData) {
-        // Use dates for time series data
-        xAxisLabels = dateLabels;
-      } else if (chart.xAxis.includes('category') || chart.xAxis.includes('type')) {
-        // For category columns
-        xAxisLabels = ['Category A', 'Category B', 'Category C', 'Category D', 'Category E'];
-      } else if (chart.xAxis.includes('region') || chart.xAxis.includes('location')) {
-        // For regional data
-        xAxisLabels = ['North', 'South', 'East', 'West', 'Central'];
-      } else {
-        // Generic labels as fallback
-        xAxisLabels = [`${chart.xAxis} 1`, `${chart.xAxis} 2`, `${chart.xAxis} 3`, `${chart.xAxis} 4`, `${chart.xAxis} 5`];
-      }
-      
-      // Generate appropriate Y-axis data based on column name
-      let yAxisData = [];
-      
-      if (chart.yAxis.includes('volume') || chart.yAxis.includes('amount')) {
-        // Volume-type data is usually high numbers
-        yAxisData = [12543, 8754, 15876, 9432, 7654, 11324];
-      } else if (chart.yAxis.includes('price') || chart.yAxis.includes('cost')) {
-        // Price-type data
-        yAxisData = [154.23, 187.56, 143.89, 172.45, 168.33, 192.78];
-      } else if (chart.yAxis.includes('percent') || chart.yAxis.includes('rate')) {
-        // Percentage data
-        yAxisData = [4.5, 3.2, 5.7, 2.8, 6.1, 3.9];
-      } else {
-        // Generic numeric data as fallback
-        yAxisData = [65, 59, 80, 81, 56, 55];
-      }
-      
-      // Ensure we have the right number of data points
-      yAxisData = yAxisData.slice(0, xAxisLabels.length);
-      
-      // Modern color palette for charts
+      updateChartWithRealData(ctx, chart.chartType, dataResult.chartData.labels, 
+        dataResult.chartData.values, chart.yAxis, instancesObject, chartKey);
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+    }
+  };
+
+  // Create a chart with real data
+  const updateChartWithRealData = (ctx, chartType, labels, values, yAxisLabel, instancesObject, chartKey) => {
+    console.log('Updating chart with real data:', { chartType, labels, values });
+    
       const modernColors = [
-        'rgba(96, 165, 250, 0.8)',   // Blue
-        'rgba(167, 139, 250, 0.8)',  // Purple
-        'rgba(251, 146, 60, 0.8)',   // Orange
-        'rgba(52, 211, 153, 0.8)',   // Green
-        'rgba(248, 113, 113, 0.8)',  // Red
-        'rgba(251, 191, 36, 0.8)'    // Yellow
+      'rgba(53, 162, 235, 0.8)',
+      'rgba(255, 99, 132, 0.8)',
+      'rgba(75, 192, 192, 0.8)',
+      'rgba(255, 159, 64, 0.8)',
+      'rgba(153, 102, 255, 0.8)'
       ];
       
       const modernBorderColors = [
-        'rgba(59, 130, 246, 1)',    // Blue border
-        'rgba(139, 92, 246, 1)',    // Purple border
-        'rgba(249, 115, 22, 1)',    // Orange border
-        'rgba(16, 185, 129, 1)',    // Green border
-        'rgba(239, 68, 68, 1)',     // Red border
-        'rgba(245, 158, 11, 1)'     // Yellow border
-      ];
-      
-      // Modern chart options
-      const modernChartOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: chart.chartType === 'pie' ? 'right' : 'top',
-            labels: {
-              usePointStyle: true,
-              pointStyle: 'circle',
-              padding: 15,
-              color: theme.palette.text.primary,
-              font: {
-                family: theme.typography.fontFamily,
-                size: 12,
-                weight: '500'
-              }
-            }
-          },
-          title: {
-            display: true,
-            text: chart.title || `${chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart`,
-            color: theme.palette.text.primary,
-            font: {
-              family: theme.typography.fontFamily,
-              size: 16,
-              weight: '600'
-            },
-            padding: {
-              top: 10,
-              bottom: 20
-            }
-          },
-          tooltip: {
-            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(17, 25, 40, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-            titleColor: theme.palette.mode === 'dark' ? '#fff' : 'rgba(17, 24, 39, 1)',
-            bodyColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(55, 65, 81, 1)',
-            borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-            borderWidth: 1,
-            padding: 12,
-            cornerRadius: 8,
-            boxPadding: 6,
-            titleFont: {
-              weight: '600',
-              family: theme.typography.fontFamily
-            },
-            bodyFont: {
-              family: theme.typography.fontFamily
-            },
-            displayColors: true,
-            boxWidth: 8,
-            boxHeight: 8,
-            usePointStyle: true
-          }
-        },
-        scales: chart.chartType === 'pie' ? undefined : {
-          x: {
-            title: {
-              display: true,
-              text: chart.xAxis || 'X Axis',
-              color: theme.palette.text.primary,
-              font: {
-                family: theme.typography.fontFamily,
-                size: 13,
-                weight: '500'
-              },
-              padding: { top: 10 }
-            },
-            ticks: {
-              color: theme.palette.text.secondary,
-              padding: 8,
-              font: {
-                family: theme.typography.fontFamily,
-                size: 11
-              }
-            },
-            grid: {
-              display: true,
-              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-              drawBorder: false,
-              drawTicks: false
-            }
-          },
-          y: {
-            title: {
-              display: true,
-              text: chart.yAxis || 'Y Axis',
-              color: theme.palette.text.primary,
-              font: {
-                family: theme.typography.fontFamily,
-                size: 13,
-                weight: '500'
-              },
-              padding: { bottom: 10 }
-            },
-            ticks: {
-              color: theme.palette.text.secondary,
-              padding: 8,
-              font: {
-                family: theme.typography.fontFamily,
-                size: 11
-              }
-            },
-            grid: {
-              display: true,
-              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-              drawBorder: false,
-              drawTicks: false
-            },
-            beginAtZero: true
-          }
-        }
-      };
-      
-      if (chart.chartType === 'scatter') {
-        // Scatter chart data - create x-y coordinate pairs
+      'rgba(53, 162, 235, 1)',
+      'rgba(255, 99, 132, 1)',
+      'rgba(75, 192, 192, 1)',
+      'rgba(255, 159, 64, 1)',
+      'rgba(153, 102, 255, 1)'
+    ];
+    
+    // Create chart data based on the chart type
+    let chartData;
+    
+    if (chartType === 'scatter') {
+      // Create scatter plot data points
         const scatterData = [];
-        
-        // Generate scatter plot data points
-        for (let i = 0; i < Math.min(xAxisLabels.length, yAxisData.length); i++) {
-          // For scatter, we need numeric x values
+      for (let i = 0; i < Math.min(labels.length, values.length); i++) {
+        const xValue = isNaN(parseFloat(labels[i])) ? i + 1 : parseFloat(labels[i]);
           scatterData.push({
-            x: (i + 1) * 10,
-            y: yAxisData[i]
+          x: xValue,
+          y: values[i]
           });
         }
         
         chartData = {
           datasets: [{
-            label: chart.yAxis || 'Value',
+          label: yAxisLabel || 'Value',
             data: scatterData,
             backgroundColor: modernColors[0],
             borderColor: modernBorderColors[0],
             pointRadius: 7,
-            pointHoverRadius: 9
+          pointHoverRadius: 9,
+          pointBackgroundColor: '#ffffff',
+          pointBorderWidth: 2
           }]
         };
-      } else if (chart.chartType === 'pie') {
+    } else if (chartType === 'pie') {
         // Pie chart data
         chartData = {
-          labels: xAxisLabels,
+        labels: labels,
           datasets: [{
-            data: yAxisData,
+          data: values,
             backgroundColor: modernColors,
             borderColor: modernBorderColors,
             borderWidth: 1,
@@ -722,13 +621,13 @@ function Visualizations() {
             borderRadius: 4
           }]
         };
-      } else if (chart.chartType === 'line') {
+    } else if (chartType === 'line') {
         // Line chart data
         chartData = {
-          labels: isTimeSeriesData ? dateLabels : xAxisLabels,
+        labels: labels,
           datasets: [{
-            label: chart.yAxis || 'Value',
-            data: yAxisData,
+          label: yAxisLabel || 'Value',
+          data: values,
             fill: {
               target: 'origin',
               above: modernColors[0].replace('0.8', '0.1')
@@ -746,10 +645,10 @@ function Visualizations() {
       } else {
         // Bar chart (default)
         chartData = {
-          labels: xAxisLabels,
+        labels: labels,
           datasets: [{
-            label: chart.yAxis || 'Value',
-            data: yAxisData,
+          label: yAxisLabel || 'Value',
+          data: values,
             backgroundColor: modernColors,
             borderColor: modernBorderColors,
             borderWidth: 1,
@@ -760,23 +659,117 @@ function Visualizations() {
           }]
         };
       }
+    
+    // Modern chart options
+    const modernChartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: chartType === 'pie',
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            padding: 20,
+            font: {
+              size: 12
+            }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          padding: 12,
+          titleColor: '#ffffff',
+          titleFont: {
+            size: 14,
+            weight: 'bold'
+          },
+          bodyFont: {
+            size: 13
+          },
+          cornerRadius: 6,
+          boxPadding: 6
+        }
+      },
+      animation: {
+        duration: 1000,
+        easing: 'easeOutQuart'
+      },
+      scales: chartType !== 'pie' && chartType !== 'scatter' ? {
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            font: {
+              size: 12
+            },
+            maxRotation: 45,
+            minRotation: 0
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            borderDash: [4, 4]
+          },
+          ticks: {
+            font: {
+              size: 12
+            }
+          }
+        }
+      } : {}
+    };
       
       // Create the chart based on the type
-      console.log('Creating new chart of type:', chart.chartType);
+    try {
+      console.log('Creating new chart with real data of type:', chartType);
       const newChart = new Chart(ctx, {
-        type: chart.chartType,
+        type: chartType,
         data: chartData,
         options: modernChartOptions
       });
       
-      console.log('Chart created successfully');
-      setChartInstance(newChart);
+      console.log('Chart created successfully with real data');
       
       // Store the instance
+      if (instancesObject) {
       instancesObject[chartKey] = newChart;
-    } catch (error) {
-      console.error(`Error creating chart ${chartKey}:`, error);
+      }
+    } catch (chartError) {
+      console.error('Error creating chart with real data:', chartError);
     }
+  };
+
+  // Attempt to get canvas element with a more resilient approach
+  const getCanvasElement = (chartKey) => {
+    const canvasId = `chart-${chartKey}`;
+    const directCanvas = document.getElementById(canvasId);
+    
+    if (directCanvas) {
+      console.log(`Found canvas element with ID ${canvasId} directly`);
+      return directCanvas;
+    }
+    
+    // Try alternative selector approaches
+    const canvasByQuery = document.querySelector(`#${canvasId}`);
+    if (canvasByQuery) {
+      console.log(`Found canvas element with query selector #${canvasId}`);
+      return canvasByQuery;
+    }
+    
+    // Look for canvas by partial ID match
+    const allCanvases = document.querySelectorAll('canvas');
+    for (let canvas of allCanvases) {
+      if (canvas.id && canvas.id.includes(chartKey)) {
+        console.log(`Found canvas with partial ID match: ${canvas.id}`);
+        return canvas;
+      }
+    }
+    
+    console.error(`Could not find canvas element with ID ${canvasId} using any method`);
+    return null;
   };
 
   const handleSaveChart = async (chart) => {
@@ -1051,245 +1044,316 @@ function Visualizations() {
 
   const renderChart = (visualization) => {
     try {
-      if (!chartContainerRef.current || !visualization) {
-        console.error('Chart container ref or visualization is missing');
+      console.log('Rendering visualization:', visualization);
+      
+      if (!visualization) {
+        console.error('Invalid visualization object');
         return;
       }
       
-      // Destroy previous chart instance if it exists
-      if (chartInstance) {
-        try {
-          console.log('Destroying previous chart instance');
-          chartInstance.destroy();
-        } catch (err) {
-          console.error('Error destroying previous chart:', err);
-        }
+      // Get the canvas element
+      const canvas = document.getElementById(`visualization-chart-${visualization._id}`);
+      if (!canvas) {
+        console.error('Canvas element not found for visualization', visualization._id);
+        return;
       }
       
-      const ctx = chartContainerRef.current.getContext('2d');
+      const ctx = canvas.getContext('2d');
       if (!ctx) {
-        console.error('Could not get 2d context for chart container');
+        console.error('Could not get 2D context for visualization canvas', visualization._id);
         return;
       }
 
-      // Modern color palette for charts
+      // Check if there's an existing chart instance and destroy it
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+      
+      // Modern color palette
       const modernColors = [
-        'rgba(96, 165, 250, 0.8)',   // Blue
-        'rgba(167, 139, 250, 0.8)',  // Purple
-        'rgba(251, 146, 60, 0.8)',   // Orange
-        'rgba(52, 211, 153, 0.8)',   // Green
-        'rgba(248, 113, 113, 0.8)',  // Red
-        'rgba(251, 191, 36, 0.8)'    // Yellow
+        'rgba(53, 162, 235, 0.8)',
+        'rgba(255, 99, 132, 0.8)',
+        'rgba(75, 192, 192, 0.8)',
+        'rgba(255, 159, 64, 0.8)',
+        'rgba(153, 102, 255, 0.8)'
       ];
       
       const modernBorderColors = [
-        'rgba(59, 130, 246, 1)',    // Blue border
-        'rgba(139, 92, 246, 1)',    // Purple border
-        'rgba(249, 115, 22, 1)',    // Orange border
-        'rgba(16, 185, 129, 1)',    // Green border
-        'rgba(239, 68, 68, 1)',     // Red border
-        'rgba(245, 158, 11, 1)'     // Yellow border
+        'rgba(53, 162, 235, 1)',
+        'rgba(255, 99, 132, 1)',
+        'rgba(75, 192, 192, 1)',
+        'rgba(255, 159, 64, 1)',
+        'rgba(153, 102, 255, 1)'
       ];
-
-      // Configure chart options with modern styling
+      
+      const chartType = visualization.chartType || 'bar';
+      const xAxis = visualization.xAxis || visualization.config?.xAxis?.field || '';
+      const yAxis = visualization.yAxis || visualization.config?.yAxis?.field || '';
+      
+      // Prepare for data fetching
+      let data;
+      
+      // Fetch actual chart data from the API
+      (async () => {
+        try {
+          const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+          const fileId = visualization.fileId;
+          
+          // Use the data API to get actual values from the file
+          const dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${fileId}&xAxis=${xAxis}&yAxis=${yAxis}`;
+          console.log('Fetching chart data from:', dataUrl);
+          
+          const dataResponse = await fetch(dataUrl);
+          
+          if (!dataResponse.ok) {
+            throw new Error(`Failed to fetch chart data: ${dataResponse.status} ${dataResponse.statusText}`);
+          }
+          
+          const dataResult = await dataResponse.json();
+          
+          if (!dataResult.success) {
+            throw new Error(dataResult.message || 'Failed to get chart data');
+          }
+          
+          console.log('Received actual data for visualization:', dataResult);
+          
+          const xAxisLabels = dataResult.chartData.labels;
+          const yAxisData = dataResult.chartData.values;
+          
+          // Create chart data based on the chart type
+          if (chartType === 'scatter') {
+            // Create scatter plot data points
+            const scatterData = [];
+            for (let i = 0; i < Math.min(xAxisLabels.length, yAxisData.length); i++) {
+              // For scatter, we convert label to numeric value if needed
+              const xValue = isNaN(parseFloat(xAxisLabels[i])) ? i + 1 : parseFloat(xAxisLabels[i]);
+              scatterData.push({
+                x: xValue,
+                y: yAxisData[i]
+              });
+            }
+            
+            data = {
+              datasets: [{
+                label: yAxis || 'Value',
+                data: scatterData,
+                backgroundColor: modernColors[0],
+                borderColor: modernBorderColors[0],
+                pointRadius: 7,
+                pointHoverRadius: 9,
+                pointBackgroundColor: '#ffffff',
+                pointBorderWidth: 2
+              }]
+            };
+          } else if (chartType === 'pie') {
+            // For pie charts
+            data = {
+              labels: xAxisLabels,
+              datasets: [{
+                label: yAxis || 'Value',
+                data: yAxisData,
+                backgroundColor: modernColors,
+                borderColor: modernBorderColors,
+                borderWidth: 1,
+                hoverOffset: 12,
+                borderRadius: 4
+              }]
+            };
+          } else if (chartType === 'line') {
+            // For line charts
+            data = {
+              labels: xAxisLabels,
+              datasets: [{
+                label: yAxis || 'Value',
+                data: yAxisData,
+                fill: {
+                  target: 'origin',
+                  above: modernColors[0].replace('0.8', '0.1')
+                },
+                backgroundColor: modernColors[0],
+                borderColor: modernBorderColors[0],
+                tension: 0.3,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: modernBorderColors[0],
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+              }]
+            };
+          } else {
+            // For bar charts (default)
+            data = {
+              labels: xAxisLabels,
+              datasets: [{
+                label: yAxis || 'Value',
+                data: yAxisData,
+                backgroundColor: modernColors,
+                borderColor: modernBorderColors,
+                borderWidth: 1,
+                borderRadius: 6,
+                hoverBackgroundColor: modernColors.map(color => color.replace('0.8', '0.9')),
+                barPercentage: 0.7,
+                categoryPercentage: 0.8
+              }]
+            };
+          }
+        
+          // Chart options
       const options = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            position: visualization.chartType === 'pie' ? 'right' : 'top',
+                display: chartType === 'pie',
+                position: 'top',
             labels: {
               usePointStyle: true,
-              pointStyle: 'circle',
-              padding: 15,
-              color: theme.palette.text.primary,
+                  padding: 20,
               font: {
-                family: theme.typography.fontFamily,
-                size: 12,
-                weight: '500'
-              }
-            }
-          },
-          title: {
-            display: true,
-            text: visualization.title || visualization.name || 'Chart',
-            color: theme.palette.text.primary,
-            font: {
-              family: theme.typography.fontFamily,
-              size: 18,
-              weight: '600'
-            },
-            padding: {
-              top: 10,
-              bottom: 20
-            }
-          },
+                    size: 12
+                  }
+                }
+              },
           tooltip: {
-            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(17, 25, 40, 0.9)' : 'rgba(255, 255, 255, 0.95)',
-            titleColor: theme.palette.mode === 'dark' ? '#fff' : 'rgba(17, 24, 39, 1)',
-            bodyColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(55, 65, 81, 1)',
-            borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-            borderWidth: 1,
+                backgroundColor: 'rgba(0, 0, 0, 0.75)',
             padding: 12,
-            cornerRadius: 8,
-            boxPadding: 6,
+                titleColor: '#ffffff',
             titleFont: {
-              weight: '600',
-              family: theme.typography.fontFamily
+                  size: 14,
+                  weight: 'bold'
             },
             bodyFont: {
-              family: theme.typography.fontFamily
-            },
-            displayColors: true,
-            boxWidth: 8,
-            boxHeight: 8,
-            usePointStyle: true
-          }
-        },
-        scales: visualization.chartType === 'pie' ? undefined : {
-          x: {
-            title: {
-              display: true,
-              text: visualization.xAxis || visualization.config?.xAxis?.label || 'X Axis',
-              color: theme.palette.text.primary,
-              font: {
-                family: theme.typography.fontFamily,
-                size: 13,
-                weight: '500'
-              },
-              padding: { top: 10 }
-            },
-            ticks: {
-              color: theme.palette.text.secondary,
-              padding: 8,
-              font: {
-                family: theme.typography.fontFamily,
-                size: 11
+                  size: 13
+                },
+                cornerRadius: 6,
+                boxPadding: 6
               }
             },
-            grid: {
-              display: true,
-              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-              drawBorder: false,
-              drawTicks: false
+            animation: {
+              duration: 1000,
+              easing: 'easeOutQuart'
+            },
+            scales: chartType !== 'pie' && chartType !== 'scatter' ? {
+              x: {
+                grid: {
+                  display: false
+            },
+            ticks: {
+              font: {
+                    size: 12
+                  },
+                  maxRotation: 45,
+                  minRotation: 0
             }
           },
           y: {
-            title: {
-              display: true,
-              text: visualization.yAxis || visualization.config?.yAxis?.label || 'Y Axis',
-              color: theme.palette.text.primary,
-              font: {
-                family: theme.typography.fontFamily,
-                size: 13,
-                weight: '500'
-              },
-              padding: { bottom: 10 }
+                beginAtZero: true,
+                grid: {
+                  borderDash: [4, 4]
             },
             ticks: {
-              color: theme.palette.text.secondary,
-              padding: 8,
               font: {
-                family: theme.typography.fontFamily,
-                size: 11
+                    size: 12
+                  }
+                }
               }
-            },
-            grid: {
-              display: true,
-              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-              drawBorder: false,
-              drawTicks: false
-            },
-            beginAtZero: true
-          }
+            } : {}
+          };
+          
+          // Create the chart based on the type
+          console.log('Creating new visualization chart of type:', chartType);
+          const newChart = new Chart(ctx, {
+            type: chartType,
+            data: data,
+            options: options
+          });
+          
+          console.log('Visualization chart created successfully');
+          setChartInstance(newChart);
+          
+        } catch (dataError) {
+          console.error('Error fetching or rendering chart data:', dataError);
+          
+          // Fallback to placeholder data
+          createFallbackChart(ctx, chartType, xAxis, yAxis, modernColors, modernBorderColors);
         }
-      };
-
-      // Setup data based on column names and chart type
-      let data;
-      const chartType = visualization.chartType || 'bar';
-      const xAxis = visualization.xAxis || visualization.config?.xAxis?.field || '';
-      const yAxis = visualization.yAxis || visualization.config?.yAxis?.field || '';
-      
-      // Stock symbols and date labels for realistic data
-      let stockSymbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'META', 'TSLA', 'NFLX'];
-      let dateLabels = ['2023-01', '2023-02', '2023-03', '2023-04', '2023-05', '2023-06'];
-      
-      // Map specific column names to appropriate data
-      const isStockData = xAxis === 'stock_symbol' || xAxis.includes('stock') || yAxis.includes('trading_volume');
-      const isTimeSeriesData = xAxis.includes('date') || xAxis.includes('month') || xAxis.includes('time');
-      
+      })();
+    } catch (error) {
+      console.error('Error rendering visualization:', error);
+    }
+  };
+  
+  // Create a fallback chart with demo data
+  const createFallbackChart = (ctx, chartType, xAxis, yAxis, modernColors, modernBorderColors, instancesObject, chartKey) => {
+    console.log('Creating fallback chart with demo data:', { chartType, xAxis, yAxis });
+    
+    // Generate demo data based on chart type and axis names
       let xAxisLabels = [];
+    let yAxisData = [];
+    
+    // Stock symbols and date labels for demo data
+    let stockSymbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'META'];
+    let dateLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
+    
+    // Map specific column names to appropriate data
+    const isStockData = xAxis === 'stock_symbol' || xAxis.includes('stock');
+    const isTimeSeriesData = xAxis.includes('date') || xAxis.includes('month') || xAxis.includes('time');
       
       // Generate appropriate X-axis labels based on column name
       if (isStockData && xAxis === 'stock_symbol') {
-        // Use stock symbols for x-axis
-        xAxisLabels = stockSymbols.slice(0, 5);
+      xAxisLabels = stockSymbols;
       } else if (isTimeSeriesData) {
-        // Use dates for time series data
         xAxisLabels = dateLabels;
+    } else if (xAxis.includes('page') || xAxis.includes('id')) {
+      xAxisLabels = ['page_id_1', 'page_id_2', 'page_id_3', 'page_id_4', 'page_id_5'];
       } else if (xAxis.includes('category') || xAxis.includes('type')) {
-        // For category columns
         xAxisLabels = ['Category A', 'Category B', 'Category C', 'Category D', 'Category E'];
       } else if (xAxis.includes('region') || xAxis.includes('location')) {
-        // For regional data
         xAxisLabels = ['North', 'South', 'East', 'West', 'Central'];
       } else {
-        // Generic labels as fallback
         xAxisLabels = [`${xAxis} 1`, `${xAxis} 2`, `${xAxis} 3`, `${xAxis} 4`, `${xAxis} 5`];
       }
       
       // Generate appropriate Y-axis data based on column name
-      let yAxisData = [];
-      
-      if (yAxis.includes('volume') || yAxis.includes('amount')) {
-        // Volume-type data is usually high numbers
-        yAxisData = [12543, 8754, 15876, 9432, 7654, 11324];
+    if (yAxis.includes('load_time') || yAxis.includes('seconds')) {
+      yAxisData = [0.45, 0.62, 0.53, 0.48, 0.71];
+    } else if (yAxis.includes('volume') || yAxis.includes('amount')) {
+      yAxisData = [12543, 8754, 15876, 9432, 7654];
       } else if (yAxis.includes('price') || yAxis.includes('cost')) {
-        // Price-type data
-        yAxisData = [154.23, 187.56, 143.89, 172.45, 168.33, 192.78];
+      yAxisData = [154.23, 187.56, 143.89, 172.45, 168.33];
       } else if (yAxis.includes('percent') || yAxis.includes('rate')) {
-        // Percentage data
-        yAxisData = [4.5, 3.2, 5.7, 2.8, 6.1, 3.9];
+      yAxisData = [4.5, 3.2, 5.7, 2.8, 6.1];
       } else {
-        // Generic numeric data as fallback
-        yAxisData = [65, 59, 80, 81, 56, 55];
+      yAxisData = [65, 59, 80, 81, 56];
       }
       
-      // Ensure we have the right number of data points
-      yAxisData = yAxisData.slice(0, xAxisLabels.length);
+    let chartData;
       
       if (chartType === 'scatter') {
-        // For scatter charts, create paired x-y coordinates with realistic data
+      // For scatter charts, create paired x-y coordinates
         const scatterData = [];
-        
-        // Generate scatter plot data points
         for (let i = 0; i < Math.min(xAxisLabels.length, yAxisData.length); i++) {
-          // For scatter, we need numeric x values
           scatterData.push({
             x: (i + 1) * 10,
             y: yAxisData[i]
           });
         }
         
-        data = {
+      chartData = {
           datasets: [{
             label: yAxis || 'Value',
             data: scatterData,
             backgroundColor: modernColors[0],
             borderColor: modernBorderColors[0],
             pointRadius: 7,
-            pointHoverRadius: 9,
-            pointBackgroundColor: '#ffffff',
-            pointBorderWidth: 2
+          pointHoverRadius: 9
           }]
         };
       } else if (chartType === 'pie') {
         // For pie charts
-        data = {
+      chartData = {
           labels: xAxisLabels,
           datasets: [{
-            label: yAxis || 'Value',
             data: yAxisData,
             backgroundColor: modernColors,
             borderColor: modernBorderColors,
@@ -1300,8 +1364,8 @@ function Visualizations() {
         };
       } else if (chartType === 'line') {
         // For line charts
-        data = {
-          labels: isTimeSeriesData ? dateLabels : xAxisLabels,
+      chartData = {
+        labels: xAxisLabels,
           datasets: [{
             label: yAxis || 'Value',
             data: yAxisData,
@@ -1321,7 +1385,7 @@ function Visualizations() {
         };
       } else {
         // For bar charts (default)
-        data = {
+      chartData = {
           labels: xAxisLabels,
           datasets: [{
             label: yAxis || 'Value',
@@ -1337,18 +1401,91 @@ function Visualizations() {
         };
       }
       
-      // Create the chart based on the type
-      console.log('Creating new chart of type:', chartType);
+    // Chart options
+    const modernChartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: chartType === 'pie',
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            padding: 20,
+            font: {
+              size: 12
+            }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          padding: 12,
+          titleColor: '#ffffff',
+          titleFont: {
+            size: 14,
+            weight: 'bold'
+          },
+          bodyFont: {
+            size: 13
+          },
+          cornerRadius: 6,
+          boxPadding: 6
+        }
+      },
+      animation: {
+        duration: 1000,
+        easing: 'easeOutQuart'
+      },
+      scales: chartType !== 'pie' && chartType !== 'scatter' ? {
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            font: {
+              size: 12
+            },
+            maxRotation: 45,
+            minRotation: 0
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            borderDash: [4, 4]
+          },
+          ticks: {
+            font: {
+              size: 12
+            }
+          }
+        }
+      } : {}
+    };
+    
+    // Create the demo chart
+    try {
+      console.log('Creating fallback chart of type:', chartType);
+      
+      // If there's an existing chart, destroy it first
+      if (instancesObject && instancesObject[chartKey]) {
+        instancesObject[chartKey].destroy();
+      }
+      
       const newChart = new Chart(ctx, {
         type: chartType,
-        data: data,
-        options: options
+        data: chartData,
+        options: modernChartOptions
       });
       
-      console.log('Chart created successfully');
-      setChartInstance(newChart);
+      console.log('Fallback chart created successfully');
+      
+      // Store the chart instance
+      if (instancesObject) {
+        instancesObject[chartKey] = newChart;
+      }
     } catch (error) {
-      console.error('Error creating chart:', error);
+      console.error('Error creating fallback chart:', error);
     }
   };
 
