@@ -15,8 +15,17 @@ export const ColorModeContext = createContext({
   mode: 'light',
 });
 
+// Create Data Context for managing data updates across components
+export const DataContext = createContext({
+  refreshData: () => {},
+  lastUpdate: 0,
+});
+
 // Custom hook to use the color mode context
 export const useColorMode = () => useContext(ColorModeContext);
+
+// Custom hook to use the data context
+export const useDataContext = () => useContext(DataContext);
 
 function AppRoutes() {
   const location = useLocation();
@@ -47,10 +56,24 @@ function App() {
     return savedMode || 'light';
   });
 
+  // State for the data context
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
+
   // Update localStorage when theme changes
   useEffect(() => {
     localStorage.setItem('themeMode', mode);
   }, [mode]);
+
+  // Add regular polling for data updates
+  useEffect(() => {
+    // Set up an interval to automatically refresh data every 5 seconds
+    const refreshInterval = setInterval(() => {
+      setLastUpdate(Date.now());
+    }, 5000);
+    
+    // Clean up on unmount
+    return () => clearInterval(refreshInterval);
+  }, []);
 
   const colorMode = useMemo(
     () => ({
@@ -63,6 +86,15 @@ function App() {
       mode,
     }),
     [mode]
+  );
+
+  // Create data context value
+  const dataContextValue = useMemo(
+    () => ({
+      refreshData: () => setLastUpdate(Date.now()),
+      lastUpdate,
+    }),
+    [lastUpdate]
   );
 
   // Create theme based on mode
@@ -128,14 +160,16 @@ function App() {
 
   return (
     <ColorModeContext.Provider value={colorMode}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <HashRouter>
-          <Layout>
-            <AppRoutes />
-          </Layout>
-        </HashRouter>
-      </ThemeProvider>
+      <DataContext.Provider value={dataContextValue}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <HashRouter>
+            <Layout>
+              <AppRoutes />
+            </Layout>
+          </HashRouter>
+        </ThemeProvider>
+      </DataContext.Provider>
     </ColorModeContext.Provider>
   );
 }

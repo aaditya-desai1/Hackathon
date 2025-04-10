@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useDataContext } from '../App';
 import {
   Box,
   Typography,
@@ -31,6 +32,7 @@ import FileUploader from '../components/file/FileUploader';
 function FileManager() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { refreshData } = useDataContext();
   const [openUploadDialog, setOpenUploadDialog] = useState(false);
   const [openPreviewDialog, setOpenPreviewDialog] = useState(false);
   const [previewData, setPreviewData] = useState(null);
@@ -41,6 +43,8 @@ function FileManager() {
   const theme = useTheme();
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [fileToDelete, setFileToDelete] = useState(null);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [openDeleteAllDialog, setOpenDeleteAllDialog] = useState(false);
 
   // Helper function to format dates
   const formatDate = (dateString) => {
@@ -137,6 +141,9 @@ function FileManager() {
     // Refresh the file list immediately
     await fetchFiles();
     
+    // Notify other components that data has changed
+    refreshData();
+    
     // Wait a moment before closing the dialog to show success
     setTimeout(() => {
       handleCloseUploadDialog();
@@ -170,6 +177,9 @@ function FileManager() {
       
       // Refresh the file list
       await fetchFiles();
+      
+      // Notify other components that data has changed
+      refreshData();
       
       // Close dialog
       setOpenDeleteDialog(false);
@@ -273,21 +283,32 @@ function FileManager() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const handleDeleteAllFiles = async () => {
+  const handleConfirmDeleteAll = () => {
+    setOpenDeleteAllDialog(false);
+    deleteAllFiles();
+  };
+
+  const handleCancelDeleteAll = () => {
+    setOpenDeleteAllDialog(false);
+  };
+
+  const handleDeleteAllFiles = () => {
+    setOpenDeleteAllDialog(true);
+  };
+
+  const deleteAllFiles = async () => {
     try {
-      if (!window.confirm('Are you sure you want to delete ALL files from the database? This action cannot be undone.')) {
-        return;
-      }
+      setIsDeletingAll(true);
       
-      setLoading(true);
+      // Clear any previous errors
+      console.log('Starting complete reset operation...');
       
-      // Use environment-aware API endpoint
-      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
-      const url = `${API_BASE_URL}/api/files/cleanup-database`;
+      // Use the reset-everything endpoint for most reliable delete
+      const url = `/api/files/reset-everything`;
       
-      console.log('Cleaning up database from:', url);
+      console.log('Sending reset request to:', url);
       
-      // Call the cleanup endpoint
+      // Call the reset endpoint
       const response = await fetch(url, { 
         method: 'DELETE',
         headers: {
@@ -295,22 +316,41 @@ function FileManager() {
         }
       });
       
+      // Check response
       if (!response.ok) {
-        throw new Error('Failed to clean up database');
+        const errorText = await response.text();
+        console.error(`Server error (${response.status}):`, errorText);
+        throw new Error(`Server error: ${response.status} ${response.statusText}`);
       }
       
+      // Get the response data
       const result = await response.json();
-      console.log('Cleanup result:', result);
+      console.log('Reset operation result:', result);
       
       // Refresh the file list
       await fetchFiles();
       
-      alert(`Successfully removed ${result.filesDeleted} files from the database.`);
+      // Notify other components that data has changed
+      refreshData();
+      
+      // Show success message
+      alert(`Database and files successfully reset. Reload the page to ensure everything is fresh.`);
+      
+      // Automatically reload the page to ensure everything is fresh
+      window.location.reload();
     } catch (error) {
-      console.error('Error cleaning up database:', error);
-      alert(`Error cleaning up database: ${error.message}`);
+      console.error('Error resetting database and files:', error);
+      
+      // Allow the user to retry or reload
+      const shouldReload = window.confirm(
+        `Error: ${error.message}. The application may be in an inconsistent state. Would you like to reload the page?`
+      );
+      
+      if (shouldReload) {
+        window.location.reload();
+      }
     } finally {
-      setLoading(false);
+      setIsDeletingAll(false);
     }
   };
 
@@ -321,20 +361,34 @@ function FileManager() {
           File Manager
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="outlined"
-            color="error"
-            onClick={handleDeleteAllFiles}
-            sx={{ display: files.length > 0 ? 'flex' : 'none' }}
-          >
-            Delete All Files
-          </Button>
+          {files.length > 0 && !isDeletingAll && (
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={handleDeleteAllFiles}
+              disabled={loading}
+            >
+              Delete All Files
+            </Button>
+          )}
+          {isDeletingAll && (
+            <Button
+              variant="outlined"
+              color="error"
+              disabled
+              startIcon={<CircularProgress size={20} color="error" />}
+              sx={{ minWidth: '150px' }}
+            >
+              Deleting...
+            </Button>
+          )}
           <Button
             variant="contained"
             color="primary"
             onClick={() => setOpenUploadDialog(true)}
+            disabled={isDeletingAll}
           >
-            Upload New File
+            {isDeletingAll ? "Please wait..." : "Upload New File"}
           </Button>
         </Box>
       </Box>
@@ -612,6 +666,62 @@ function FileManager() {
           </Button>
           <Button onClick={handleConfirmDelete} color="error" variant="contained">
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete All Files confirmation dialog */}
+      <Dialog
+        open={openDeleteAllDialog}
+        onClose={!isDeletingAll ? handleCancelDeleteAll : undefined}
+        aria-labelledby="delete-all-dialog-title"
+      >
+        <DialogTitle id="delete-all-dialog-title" sx={{ 
+          bgcolor: 'error.main', 
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}>
+          <DeleteIcon />
+          Delete All Files
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2, minWidth: '400px' }}>
+          {isDeletingAll ? (
+            <Box sx={{ py: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <CircularProgress size={40} />
+              <Typography>
+                Deleting all files and visualizations...
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                This may take a moment. Please do not close this window.
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              <Typography gutterBottom sx={{ mt: 1 }}>
+                Are you sure you want to delete ALL files from the database? This will also remove all visualizations based on these files.
+              </Typography>
+              <Typography variant="body2" color="error" sx={{ mt: 2, fontWeight: 'bold' }}>
+                This action cannot be undone.
+              </Typography>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={handleCancelDeleteAll} 
+            disabled={isDeletingAll}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleConfirmDeleteAll} 
+            color="error" 
+            variant="contained"
+            disabled={isDeletingAll}
+          >
+            Delete All Files
           </Button>
         </DialogActions>
       </Dialog>
