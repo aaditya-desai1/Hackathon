@@ -41,12 +41,32 @@ const fileFilter = (req, file, cb) => {
   
   console.log(`[FileRoutes] File upload attempt: ${file.originalname}, mime: ${file.mimetype}, ext: ${ext}`);
   
+  // Check for valid MIME types or extensions
   if (allowedTypes.includes(file.mimetype) && (allowedExtensions.includes(ext) || ext === '')) {
     cb(null, true);
-  } else {
-    console.log(`[FileRoutes] Rejected file: ${file.originalname} (type: ${file.mimetype}, ext: ${ext})`);
-    cb(new Error(`Invalid file type. Only CSV and JSON files are allowed. Received: ${file.mimetype}, ${ext}`));
+    return;
   }
+  
+  // Special case for files with wrong mimetype but correct extension
+  // This helps with files that browsers might misidentify
+  if (allowedExtensions.includes(ext)) {
+    console.log(`[FileRoutes] File has correct extension but wrong MIME type: ${file.mimetype}`);
+    
+    // Override the mimetype based on extension
+    if (ext === '.csv') {
+      file.mimetype = 'text/csv';
+    } else if (ext === '.json') {
+      file.mimetype = 'application/json';
+    } else if (ext === '.txt') {
+      file.mimetype = 'text/plain';
+    }
+    
+    cb(null, true);
+    return;
+  }
+  
+  console.log(`[FileRoutes] Rejected file: ${file.originalname} (type: ${file.mimetype}, ext: ${ext})`);
+  cb(new Error(`Invalid file type. Only CSV, JSON, and text files are allowed. Received: ${file.mimetype}, ${ext}`));
 };
 
 const upload = multer({
@@ -171,7 +191,7 @@ router.use((error, req, res, next) => {
   
   if (error.message.includes('Invalid file type')) {
     return res.status(400).json({ 
-      error: 'Invalid file type. Only CSV and JSON files are allowed.' 
+      error: 'Invalid file type. Only CSV, JSON, and text files are allowed.' 
     });
   }
   

@@ -7,6 +7,7 @@ import {
   Alert,
   Paper,
   Button,
+  CircularProgress,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
@@ -18,6 +19,86 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [validating, setValidating] = useState(false);
+
+  // Function to validate file content before upload
+  const validateFileContent = async (file) => {
+    setValidating(true);
+    try {
+      // Basic file validation
+      if (file.size === 0) {
+        throw new Error('File is empty');
+      }
+
+      // For larger files, just check a sample
+      const maxSizeToCheck = 50 * 1024; // 50KB
+      const sizeToCheck = Math.min(file.size, maxSizeToCheck);
+      
+      // Read a portion of the file to check its format
+      const fileSlice = file.slice(0, sizeToCheck);
+      const content = await readFileSlice(fileSlice);
+      
+      // Check if the file appears to be JSON
+      if (file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')) {
+        validateJsonContent(content);
+      }
+      
+      // Check if the file appears to be CSV 
+      if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) {
+        validateCsvContent(content);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('File validation error:', error);
+      setError(`File validation failed: ${error.message}`);
+      return false;
+    } finally {
+      setValidating(false);
+    }
+  };
+  
+  // Helper function to read a file slice
+  const readFileSlice = (fileSlice) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsText(fileSlice);
+    });
+  };
+  
+  // Helper function to validate JSON content
+  const validateJsonContent = (content) => {
+    try {
+      // Clean the content of BOM and other characters
+      const cleanContent = content.trim().replace(/^\uFEFF/, '');
+      
+      // Check if content starts with { or [
+      if (!(cleanContent.startsWith('{') || cleanContent.startsWith('['))) {
+        throw new Error('JSON file must start with { or [');
+      }
+      
+      // Try to parse the JSON
+      JSON.parse(cleanContent);
+    } catch (e) {
+      throw new Error(`Invalid JSON format: ${e.message}`);
+    }
+  };
+  
+  // Helper function to validate CSV content
+  const validateCsvContent = (content) => {
+    // Check if content has commas or tabs
+    if (!content.includes(',') && !content.includes('\t') && !content.includes(';')) {
+      throw new Error('CSV file does not contain any delimiters (comma, tab, or semicolon)');
+    }
+    
+    // Check if there are at least some rows
+    const lines = content.split('\n').filter(line => line.trim().length > 0);
+    if (lines.length === 0) {
+      throw new Error('CSV file does not contain any data');
+    }
+  };
 
   const uploadFile = async (file) => {
     if (!file) return;
@@ -27,6 +108,13 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     setErrorDetails(null);
     setSuccess(false);
     setUploadProgress(0);
+    
+    // Validate file content first
+    const isValid = await validateFileContent(file);
+    if (!isValid) {
+      setUploading(false);
+      return;
+    }
     
     // Simulate upload progress for better UX
     const progressInterval = setInterval(() => {
@@ -112,8 +200,16 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     
     if (!file) return;
     
-    if (!allowedTypes.includes(file.type)) {
-      setError(`File type not supported. Please upload ${allowedTypes.join(', ')} files.`);
+    // Check file type
+    const fileExtension = file.name.toLowerCase().split('.').pop();
+    console.log(`File extension: ${fileExtension}, MIME type: ${file.type}`);
+    
+    // Check if file type is allowed based on both MIME type and extension
+    const isAllowedMimeType = allowedTypes.includes(file.type);
+    const isAllowedExtension = ['csv', 'json', 'txt'].includes(fileExtension);
+    
+    if (!isAllowedMimeType && !isAllowedExtension) {
+      setError(`File type not supported. Please upload CSV, JSON, or TXT files.`);
       return;
     }
 
@@ -126,10 +222,11 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: allowedTypes.reduce((acc, type) => {
-      acc[type] = [];
-      return acc;
-    }, {}),
+    accept: {
+      'text/csv': ['.csv'],
+      'application/json': ['.json'],
+      'text/plain': ['.txt', '.csv', '.json']
+    },
     multiple: false,
   });
 
@@ -171,15 +268,15 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
           border: '2px dashed',
           borderColor: isDragActive ? 'primary.main' : 'grey.300',
           backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
-          cursor: uploading ? 'default' : 'pointer',
+          cursor: (uploading || validating) ? 'default' : 'pointer',
           transition: 'all 0.2s ease',
           '&:hover': {
-            borderColor: uploading ? 'grey.300' : 'primary.main',
-            backgroundColor: uploading ? 'background.paper' : 'action.hover',
+            borderColor: (uploading || validating) ? 'grey.300' : 'primary.main',
+            backgroundColor: (uploading || validating) ? 'background.paper' : 'action.hover',
           },
         }}
       >
-        <input {...getInputProps()} disabled={uploading} />
+        <input {...getInputProps()} disabled={uploading || validating} />
         <Box
           sx={{
             display: 'flex',
@@ -188,19 +285,30 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
             textAlign: 'center',
           }}
         >
-          <CloudUploadIcon
-            sx={{ fontSize: 48, color: 'primary.main', mb: 2 }}
-          />
-          <Typography variant="h6" gutterBottom>
-            {isDragActive
-              ? 'Drop the file here'
-              : uploading
-              ? 'Uploading...'
-              : 'Drag and drop a file here, or click to select'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Supported formats: CSV, JSON, and text files
-          </Typography>
+          {validating ? (
+            <>
+              <CircularProgress sx={{ mb: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                Validating file...
+              </Typography>
+            </>
+          ) : (
+            <>
+              <CloudUploadIcon
+                sx={{ fontSize: 48, color: 'primary.main', mb: 2 }}
+              />
+              <Typography variant="h6" gutterBottom>
+                {isDragActive
+                  ? 'Drop the file here'
+                  : uploading
+                  ? 'Uploading...'
+                  : 'Drag and drop a file here, or click to select'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Supported formats: CSV, JSON, and text files
+              </Typography>
+            </>
+          )}
         </Box>
       </Paper>
 
