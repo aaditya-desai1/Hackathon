@@ -126,7 +126,81 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      
+      // Create a sanitized file if it's JSON to ensure proper content
+      if (file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')) {
+        try {
+          // Read the file content
+          const content = await readFileSlice(file);
+          
+          // Clean and validate content
+          const cleanContent = content.trim().replace(/^\uFEFF/, '');
+          let validJsonContent;
+          
+          try {
+            // Attempt to parse and stringify to ensure valid JSON
+            const parsedData = JSON.parse(cleanContent);
+            validJsonContent = JSON.stringify(parsedData);
+          } catch (err) {
+            // If standard parsing fails, try to extract valid JSON
+            const jsonStart = Math.max(
+              cleanContent.indexOf('{'), 
+              cleanContent.indexOf('[')
+            );
+            
+            if (jsonStart >= 0) {
+              let extractedContent = cleanContent.substring(jsonStart);
+              // Find matching end bracket/brace
+              const isArray = extractedContent.startsWith('[');
+              let count = 1;
+              let endPos = -1;
+              
+              for (let i = 1; i < extractedContent.length; i++) {
+                const char = extractedContent[i];
+                if ((isArray && char === '[') || (!isArray && char === '{')) count++;
+                if ((isArray && char === ']') || (!isArray && char === '}')) count--;
+                
+                if (count === 0) {
+                  endPos = i;
+                  break;
+                }
+              }
+              
+              if (endPos > 0) {
+                extractedContent = extractedContent.substring(0, endPos + 1);
+                try {
+                  // Verify we have valid JSON
+                  const parsed = JSON.parse(extractedContent);
+                  validJsonContent = JSON.stringify(parsed);
+                } catch (e) {
+                  throw new Error(`Could not extract valid JSON: ${e.message}`);
+                }
+              } else {
+                throw new Error('Could not find matching closing bracket/brace in JSON');
+              }
+            } else {
+              throw new Error('No valid JSON structure found in file');
+            }
+          }
+          
+          // Create a new sanitized file with the valid JSON
+          const sanitizedFile = new File(
+            [validJsonContent], 
+            file.name, 
+            { type: 'application/json' }
+          );
+          
+          formData.append('file', sanitizedFile);
+          console.log('Using sanitized JSON file for upload');
+        } catch (error) {
+          console.error('Error sanitizing JSON file:', error);
+          // Fall back to the original file if sanitization fails
+          formData.append('file', file);
+        }
+      } else {
+        // For non-JSON files, use as-is
+        formData.append('file', file);
+      }
       
       // Use the absolute URL path for consistent behavior in all environments
       const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
