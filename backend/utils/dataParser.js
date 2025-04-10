@@ -165,10 +165,10 @@ exports.parseJSON = async (filePath) => {
   try {
     console.log('[dataParser] Reading JSON file:', filePath);
     
-    // Read the raw content first
+    // Read the content
     const content = await fs.readFile(filePath, 'utf-8');
     const contentLength = content.length;
-    console.log('[dataParser] JSON raw content length:', contentLength);
+    console.log('[dataParser] JSON content length:', contentLength);
     
     if (contentLength === 0) {
       console.log('[dataParser] Empty JSON file');
@@ -183,32 +183,20 @@ exports.parseJSON = async (filePath) => {
     console.log('[dataParser] Content start (first 100 chars):', 
       content.substring(0, 100).replace(/\n/g, '\\n').replace(/\r/g, '\\r'));
     
-    // Create a sanitized version of the JSON file
-    const sanitizedPath = `${filePath}.sanitized`;
+    // Clean and process the content in memory without writing files
     let data;
-    
     try {
-      // First try to convert/clean the JSON directly
       // Remove BOM and whitespace
       let cleanContent = content.replace(/^\uFEFF/, '').trim();
       
-      // Try to parse and automatically fix the content by re-stringifying it
+      // Try parsing the JSON directly first
       try {
-        const parsed = JSON.parse(cleanContent);
-        // Re-stringify to ensure proper format
-        const properJson = JSON.stringify(parsed);
-        
-        // Write the sanitized version to disk
-        await fs.writeFile(sanitizedPath, properJson, 'utf-8');
-        console.log('[dataParser] Written sanitized JSON to:', sanitizedPath);
-        
-        // Use the parsed data
-        data = parsed;
+        data = JSON.parse(cleanContent);
+        console.log('[dataParser] Successfully parsed JSON directly');
       } catch (initialError) {
-        console.log('[dataParser] Initial JSON parse failed, trying to fix content...');
+        console.log('[dataParser] Initial JSON parse failed, attempting repair:', initialError.message);
         
-        // Attempt to extract valid JSON from potentially invalid content
-        // Remove any leading garbage before { or [
+        // Attempt to extract valid JSON structure
         const firstBrace = cleanContent.indexOf('{');
         const firstBracket = cleanContent.indexOf('[');
         
@@ -225,30 +213,39 @@ exports.parseJSON = async (filePath) => {
           cleanContent = cleanContent.substring(startIndex);
         }
         
-        // Find where the JSON actually ends (in case there's trailing garbage)
+        // Find where the JSON actually ends
         let endIndex = cleanContent.length;
+        const isArray = cleanContent.startsWith('[');
+        let depth = 0;
+        let inString = false;
+        let escapeNext = false;
         
-        // Try to find valid JSON substring
-        if (cleanContent.startsWith('{')) {
-          // For objects, find matching closing brace
-          let braceCount = 0;
-          let i = 0;
-          for (i = 0; i < cleanContent.length; i++) {
-            if (cleanContent[i] === '{') braceCount++;
-            if (cleanContent[i] === '}') braceCount--;
-            if (braceCount === 0 && i > 0) {
-              endIndex = i + 1;
-              break;
-            }
+        // More efficient and accurate JSON structure finding
+        for (let i = 0; i < cleanContent.length; i++) {
+          const char = cleanContent[i];
+          
+          if (escapeNext) {
+            escapeNext = false;
+            continue;
           }
-        } else if (cleanContent.startsWith('[')) {
-          // For arrays, find matching closing bracket
-          let bracketCount = 0;
-          let i = 0;
-          for (i = 0; i < cleanContent.length; i++) {
-            if (cleanContent[i] === '[') bracketCount++;
-            if (cleanContent[i] === ']') bracketCount--;
-            if (bracketCount === 0 && i > 0) {
+          
+          if (char === '\\') {
+            escapeNext = true;
+            continue;
+          }
+          
+          if (char === '"' && !escapeNext) {
+            inString = !inString;
+            continue;
+          }
+          
+          if (inString) continue;
+          
+          if ((isArray && char === '[') || (!isArray && char === '{')) {
+            depth++;
+          } else if ((isArray && char === ']') || (!isArray && char === '}')) {
+            depth--;
+            if (depth === 0) {
               endIndex = i + 1;
               break;
             }
@@ -260,17 +257,18 @@ exports.parseJSON = async (filePath) => {
           cleanContent = cleanContent.substring(0, endIndex);
         }
         
-        // Try parsing the fixed content and save it
-        data = JSON.parse(cleanContent);
-        const properJson = JSON.stringify(data);
-        
-        // Write the sanitized version to disk
-        await fs.writeFile(sanitizedPath, properJson, 'utf-8');
-        console.log('[dataParser] Written repaired JSON to:', sanitizedPath);
+        // Try parsing the fixed content
+        try {
+          data = JSON.parse(cleanContent);
+          console.log('[dataParser] Successfully parsed repaired JSON');
+        } catch (repairError) {
+          console.error('[dataParser] JSON repair failed:', repairError.message);
+          throw repairError;
+        }
       }
     } catch (parseError) {
       console.error('[dataParser] JSON parse error:', parseError.message);
-      console.error('[dataParser] Content snippet:', content.substring(0, 200).replace(/\n/g, '\\n'));
+      console.error('[dataParser] Failed content snippet:', content.substring(0, 200).replace(/\n/g, '\\n'));
       throw new Error(`Error parsing JSON: ${parseError.message}`);
     }
     
@@ -303,13 +301,6 @@ exports.parseJSON = async (filePath) => {
         columns = Object.keys(item);
         if (columns.length > 0) break;
       }
-    }
-    
-    // Cleanup the temporary sanitized file
-    try {
-      await fs.unlink(sanitizedPath);
-    } catch (err) {
-      console.warn('[dataParser] Could not delete sanitized file:', err.message);
     }
     
     return {

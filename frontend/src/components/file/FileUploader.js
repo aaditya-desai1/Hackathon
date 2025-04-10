@@ -125,82 +125,128 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     }, 100);
     
     try {
-      const formData = new FormData();
+      let fileToUpload = file;
       
-      // Create a sanitized file if it's JSON to ensure proper content
+      // For JSON files, ensure we have valid JSON by pre-processing it
       if (file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')) {
         try {
-          // Read the file content
-          const content = await readFileSlice(file);
+          console.log('Processing JSON file before upload');
+          // Read the entire file content
+          const fileContent = await readFileSlice(file);
           
-          // Clean and validate content
-          const cleanContent = content.trim().replace(/^\uFEFF/, '');
-          let validJsonContent;
+          // Clean the content of BOM and whitespace
+          const cleanContent = fileContent.replace(/^\uFEFF/, '').trim();
+          
+          // Try to parse and re-stringify to ensure valid JSON format
+          let validJson;
           
           try {
-            // Attempt to parse and stringify to ensure valid JSON
+            // Attempt to parse the JSON
             const parsedData = JSON.parse(cleanContent);
-            validJsonContent = JSON.stringify(parsedData);
-          } catch (err) {
-            // If standard parsing fails, try to extract valid JSON
-            const jsonStart = Math.max(
-              cleanContent.indexOf('{'), 
-              cleanContent.indexOf('[')
-            );
+            validJson = JSON.stringify(parsedData);
+            console.log('Successfully parsed and validated JSON content');
+          } catch (jsonError) {
+            console.error('Error parsing JSON content:', jsonError);
             
-            if (jsonStart >= 0) {
-              let extractedContent = cleanContent.substring(jsonStart);
-              // Find matching end bracket/brace
-              const isArray = extractedContent.startsWith('[');
-              let count = 1;
-              let endPos = -1;
+            // Try to extract valid JSON from the content
+            let extractedContent = null;
+            
+            // Find the start of a JSON object or array
+            const firstBrace = cleanContent.indexOf('{');
+            const firstBracket = cleanContent.indexOf('[');
+            
+            if (firstBrace === -1 && firstBracket === -1) {
+              throw new Error('No valid JSON structure found in file');
+            }
+            
+            const startIndex = (firstBrace !== -1 && firstBracket !== -1)
+              ? Math.min(firstBrace, firstBracket)
+              : Math.max(firstBrace, firstBracket);
+            
+            if (startIndex >= 0) {
+              // Extract substring starting from JSON structure
+              extractedContent = cleanContent.substring(startIndex);
               
-              for (let i = 1; i < extractedContent.length; i++) {
+              // Determine if we're dealing with an object or array
+              const isArray = extractedContent.startsWith('[');
+              
+              // Find the matching closing bracket/brace
+              let depth = 0;
+              let endPos = -1;
+              let inString = false;
+              let escapeNext = false;
+              
+              for (let i = 0; i < extractedContent.length; i++) {
                 const char = extractedContent[i];
-                if ((isArray && char === '[') || (!isArray && char === '{')) count++;
-                if ((isArray && char === ']') || (!isArray && char === '}')) count--;
                 
-                if (count === 0) {
-                  endPos = i;
-                  break;
+                if (escapeNext) {
+                  escapeNext = false;
+                  continue;
+                }
+                
+                if (char === '\\') {
+                  escapeNext = true;
+                  continue;
+                }
+                
+                if (char === '"' && !escapeNext) {
+                  inString = !inString;
+                  continue;
+                }
+                
+                if (inString) continue;
+                
+                if ((isArray && char === '[') || (!isArray && char === '{')) {
+                  depth++;
+                } else if ((isArray && char === ']') || (!isArray && char === '}')) {
+                  depth--;
+                  if (depth === 0) {
+                    endPos = i + 1;
+                    break;
+                  }
                 }
               }
               
               if (endPos > 0) {
-                extractedContent = extractedContent.substring(0, endPos + 1);
+                // Extract just the valid JSON part
+                extractedContent = extractedContent.substring(0, endPos);
+                
                 try {
-                  // Verify we have valid JSON
-                  const parsed = JSON.parse(extractedContent);
-                  validJsonContent = JSON.stringify(parsed);
-                } catch (e) {
-                  throw new Error(`Could not extract valid JSON: ${e.message}`);
+                  // Verify it's valid JSON
+                  const parsedData = JSON.parse(extractedContent);
+                  validJson = JSON.stringify(parsedData);
+                  console.log('Successfully extracted and validated JSON content');
+                } catch (extractError) {
+                  console.error('Failed to extract valid JSON:', extractError);
+                  throw new Error(`Could not extract valid JSON: ${extractError.message}`);
                 }
               } else {
-                throw new Error('Could not find matching closing bracket/brace in JSON');
+                throw new Error('Could not find complete JSON structure');
               }
             } else {
-              throw new Error('No valid JSON structure found in file');
+              throw new Error('No valid JSON structure found');
             }
           }
           
-          // Create a new sanitized file with the valid JSON
-          const sanitizedFile = new File(
-            [validJsonContent], 
-            file.name, 
-            { type: 'application/json' }
-          );
-          
-          formData.append('file', sanitizedFile);
-          console.log('Using sanitized JSON file for upload');
-        } catch (error) {
-          console.error('Error sanitizing JSON file:', error);
-          // Fall back to the original file if sanitization fails
-          formData.append('file', file);
+          // Create a new file with the valid JSON content
+          if (validJson) {
+            fileToUpload = new File(
+              [validJson], 
+              file.name, 
+              { type: 'application/json' }
+            );
+            console.log('Created sanitized JSON file for upload');
+          }
+        } catch (preprocessError) {
+          console.error('Failed to pre-process JSON file:', preprocessError);
+          // Continue with original file if pre-processing fails
+          setError(`Warning: Could not validate JSON format: ${preprocessError.message}. Attempting upload anyway.`);
         }
-      } else {
-        // For non-JSON files, use as-is
-        formData.append('file', file);
       }
+      
+      // Prepare the form data with the processed file
+      const formData = new FormData();
+      formData.append('file', fileToUpload);
       
       // Use the absolute URL path for consistent behavior in all environments
       const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
@@ -209,10 +255,10 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       console.log('Uploading file to:', url);
       console.log('Environment:', process.env.NODE_ENV);
       console.log('File details:', {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        lastModified: new Date(file.lastModified).toISOString()
+        name: fileToUpload.name,
+        type: fileToUpload.type,
+        size: fileToUpload.size,
+        lastModified: new Date(fileToUpload.lastModified).toISOString()
       });
       
       const response = await fetch(url, {

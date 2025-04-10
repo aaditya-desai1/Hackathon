@@ -127,86 +127,32 @@ router.post('/upload', handleFileUpload, async (req, res, next) => {
       try {
         // Read file content
         const fileContent = await fs.readFile(req.file.path, 'utf-8');
+        console.log('[FileRoutes] Validating JSON file content, length:', fileContent.length);
         
-        // Try to parse and re-stringify to ensure valid JSON
-        let validContent;
-        
+        // Simple validation to ensure it's a valid JSON structure without writing to disk
         try {
-          // Clean the content
+          // Clean and validate the JSON
           const cleanContent = fileContent.trim().replace(/^\uFEFF/, '');
-          
-          // Try parsing the JSON
-          const parsedData = JSON.parse(cleanContent);
-          validContent = JSON.stringify(parsedData);
-          
-          // Write the cleaned JSON back to the file
-          await fs.writeFile(req.file.path, validContent, 'utf-8');
-          console.log('[FileRoutes] JSON validated and cleaned successfully');
+          JSON.parse(cleanContent); // Just validate, don't save the result
+          console.log('[FileRoutes] JSON content validated successfully');
         } catch (parseError) {
           console.error('[FileRoutes] JSON parse error:', parseError.message);
-          
-          // Try to extract valid JSON
-          const firstBrace = fileContent.indexOf('{');
-          const firstBracket = fileContent.indexOf('[');
-          
-          if (firstBrace === -1 && firstBracket === -1) {
-            throw new Error('No valid JSON structure found in file');
-          }
-          
-          const startIndex = (firstBrace !== -1 && firstBracket !== -1)
-            ? Math.min(firstBrace, firstBracket)
-            : Math.max(firstBrace, firstBracket);
-            
-          if (startIndex >= 0) {
-            let content = fileContent.substring(startIndex);
-            const isArray = content.startsWith('[');
-            
-            // Find the matching ending
-            let count = 1;
-            let endPos = -1;
-            
-            for (let i = 1; i < content.length; i++) {
-              const char = content[i];
-              if ((isArray && char === '[') || (!isArray && char === '{')) count++;
-              if ((isArray && char === ']') || (!isArray && char === '}')) count--;
-              
-              if (count === 0) {
-                endPos = i;
-                break;
-              }
-            }
-            
-            if (endPos > 0) {
-              content = content.substring(0, endPos + 1);
-              
-              // Validate extracted content
-              try {
-                const parsed = JSON.parse(content);
-                validContent = JSON.stringify(parsed);
-                
-                // Write fixed JSON back to file
-                await fs.writeFile(req.file.path, validContent, 'utf-8');
-                console.log('[FileRoutes] JSON fixed and saved successfully');
-              } catch (e) {
-                throw new Error(`Extracted content is not valid JSON: ${e.message}`);
-              }
-            } else {
-              throw new Error('Could not find matching closing bracket/brace in JSON');
-            }
-          } else {
-            throw new Error('No valid JSON structure found in file');
-          }
+          // Don't try to fix JSON server-side, rely on client-side sanitization
+          return res.status(400).json({ 
+            error: 'Invalid JSON format in uploaded file', 
+            details: parseError.message 
+          });
         }
       } catch (error) {
-        console.error('[FileRoutes] JSON validation error:', error.message);
-        return res.status(400).json({ 
-          error: 'Invalid JSON format in uploaded file', 
+        console.error('[FileRoutes] Error reading JSON file:', error.message);
+        return res.status(500).json({ 
+          error: 'Failed to read uploaded file', 
           details: error.message 
         });
       }
     }
     
-    // If JSON validation passed, continue to the controller
+    // If validation passed, continue to the controller
     fileController.uploadFile(req, res, next);
   } catch (error) {
     console.error('[FileRoutes] Unexpected error in upload middleware:', error);
