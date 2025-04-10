@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useDataContext } from '../App';
 import {
   Box,
   Typography,
@@ -49,8 +50,10 @@ import { fetchApi } from '../services/api';
 Chart.register(...registerables);
 
 function Visualizations() {
-  const theme = useTheme();
+  const navigate = useNavigate();
   const location = useLocation();
+  const { refreshData } = useDataContext();
+  const theme = useTheme();
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -778,38 +781,15 @@ function Visualizations() {
 
   const handleSaveChart = async (chart) => {
     try {
-      // Save the chart as an image
-      const canvasRef = chartPreviewRefs.current[chart.chartType];
-      if (canvasRef) {
-        // Get the image data URL
-        const imageUrl = canvasRef.toDataURL("image/png");
-        
-        // Create a temporary link element to download the image
-        const downloadLink = document.createElement("a");
-        downloadLink.href = imageUrl;
-        downloadLink.download = `${chart.name}.png`;
-        
-        // Append to body, click, and remove
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-        
-        console.log("Chart image saved locally");
-        
-        // Success message
-        alert("Chart saved to your downloads folder");
-      }
-      
-      // Ask if the user wants to save to the server as well
-      const saveToServer = window.confirm("Do you also want to save this visualization to your account?");
-      if (!saveToServer) {
-        return;
-      }
-      
       setLoading(true);
-      setError(null);
+      console.log('Saving chart to database:', chart);
       
-      // Create a basic config from the selected axes
+      // Validate required fields are present
+      if (!chart.name || !chart.fileId || !chart.chartType || !chart.xAxis || !chart.yAxis) {
+        throw new Error('Missing required fields for visualization');
+      }
+      
+      // Prepare the config object with proper structure
       const config = {
         xAxis: {
           field: chart.xAxis,
@@ -831,27 +811,33 @@ function Visualizations() {
         },
         body: JSON.stringify({
           name: chart.name,
-          description: chart.description,
+          description: chart.description || `${chart.chartType} chart showing ${chart.yAxis} by ${chart.xAxis}`,
           fileId: chart.fileId,
           chartType: chart.chartType,
-          confidence: chart.confidence,
-          config: config,
-          isAIGenerated: true
+          confidence: chart.confidence || 90,
+          config: config
         })
       });
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create visualization');
+        console.error('Failed to create visualization:', errorData);
+        throw new Error(errorData.message || `Failed to create visualization: ${response.status} ${response.statusText}`);
       }
       
       const result = await response.json();
-      console.log('Visualization created:', result);
+      console.log('Visualization created successfully:', result);
       
       // Show success message
-      alert('Visualization saved successfully to your account!');
+      alert('Visualization saved successfully!');
       
-      // Refresh visualizations
+      // Update the DataContext to trigger a refresh across components
+      if (refreshData) {
+        console.log('Triggering global data refresh');
+        refreshData();
+      }
+      
+      // Refresh visualizations list
       await fetchVisualizations();
     } catch (error) {
       console.error('Error creating visualization:', error);
