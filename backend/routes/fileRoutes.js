@@ -10,7 +10,11 @@ const File = require('../models/File');
 // Configure multer for file upload
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
-    const uploadDir = path.resolve(__dirname, '..', 'uploads');
+    // Use /tmp directory in production (Vercel) environment
+    const uploadDir = process.env.NODE_ENV === 'production' 
+      ? path.resolve('/tmp') 
+      : path.resolve(__dirname, '..', 'uploads');
+    
     try {
       await fs.access(uploadDir);
     } catch {

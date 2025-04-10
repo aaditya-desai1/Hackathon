@@ -42,6 +42,13 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       const url = `${API_BASE_URL}/api/files/upload`;
       
       console.log('Uploading file to:', url);
+      console.log('Environment:', process.env.NODE_ENV);
+      console.log('File details:', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        lastModified: new Date(file.lastModified).toISOString()
+      });
       
       const response = await fetch(url, {
         method: 'POST',
@@ -52,8 +59,18 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       clearInterval(progressInterval);
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
-        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+        console.error('Upload failed with status:', response.status);
+        let errorMessage = `Upload failed with status ${response.status}`;
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          console.error('Error details:', errorData);
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError);
+        }
+        
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();
