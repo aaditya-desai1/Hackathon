@@ -320,6 +320,14 @@ exports.getFilePreview = async (req, res) => {
 
     res.json({
       success: true,
+      file: {
+        _id: file._id,
+        name: file.name,
+        type: file.type, 
+        size: file.size,
+        createdAt: file.createdAt,
+        updatedAt: file.updatedAt
+      },
       headers: data.columns || [],
       rows: data.data || data.preview || [],
       columns: data.columns || []

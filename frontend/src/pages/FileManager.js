@@ -216,7 +216,7 @@ function FileManager() {
       
       console.log('Fetching file preview from:', url);
       
-      // Get the file from the API
+      // Get the file and preview data from the API
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -231,7 +231,7 @@ function FileManager() {
         throw new Error(data.error || 'Failed to load preview');
       }
       
-      // Create the preview data structure
+      // Create the preview data structure with file metadata
       const previewData = {
         _id: fileId,
         name: data.file?.name || 'Unknown file',
