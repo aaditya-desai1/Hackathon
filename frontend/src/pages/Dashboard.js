@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDataContext } from '../App';
 import {
   Box,
   Grid,
@@ -31,6 +32,7 @@ import PageHeader from '../components/common/PageHeader';
 
 function Dashboard() {
   const navigate = useNavigate();
+  const { lastUpdate } = useDataContext();
   const [stats, setStats] = useState({
     totalFiles: 0,
     totalVisualizations: 0,
@@ -38,25 +40,43 @@ function Dashboard() {
     recentVisualizations: []
   });
   const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(0);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch files from the API
-      const filesResponse = await fetch('/api/files');
-      if (!filesResponse.ok) {
-        throw new Error('Failed to fetch files');
-      }
-      const filesData = await filesResponse.json();
+      console.log('Fetching dashboard data...');
       
-      // Fetch visualizations from the API
-      const vizResponse = await fetch('/api/visualizations');
-      if (!vizResponse.ok) {
-        throw new Error('Failed to fetch visualizations');
+      // Fetch files from the API with proper error handling
+      let filesData = { files: [] };
+      try {
+        const filesResponse = await fetch('/api/files');
+        if (!filesResponse.ok) {
+          console.error('Files API error:', filesResponse.status, filesResponse.statusText);
+        } else {
+          filesData = await filesResponse.json();
+        }
+      } catch (fileError) {
+        console.error('Files fetch error:', fileError);
       }
-      const vizData = await vizResponse.json();
       
-      // Build dashboard data
+      // Fetch visualizations from the API with proper error handling
+      let vizData = { visualizations: [] };
+      try {
+        console.log('Fetching visualizations data...');
+        const vizResponse = await fetch('/api/visualizations');
+        if (!vizResponse.ok) {
+          console.error('Visualizations API error:', vizResponse.status, vizResponse.statusText);
+        } else {
+          vizData = await vizResponse.json();
+          console.log('Visualizations API response data:', vizData);
+          console.log('Number of visualizations retrieved:', vizData.visualizations ? vizData.visualizations.length : 0);
+        }
+      } catch (vizError) {
+        console.error('Visualizations fetch error:', vizError);
+      }
+      
+      // Build dashboard data even if one API fails
       const dashboardData = {
         totalFiles: filesData.files ? filesData.files.length : 0,
         totalVisualizations: vizData.visualizations ? vizData.visualizations.length : 0,
@@ -82,6 +102,7 @@ function Dashboard() {
             })) : []
       };
       
+      console.log('Dashboard data updated:', dashboardData);
       setStats(dashboardData);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -98,7 +119,43 @@ function Dashboard() {
   };
 
   useEffect(() => {
+    // Fetch data whenever lastUpdate changes (files or visualizations were modified)
+    console.log('Dashboard effect triggered by lastUpdate change', new Date().toISOString());
     fetchData();
+    setLastRefresh(Date.now());
+  }, [lastUpdate]);
+  
+  useEffect(() => {
+    // Set up an interval to refresh data every 15 seconds while the component is mounted
+    console.log('Setting up dashboard refresh interval');
+    const refreshInterval = setInterval(() => {
+      console.log('Dashboard auto-refresh triggered');
+      fetchData();
+      setLastRefresh(Date.now());
+    }, 15000);
+    
+    // Fetch data immediately when component mounts
+    fetchData();
+    setLastRefresh(Date.now());
+    
+    // Detect when the user returns to this tab/window
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Dashboard visibility changed to visible, refreshing data');
+        // Refresh data when user returns to tab
+        fetchData();
+        setLastRefresh(Date.now());
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Clean up on unmount
+    return () => {
+      console.log('Dashboard component unmounting, cleaning up listeners');
+      clearInterval(refreshInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const handleUploadClick = () => {
@@ -112,7 +169,30 @@ function Dashboard() {
   const handleRefresh = () => {
     // Refresh stats by calling the API again
     fetchData();
+    // Also check server status
+    checkServerStatus();
   };
+
+  // Add a function to check server status
+  const checkServerStatus = async () => {
+    try {
+      // Check if the API server is reachable
+      const healthResponse = await fetch('/health');
+      if (healthResponse.ok) {
+        const healthData = await healthResponse.json();
+        console.log('Server status:', healthData);
+      } else {
+        console.error('Health check failed:', healthResponse.status, healthResponse.statusText);
+      }
+    } catch (error) {
+      console.error('Error checking server status:', error);
+    }
+  };
+
+  // Check server status on mount
+  useEffect(() => {
+    checkServerStatus();
+  }, []);
 
   const getChartIcon = (type) => {
     switch (type) {
