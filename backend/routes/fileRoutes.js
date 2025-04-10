@@ -17,7 +17,9 @@ const storage = multer.diskStorage({
     
     try {
       await fs.access(uploadDir);
+      console.log(`[FileRoutes] Upload directory exists: ${uploadDir}`);
     } catch {
+      console.log(`[FileRoutes] Creating upload directory: ${uploadDir}`);
       await fs.mkdir(uploadDir, { recursive: true });
     }
     cb(null, uploadDir);
@@ -26,20 +28,24 @@ const storage = multer.diskStorage({
     // Create a unique filename while preserving the original extension
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
+    console.log(`[FileRoutes] Generated filename: ${uniqueSuffix}${ext}`);
     cb(null, `${uniqueSuffix}${ext}`);
   }
 });
 
 const fileFilter = (req, file, cb) => {
   // Check both mimetype and file extension
-  const allowedTypes = ['text/csv', 'application/json'];
-  const allowedExtensions = ['.csv', '.json'];
+  const allowedTypes = ['text/csv', 'application/json', 'text/plain'];
+  const allowedExtensions = ['.csv', '.json', '.txt'];
   const ext = path.extname(file.originalname).toLowerCase();
   
-  if (allowedTypes.includes(file.mimetype) && allowedExtensions.includes(ext)) {
+  console.log(`[FileRoutes] File upload attempt: ${file.originalname}, mime: ${file.mimetype}, ext: ${ext}`);
+  
+  if (allowedTypes.includes(file.mimetype) && (allowedExtensions.includes(ext) || ext === '')) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only CSV and JSON files are allowed.'));
+    console.log(`[FileRoutes] Rejected file: ${file.originalname} (type: ${file.mimetype}, ext: ${ext})`);
+    cb(new Error(`Invalid file type. Only CSV and JSON files are allowed. Received: ${file.mimetype}, ${ext}`));
   }
 };
 
@@ -51,8 +57,35 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
+// Middleware to handle file upload errors
+const handleFileUpload = (req, res, next) => {
+  const uploadSingle = upload.single('file');
+  
+  uploadSingle(req, res, (err) => {
+    if (err) {
+      console.error('[FileRoutes] Upload middleware error:', err.message);
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ error: 'File size too large. Maximum size is 10MB.' });
+        }
+        return res.status(400).json({ error: `File upload error: ${err.message}` });
+      }
+      
+      return res.status(400).json({ error: err.message });
+    }
+    
+    if (!req.file) {
+      console.error('[FileRoutes] No file was uploaded');
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
+    console.log(`[FileRoutes] File upload successful: ${req.file.originalname}`);
+    next();
+  });
+};
+
 // File upload route - no auth required for testing
-router.post('/upload', upload.single('file'), fileController.uploadFile);
+router.post('/upload', handleFileUpload, fileController.uploadFile);
 
 // API route to get all files - making this public for testing
 router.get('/', fileController.getFiles);
