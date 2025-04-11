@@ -3,16 +3,8 @@ const router = express.Router();
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { OAuth2Client } = require('google-auth-library');
-const fetch = require('node-fetch');
 
-// Initialize Google Client for OAuth
-console.log('Using Google Client ID:', process.env.GOOGLE_CLIENT_ID);
-const googleClient = new OAuth2Client({
-  clientId: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  // Important: Set redirectUri to postmessage for client-side flow
-  redirectUri: 'postmessage'
-});
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Register a new user
 router.post('/register', async (req, res) => {
@@ -90,106 +82,81 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Google sign-in
+// Google Auth Login/Register
 router.post('/google', async (req, res) => {
   try {
     const { token } = req.body;
     
     if (!token) {
-      console.error('[Google Auth] No token provided in request');
-      return res.status(400).json({ error: 'No token provided' });
+      console.error('Google auth error: No token provided');
+      return res.status(400).json({ error: 'Token is required' });
     }
     
-    // Log current environment info
-    console.log('[Google Auth] Current environment:', process.env.NODE_ENV);
-    console.log('[Google Auth] Using Google Client ID:', process.env.GOOGLE_CLIENT_ID);
+    console.log('Google auth: Verifying token with Google');
+    console.log('Using Google Client ID:', process.env.GOOGLE_CLIENT_ID);
     
-    // Verify the Google token
-    try {
-      let payload;
-      try {
-        // First attempt: Standard verification but without audience validation
-        const ticket = await googleClient.verifyIdToken({
-          idToken: token,
-          audience: undefined // Don't strictly verify the audience
-        });
-        
-        payload = ticket.getPayload();
-        console.log('[Google Auth] Token verified with standard method');
-      } catch (verifyError) {
-        console.error('[Google Auth] Standard verification failed:', verifyError.message);
-        
-        // Second attempt: Fetch token info directly from Google (more permissive method)
-        try {
-          console.log('[Google Auth] Trying alternative token verification method');
-          const tokenInfoResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
-          
-          if (!tokenInfoResponse.ok) {
-            throw new Error(`Token info failed: ${tokenInfoResponse.status}`);
-          }
-          
-          payload = await tokenInfoResponse.json();
-          console.log('[Google Auth] Token verified with alternative method');
-        } catch (altError) {
-          console.error('[Google Auth] Alternative verification also failed:', altError.message);
-          throw new Error('Could not verify Google token');
-        }
-      }
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    
+    const payload = ticket.getPayload();
+    console.log('Google auth: Token verified successfully, payload received');
+    
+    const { email, name, picture, sub: googleId } = payload;
+    
+    if (!email) {
+      console.error('Google auth error: No email in payload');
+      return res.status(400).json({ error: 'Email is required from Google authentication' });
+    }
+    
+    // Check if user already exists
+    let user = await User.findOne({ email });
+    
+    if (!user) {
+      // Create a new user with Google credentials
+      console.log('Google auth: Creating new user with email', email);
+      const username = name.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000);
       
-      // At this point we have a verified payload one way or another
-      const { email, name, picture, sub: googleId } = payload;
-      
-      console.log('[Google Auth] Token verified successfully for:', email);
-      console.log('[Google Auth] Token audience:', payload.aud);
-      
-      // Check if user already exists
-      let user = await User.findOne({ email });
-      
-      if (!user) {
-        console.log('[Google Auth] Creating new user account for:', email);
-        // Create a new user with Google credentials
-        const username = name.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000);
-        
-        user = new User({
-          username,
-          email,
-          googleId,
-          picture
-        });
-        
-        await user.save();
-        console.log('[Google Auth] New user created with ID:', user._id);
-      } else if (!user.googleId) {
-        console.log('[Google Auth] Linking Google account to existing user:', email);
-        // Existing user, link Google account
-        user.googleId = googleId;
-        user.picture = picture || user.picture;
-        await user.save();
-      } else {
-        console.log('[Google Auth] Existing user found with ID:', user._id);
-      }
-      
-      // Generate auth token
-      const jwtToken = user.generateAuthToken();
-      
-      res.json({
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          picture: user.picture
-        },
-        token: jwtToken
+      user = new User({
+        username,
+        email,
+        googleId,
+        picture
       });
-    } catch (tokenError) {
-      console.error('[Google Auth] Token verification error:', tokenError.message);
-      return res.status(401).json({ error: 'Invalid Google token' });
+      
+      await user.save();
+      console.log('Google auth: New user created successfully');
+    } else if (!user.googleId) {
+      // Existing user, link Google account
+      console.log('Google auth: Linking existing user to Google account');
+      user.googleId = googleId;
+      user.picture = picture || user.picture;
+      await user.save();
+    } else {
+      console.log('Google auth: Existing user found with Google ID');
     }
+    
+    // Generate auth token
+    const jwtToken = user.generateAuthToken();
+    
+    res.json({
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        picture: user.picture
+      },
+      token: jwtToken
+    });
   } catch (error) {
-    console.error('[Google Auth] Google sign-in error:', error);
-    console.error('[Google Auth] Error stack:', error.stack);
-    res.status(400).json({ error: 'Google authentication failed' });
+    console.error('Google auth error:', error);
+    // More specific error message for debugging
+    res.status(400).json({ 
+      error: 'Google authentication failed',
+      details: error.message
+    });
   }
 });
 

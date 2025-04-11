@@ -62,7 +62,10 @@ const theme = createTheme({
 });
 
 // Get Google Client ID from environment
-const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || 'your-google-client-id';
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '250613609547-k508f484nem5i50hcdjuibfqs2bs11cd.apps.googleusercontent.com';
+
+// Debug - log client ID to console 
+console.log('Google Client ID:', GOOGLE_CLIENT_ID);
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
