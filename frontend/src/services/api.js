@@ -4,15 +4,12 @@
 
 // Determine the API base URL based on the environment
 const getApiBaseUrl = () => {
-<<<<<<< HEAD
   // Use environment variable if available
   if (process.env.REACT_APP_API_URL) {
     return process.env.REACT_APP_API_URL;
   }
   
   // Fallback logic
-=======
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   if (process.env.NODE_ENV === 'production') {
     // In production (Vercel), use the /api prefix
     return '/api';
@@ -37,7 +34,6 @@ export const fetchApi = async (endpoint, options = {}) => {
     
   console.log(`[API] Fetching: ${apiEndpoint} (${process.env.NODE_ENV} mode)`);
   console.log(`[API] Base URL: ${API_BASE_URL}`);
-<<<<<<< HEAD
   console.log(`[API] Request options:`, options);
   
   // Add auth token to headers if available
@@ -59,22 +55,10 @@ export const fetchApi = async (endpoint, options = {}) => {
       headers
     });
     console.log(`[API] Fetch response received, status: ${response.status}`);
-=======
-  
-  try {
-    const response = await fetch(apiEndpoint, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {})
-      }
-    });
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     
     if (!response.ok) {
       // Try to parse error response
       try {
-<<<<<<< HEAD
         const errorText = await response.text();
         console.error(`[API] Response text:`, errorText);
         
@@ -89,13 +73,6 @@ export const fetchApi = async (endpoint, options = {}) => {
         }
       } catch (e) {
         console.error(`[API] Request failed with status ${response.status}, could not read response:`, e);
-=======
-        const errorData = await response.json();
-        console.error(`[API] Request failed with status ${response.status}:`, errorData);
-        throw new Error(errorData.error || `HTTP error ${response.status}`);
-      } catch (e) {
-        console.error(`[API] Request failed with status ${response.status}`);
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
         throw new Error(`HTTP error ${response.status}`);
       }
     }
@@ -109,7 +86,6 @@ export const fetchApi = async (endpoint, options = {}) => {
   }
 };
 
-<<<<<<< HEAD
 // Auth API methods
 export const authApi = {
   login: async (email, password) => {
@@ -202,8 +178,4 @@ export const authApi = {
 export default {
   fetchApi,
   authApi
-=======
-export default {
-  fetchApi
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 }; 

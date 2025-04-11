@@ -1,44 +1,60 @@
 /**
- * Chart Utility Functions
+ * Utility functions for chart operations
  */
 
+import { Chart as ChartJS } from 'chart.js/auto';
+import { getRandomColor } from './colorUtils';
+
 /**
- * Gets data from a chart instance
- * @param {Object} chartInstance The Chart.js instance
- * @param {string} chartType The type of chart
- * @returns {Object} The extracted labels, values and datasets
+ * Generate chart configuration for Chart.js
+ * @param {Object} chartData - Data for the chart
+ * @param {string} chartType - Type of chart to generate
+ * @returns {Object} Chart.js compatible configuration
  */
-export const extractDataFromChartInstance = (chartInstance, chartType) => {
-  if (!chartInstance || !chartInstance.data) {
-    return { labels: [], values: [], datasets: [] };
+export const generateChartConfig = (chartData, chartType = 'bar') => {
+  // Handle empty data case
+  if (!chartData || !chartData.labels || !chartData.values) {
+    console.error('Invalid chart data provided:', chartData);
+    return {
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'No data',
+          data: [],
+          backgroundColor: 'rgba(0, 0, 0, 0.1)',
+        }]
+      }
+    };
   }
   
-  try {
-    // Extract labels
-    const labels = chartInstance.data.labels || [];
-    
-    // Extract values based on chart type
-    let values = [];
-    if (chartType === 'pie' || chartType === 'doughnut') {
-      // For pie charts, values are in the first dataset's data
-      values = chartInstance.data.datasets[0]?.data || [];
-    } else {
-      // For other charts, values are in the first dataset's data
-      values = chartInstance.data.datasets[0]?.data || [];
-    }
-    
-    // Extract datasets
-    const datasets = chartInstance.data.datasets || [];
-    
+  const { labels, values, datasets } = chartData;
+  const colors = labels.map(() => getRandomColor());
+  
+  // If custom datasets are provided, use them
+  if (datasets && datasets.length > 0) {
     return {
-      labels,
-      values,
-      datasets
+      data: {
+        labels,
+        datasets
+      },
+      type: chartType,
     };
-  } catch (err) {
-    console.error('Error extracting data from chart instance:', err);
-    return { labels: [], values: [], datasets: [] };
   }
+  
+  // Otherwise build a default dataset
+  return {
+    data: {
+      labels,
+      datasets: [{
+        label: 'Values',
+        data: values,
+        backgroundColor: colors,
+        borderColor: colors.map(color => color.replace('0.6', '1')),
+        borderWidth: 1
+      }]
+    },
+    type: chartType,
+  };
 };
 
 /**
@@ -61,7 +77,7 @@ export const fetchChartDataFromAPI = async (chart) => {
     
     // Prepare API URL - use the same logic as the API service
     const API_BASE_URL = process.env.REACT_APP_API_URL || 
-                        (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000');
+                       (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000');
     let dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${chart.fileId}&yAxis=${chart.yAxis}`;
     
     if (chart.xAxis) {
@@ -94,4 +110,9 @@ export const fetchChartDataFromAPI = async (chart) => {
     console.error('Error fetching chart data from API:', err);
     return { labels: [], values: [], datasets: [] };
   }
+};
+
+export default {
+  generateChartConfig,
+  fetchChartDataFromAPI
 }; 
