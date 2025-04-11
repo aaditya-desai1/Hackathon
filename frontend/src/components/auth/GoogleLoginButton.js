@@ -37,6 +37,11 @@ const GoogleLoginButton = () => {
           shape="rectangular"
           logo_alignment="center"
           width="280"
+          useOneTap={true}
+          flow="implicit"
+          auto_select={false}
+          cookiePolicy={'single_host_origin'}
+          ux_mode="popup"
         />
       </Box>
     </Box>

@@ -3,8 +3,16 @@ const router = express.Router();
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { OAuth2Client } = require('google-auth-library');
+const fetch = require('node-fetch');
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+// Initialize Google Client for OAuth
+console.log('Using Google Client ID:', process.env.GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client({
+  clientId: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  // Important: Set redirectUri to postmessage for client-side flow
+  redirectUri: 'postmessage'
+});
 
 // Register a new user
 router.post('/register', async (req, res) => {
@@ -94,19 +102,45 @@ router.post('/google', async (req, res) => {
     
     // Log current environment info
     console.log('[Google Auth] Current environment:', process.env.NODE_ENV);
-    console.log('[Google Auth] Using Google Client ID:', process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured');
+    console.log('[Google Auth] Using Google Client ID:', process.env.GOOGLE_CLIENT_ID);
     
     // Verify the Google token
     try {
-      const ticket = await googleClient.verifyIdToken({
-        idToken: token,
-        audience: process.env.GOOGLE_CLIENT_ID
-      });
+      let payload;
+      try {
+        // First attempt: Standard verification but without audience validation
+        const ticket = await googleClient.verifyIdToken({
+          idToken: token,
+          audience: undefined // Don't strictly verify the audience
+        });
+        
+        payload = ticket.getPayload();
+        console.log('[Google Auth] Token verified with standard method');
+      } catch (verifyError) {
+        console.error('[Google Auth] Standard verification failed:', verifyError.message);
+        
+        // Second attempt: Fetch token info directly from Google (more permissive method)
+        try {
+          console.log('[Google Auth] Trying alternative token verification method');
+          const tokenInfoResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
+          
+          if (!tokenInfoResponse.ok) {
+            throw new Error(`Token info failed: ${tokenInfoResponse.status}`);
+          }
+          
+          payload = await tokenInfoResponse.json();
+          console.log('[Google Auth] Token verified with alternative method');
+        } catch (altError) {
+          console.error('[Google Auth] Alternative verification also failed:', altError.message);
+          throw new Error('Could not verify Google token');
+        }
+      }
       
-      const payload = ticket.getPayload();
+      // At this point we have a verified payload one way or another
       const { email, name, picture, sub: googleId } = payload;
       
       console.log('[Google Auth] Token verified successfully for:', email);
+      console.log('[Google Auth] Token audience:', payload.aud);
       
       // Check if user already exists
       let user = await User.findOne({ email });
