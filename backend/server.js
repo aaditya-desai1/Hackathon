@@ -14,13 +14,30 @@ const dataRoutes = require('./routes/dataRoutes');
 
 const app = express();
 
-// CORS configuration - allow all origins in production
+// CORS configuration - allow specific origins including our Vercel frontend
+const allowedOrigins = [
+  'https://datavizpro-kn4junf9m-aaditya-desais-projects.vercel.app',
+  'https://datavizpro.vercel.app',
+  'http://localhost:3000'
+];
+
 const corsOptions = {
-  origin: true, // Allow any origin
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked request from:', origin);
+      callback(null, true); // Still allow for now, but log it
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  maxAge: 86400 // 24 hours
 };
 
 // Middleware

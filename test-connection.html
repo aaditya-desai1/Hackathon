@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DataVizPro API Connection Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #1976d2;
+    }
+    .card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    button {
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #1565c0;
+    }
+    .results {
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .success {
+      color: #4caf50;
+      font-weight: bold;
+    }
+    .error {
+      color: #f44336;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>DataVizPro API Connection Test</h1>
+  
+  <div class="card">
+    <h2>Backend Health Check</h2>
+    <p>Check if the backend server is running.</p>
+    <button id="healthCheck">Test Health Endpoint</button>
+    <div id="healthResults" class="results"></div>
+  </div>
+  
+  <div class="card">
+    <h2>User Registration Test</h2>
+    <p>Test creating a new user account.</p>
+    <div>
+      <input type="text" id="username" placeholder="Username" value="testuser">
+      <input type="email" id="email" placeholder="Email" value="testuser@example.com">
+      <input type="password" id="password" placeholder="Password" value="Test123456">
+    </div>
+    <button id="testRegistration">Test Registration</button>
+    <div id="registrationResults" class="results"></div>
+  </div>
+  
+  <div class="card">
+    <h2>CORS Test</h2>
+    <p>Test Cross-Origin Resource Sharing (CORS) configuration.</p>
+    <button id="testCORS">Test CORS Setup</button>
+    <div id="corsResults" class="results"></div>
+  </div>
+  
+  <script>
+    // Backend URL
+    const BACKEND_URL = 'https://express-backend-7m2c.onrender.com';
+    
+    // Health check
+    document.getElementById('healthCheck').addEventListener('click', async () => {
+      const resultsDiv = document.getElementById('healthResults');
+      resultsDiv.innerHTML = 'Testing backend health...';
+      
+      try {
+        const response = await fetch(`${BACKEND_URL}/health`);
+        const data = await response.json();
+        
+        if (data.status === 'ok') {
+          resultsDiv.innerHTML = `<span class="success">Backend is healthy and running!</span>\n\nDetails: ${JSON.stringify(data, null, 2)}`;
+        } else {
+          resultsDiv.innerHTML = `<span class="error">Backend health check returned unexpected result</span>\n\nDetails: ${JSON.stringify(data, null, 2)}`;
+        }
+      } catch (error) {
+        resultsDiv.innerHTML = `<span class="error">Backend health check failed</span>\n\nError: ${error.message}`;
+      }
+    });
+    
+    // Registration test
+    document.getElementById('testRegistration').addEventListener('click', async () => {
+      const resultsDiv = document.getElementById('registrationResults');
+      resultsDiv.innerHTML = 'Testing user registration...';
+      
+      const username = document.getElementById('username').value + '_' + Date.now().toString().substring(8);
+      const email = username + '@example.com';
+      const password = document.getElementById('password').value;
+      
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/users/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ username, email, password })
+        });
+        
+        const responseText = await response.text();
+        let data;
+        
+        try {
+          data = JSON.parse(responseText);
+        } catch (e) {
+          resultsDiv.innerHTML = `<span class="error">Response is not valid JSON</span>\n\nResponse text: ${responseText}`;
+          return;
+        }
+        
+        if (data.token) {
+          resultsDiv.innerHTML = `<span class="success">Registration successful!</span>\n\nUser Created:\nUsername: ${username}\nEmail: ${email}\n\nResponse: ${JSON.stringify(data, null, 2)}`;
+        } else {
+          resultsDiv.innerHTML = `<span class="error">Registration failed</span>\n\nDetails: ${JSON.stringify(data, null, 2)}`;
+        }
+      } catch (error) {
+        resultsDiv.innerHTML = `<span class="error">Registration request failed</span>\n\nError: ${error.message}`;
+      }
+    });
+    
+    // CORS test
+    document.getElementById('testCORS').addEventListener('click', async () => {
+      const resultsDiv = document.getElementById('corsResults');
+      resultsDiv.innerHTML = 'Testing CORS configuration...';
+      
+      try {
+        // First try with a preflight OPTIONS request
+        resultsDiv.innerHTML = 'Testing preflight OPTIONS request...';
+        
+        // Simulate OPTIONS request
+        const options = {
+          method: 'OPTIONS',
+          headers: {
+            'Origin': window.location.origin,
+            'Access-Control-Request-Method': 'POST',
+            'Access-Control-Request-Headers': 'Content-Type, Authorization'
+          }
+        };
+        
+        try {
+          const preflightResponse = await fetch(`${BACKEND_URL}/api/users/register`, options);
+          
+          const corsHeaders = {
+            'Access-Control-Allow-Origin': preflightResponse.headers.get('Access-Control-Allow-Origin'),
+            'Access-Control-Allow-Methods': preflightResponse.headers.get('Access-Control-Allow-Methods'),
+            'Access-Control-Allow-Headers': preflightResponse.headers.get('Access-Control-Allow-Headers'),
+            'Access-Control-Allow-Credentials': preflightResponse.headers.get('Access-Control-Allow-Credentials')
+          };
+          
+          if (corsHeaders['Access-Control-Allow-Origin']) {
+            resultsDiv.innerHTML = `<span class="success">CORS preflight request successful!</span>\n\nCORS Headers:\n${JSON.stringify(corsHeaders, null, 2)}`;
+          } else {
+            resultsDiv.innerHTML = `<span class="error">CORS preflight response missing required headers</span>\n\nResponse headers: ${JSON.stringify(corsHeaders, null, 2)}`;
+          }
+        } catch (preflightError) {
+          resultsDiv.innerHTML = `<span class="error">CORS preflight request failed</span>\n\nError: ${preflightError.message}`;
+        }
+        
+        // Now try an actual request
+        resultsDiv.innerHTML += '\n\nTesting actual request...';
+        
+        const username = 'corstest_' + Date.now().toString().substring(8);
+        const email = username + '@example.com';
+        const password = 'Test123456';
+        
+        const response = await fetch(`${BACKEND_URL}/api/users/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Origin': window.location.origin
+          },
+          credentials: 'include',
+          body: JSON.stringify({ username, email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.token) {
+          resultsDiv.innerHTML += `\n\n<span class="success">CORS request successful!</span>\n\nResponse: ${JSON.stringify(data, null, 2)}`;
+        } else {
+          resultsDiv.innerHTML += `\n\n<span class="error">CORS request failed</span>\n\nDetails: ${JSON.stringify(data, null, 2)}`;
+        }
+      } catch (error) {
+        resultsDiv.innerHTML += `\n\n<span class="error">CORS test failed</span>\n\nError: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html> 
