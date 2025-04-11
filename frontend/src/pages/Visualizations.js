@@ -2004,7 +2004,8 @@ function Visualizations() {
     if (!currentVisualization) return;
     
     try {
-      const response = await fetch(`/api/visualizations/${currentVisualization._id || currentVisualization.id}`, {
+      // Use fetchApi service for consistent error handling
+      const response = await fetchApi(`/api/visualizations/${currentVisualization._id || currentVisualization.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -2027,7 +2028,7 @@ function Visualizations() {
       await fetchVisualizations();
     } catch (error) {
       console.error('Error updating visualization:', error);
-      alert('Failed to update visualization');
+      alert('Failed to update visualization: ' + (error.message || 'Unknown error'));
     }
   };
   
@@ -2202,14 +2203,14 @@ function Visualizations() {
       // Fetch actual chart data from the API
       (async () => {
         try {
-          const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+          // Use fetchApi instead of direct fetch
           const fileId = visualization.fileId;
           
           // Use the data API to get actual values from the file
-          const dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${fileId}&xAxis=${xAxis}&yAxis=${yAxis}`;
-          console.log('Fetching chart data from:', dataUrl);
+          const dataUrl = `/api/data/chart?fileId=${fileId}&xAxis=${xAxis}&yAxis=${yAxis}`;
+          console.log('Fetching chart data from API service:', dataUrl);
           
-          const dataResponse = await fetch(dataUrl);
+          const dataResponse = await fetchApi(dataUrl);
           
           if (!dataResponse.ok) {
             throw new Error(`Failed to fetch chart data: ${dataResponse.status} ${dataResponse.statusText}`);

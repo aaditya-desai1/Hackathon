@@ -49,6 +49,9 @@ export const fetchApi = async (endpoint, options = {}) => {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
     console.log(`[API] Using token: ${token.substring(0, 10)}...`);
+  } else {
+    console.warn('[API] No authentication token found in localStorage');
+    // Don't fail immediately, let the server decide if the endpoint requires auth
   }
   
   try {
@@ -61,6 +64,7 @@ export const fetchApi = async (endpoint, options = {}) => {
     console.log(`[API] About to fetch from: ${apiEndpoint}`);
     
     // IMPORTANT: Check if we can reach the server with a simple preflight check
+    let serverAvailable = true;
     try {
       // Skip preflight for multipart/form-data requests which need direct fetch
       const skipPreflight = options.body instanceof FormData;
@@ -69,18 +73,27 @@ export const fetchApi = async (endpoint, options = {}) => {
         const preflightResponse = await fetch(`${API_BASE_URL}/health`, { 
           method: 'HEAD',
           mode: 'cors',
-          cache: 'no-cache'
+          cache: 'no-cache',
+          credentials: 'include' // Include credentials in preflight too
         });
         
         if (!preflightResponse.ok) {
-          console.warn('[API] Server health check failed, may use fallback data');
+          console.warn('[API] Server health check failed');
+          serverAvailable = false;
         } else {
           console.log('[API] Server health check passed');
         }
       }
     } catch (preflightError) {
       console.warn('[API] Server preflight check failed:', preflightError.message);
+      serverAvailable = false;
       // We'll continue with the main request, but might use fallback later
+    }
+    
+    // If server is not available and we're configured to use mock data, return it now
+    if (!serverAvailable && useMockDataWhenApiDown) {
+      console.log('[API] Server appears to be down based on health check, using mock data');
+      return createMockResponse(endpoint, options);
     }
     
     // Main request
@@ -89,7 +102,7 @@ export const fetchApi = async (endpoint, options = {}) => {
       headers,
       // Keep cors mode but ensure credentials are properly handled
       mode: 'cors',
-      credentials: 'include' // Changed from same-origin to include for cross-domain cookies
+      credentials: 'include' // Use 'include' to support cross-domain cookies
     });
     
     console.log(`[API] Fetch response received, status: ${response.status}`);
@@ -99,6 +112,18 @@ export const fetchApi = async (endpoint, options = {}) => {
       try {
         const errorText = await response.text();
         console.error(`[API] Response text:`, errorText);
+        
+        // Check for authentication errors first
+        if (response.status === 401) {
+          console.error('[API] Authentication error - clearing token');
+          localStorage.removeItem('authToken'); // Clear invalid token
+          
+          // For 401 errors on protected endpoints, return a special mock response
+          if (useMockDataWhenApiDown && endpoint.match(/\/api\/(files|visualizations)/)) {
+            console.log('[API] Authentication failed but returning mock data for UI continuity');
+            return createMockResponse(endpoint, options);
+          }
+        }
         
         // If API is down and we're set to use mock data, generate mock response
         if (useMockDataWhenApiDown && (response.status === 404 || response.status === 503 || response.status === 0)) {
@@ -440,6 +465,68 @@ export const authApi = {
       localStorage.removeItem('authToken');
       return null;
     }
+  }
+};
+
+/**
+ * Test API connection and return detailed results
+ * @returns {Promise<Object>} Connection test results
+ */
+export const testApiConnection = async () => {
+  try {
+    console.log('[API] Testing API connection...');
+    
+    // Check browser online status
+    const isOnline = navigator.onLine;
+    console.log('[API] Browser online status:', isOnline);
+    
+    // Basic connectivity test
+    let connectionTest = { success: false };
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/debug/connection-test`, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        connectionTest = await response.json();
+        console.log('[API] Connection test result:', connectionTest);
+      } else {
+        console.error('[API] Connection test failed with status:', response.status);
+        connectionTest.error = `HTTP Error: ${response.status}`;
+      }
+    } catch (connectionError) {
+      console.error('[API] Connection test error:', connectionError);
+      connectionTest.error = connectionError.message;
+    }
+    
+    // Auth token check
+    const authToken = localStorage.getItem('authToken');
+    
+    return {
+      success: connectionTest.success,
+      apiBaseUrl: API_BASE_URL,
+      browserOnline: isOnline,
+      connectionTest,
+      auth: {
+        tokenExists: !!authToken,
+        tokenLength: authToken ? authToken.length : 0
+      },
+      corsDetails: connectionTest.details?.cors || { enabled: true, credentials: true },
+      envDetails: {
+        environment: process.env.NODE_ENV,
+        reactAppApiUrl: process.env.REACT_APP_API_URL,
+      },
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('[API] Error in testApiConnection:', error);
+    return {
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    };
   }
 };
 

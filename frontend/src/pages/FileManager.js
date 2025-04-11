@@ -198,25 +198,13 @@ function FileManager() {
 
   const handleViewFile = async (fileId) => {
     try {
-      // Use environment-aware API endpoint
-      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
-      const url = `${API_BASE_URL}/api/files/${fileId}/preview`;
+      // Use fetchApi instead of direct fetch
+      const url = `/api/files/${fileId}/preview`;
       
-      console.log('Fetching file preview from:', url);
+      console.log('Fetching file preview using fetchApi service:', url);
       
-      // Get auth token
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.error('No authentication token found');
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
-      // Get the file and preview data from the API
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Use fetchApi service for consistent error handling
+      const response = await fetchApi(url);
       
       if (!response.ok) {
         console.error(`Failed to get file preview: ${response.status} ${response.statusText}`);

@@ -19,7 +19,8 @@ const app = express();
 const allowedOrigins = [
   'https://datavizpro-kn4junf9m-aaditya-desais-projects.vercel.app',
   'https://datavizpro-mbgolxqmu7-aaditya-desais-projects.vercel.app', // Current domain
-  'https://datavizpro.vercel.app',
+  'https://datavizpro-seven.vercel.app',
+  'https://datavizpro-q26miqz7o-aaditya-desais-projects.vercel.app', // URL from the image
   'http://localhost:3000'
 ];
 
@@ -47,7 +48,7 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
   exposedHeaders: ['Content-Length', 'X-Content-Type-Options'],
-  credentials: false, // Disable credentials for simplicity
+  credentials: true, // Enable credentials for authentication across domains
   optionsSuccessStatus: 200,
   maxAge: 86400 // 24 hours
 };
@@ -180,6 +181,58 @@ app.post('/api/debug/register', (req, res) => {
     },
     mockToken: 'debug-jwt-token-' + Date.now()
   });
+});
+
+// More detailed endpoint for testing all API aspects
+app.get('/api/debug/connection-test', (req, res) => {
+  try {
+    // Log detailed information for debugging
+    console.log('Connection test requested from:', req.headers.origin);
+    console.log('All request headers:', req.headers);
+    
+    // Basic response to confirm the API is working
+    const response = {
+      success: true,
+      message: 'API connection test successful',
+      timestamp: new Date().toISOString(),
+      details: {
+        env: process.env.NODE_ENV || 'development',
+        platform: isRender ? 'Render' : 'Other',
+        mongodb: {
+          readyState: mongoose.connection.readyState,
+          status: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown'
+        },
+        request: {
+          origin: req.headers.origin || 'No origin header',
+          host: req.headers.host,
+          referer: req.headers.referer || 'No referer',
+          method: req.method,
+          path: req.path,
+          ip: req.ip || req.connection.remoteAddress
+        },
+        cors: {
+          enabled: true,
+          credentials: corsOptions.credentials,
+          configuredOrigins: allowedOrigins
+        },
+        auth: {
+          jwtIsConfigured: !!process.env.JWT_SECRET,
+          jwtSecretLength: process.env.JWT_SECRET ? process.env.JWT_SECRET.length : 0
+        }
+      }
+    };
+    
+    // Return detailed response
+    res.set('Access-Control-Allow-Credentials', 'true');
+    res.json(response);
+  } catch (error) {
+    console.error('Error in connection test endpoint:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Global error handling middleware
