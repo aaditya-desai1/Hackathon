@@ -146,11 +146,24 @@ The application supports both traditional email/password authentication and Goog
 
 ### Deploying to Vercel
 
-For the application to work correctly on Vercel, make sure to set the following environment variables in your Vercel project:
+For the application to work correctly on Vercel, make sure to set the following environment variables in your Vercel project settings or use the Vercel CLI:
 
 - `MONGODB_URI`: Your MongoDB connection string
 - `JWT_SECRET`: A secure string for JWT token generation
 - `GOOGLE_CLIENT_ID`: Your Google OAuth client ID
 - `GOOGLE_CLIENT_SECRET`: Your Google OAuth client secret
 
-You can add these as environment variables in the Vercel project settings or use the Vercel CLI: 
+## Deployment
+
+### Frontend Deployment (Vercel)
+
+The frontend is deployed on Vercel. When deploying to Vercel, only the frontend will be built and deployed. The backend should be deployed separately on Render.
+
+### Backend Deployment (Render)
+
+The backend is deployed on Render. Detailed deployment instructions are available in the `RENDER_DEPLOYMENT.md` file.
+
+#### Environment Setup
+
+- **Frontend**: Set the `REACT_APP_API_URL` environment variable in Vercel to point to your Render backend.
+- **Backend**: Set all required environment variables in Render as outlined in the `RENDER_DEPLOYMENT.md` file. 
