@@ -48,10 +48,10 @@ function Layout({ children }) {
           minHeight: '100vh',
           backgroundColor: 'background.default',
           marginTop: '64px', // Height of the header
-          marginLeft: isAuthenticated && !isAuthPage && drawerOpen ? '240px' : '0',
+          marginLeft: isAuthenticated && !isAuthPage && drawerOpen ? '240px' : (isAuthenticated && !isAuthPage ? theme => theme.spacing(7) : 0),
           transition: theme => theme.transitions.create(['margin'], {
             easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
+            duration: theme.transitions.duration.enteringScreen,
           }),
         }}
       >

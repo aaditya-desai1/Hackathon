@@ -9,6 +9,7 @@ import {
   Button,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import LoginIcon from '@mui/icons-material/Login';
@@ -45,8 +46,7 @@ function Header({ drawerOpen, toggleDrawer }) {
         backgroundColor: 'background.paper',
         borderBottom: '1px solid',
         borderColor: 'divider',
-        width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
-        ml: { sm: `${drawerOpen ? drawerWidth : 0}px` },
+        width: '100%',
         transition: theme.transitions.create(['margin', 'width'], {
           easing: theme.transitions.easing.sharp,
           duration: theme.transitions.duration.leavingScreen,
@@ -61,10 +61,10 @@ function Header({ drawerOpen, toggleDrawer }) {
           onClick={toggleDrawer}
           sx={{
             marginRight: 2,
-            ...(drawerOpen && { display: 'none' }),
+            display: isAuthenticated ? 'flex' : 'none',
           }}
         >
-          <MenuIcon />
+          {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
         </IconButton>
         <Typography
           component="h1"

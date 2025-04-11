@@ -53,6 +53,8 @@ function Sidebar({ drawerOpen, toggleDrawer }) {
         flexShrink: 0,
         whiteSpace: 'nowrap',
         boxSizing: 'border-box',
+        zIndex: theme => theme.zIndex.drawer,
+        position: 'fixed',
         ...(drawerOpen && {
           '& .MuiDrawer-paper': {
             width: drawerWidth,
@@ -62,6 +64,8 @@ function Sidebar({ drawerOpen, toggleDrawer }) {
             }),
             boxSizing: 'border-box',
             overflowX: 'hidden',
+            position: 'fixed',
+            borderRight: `1px solid ${theme.palette.divider}`,
           },
         }),
         ...(!drawerOpen && {
@@ -73,6 +77,8 @@ function Sidebar({ drawerOpen, toggleDrawer }) {
             overflowX: 'hidden',
             width: theme.spacing(7),
             boxSizing: 'border-box',
+            position: 'fixed',
+            borderRight: `1px solid ${theme.palette.divider}`,
           },
         }),
       }}
@@ -95,9 +101,6 @@ function Sidebar({ drawerOpen, toggleDrawer }) {
             >
               DataViz Pro
             </Typography>
-            <IconButton onClick={toggleDrawer}>
-              <ChevronLeftIcon />
-            </IconButton>
           </Box>
         )}
       </Toolbar>

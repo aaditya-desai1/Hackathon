@@ -232,7 +232,7 @@ function Dashboard() {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box>
       <PageHeader 
         title="Dashboard" 
         icon={<ChartIcon />}
