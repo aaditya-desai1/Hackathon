@@ -2733,85 +2733,88 @@ function Visualizations() {
   };
 
   return (
-    <Container maxWidth="xl">
-      <Box sx={{ py: 4 }}>
-        <PageHeader
-          title="Visualizations"
-          subtitle="Create and manage your data visualizations"
-          action={
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              {previewCharts.length > 0 && (
+    <Box 
+      component="div" 
+      className={`visualizations-container ${loading ? 'loading' : ''}`} 
+      sx={{ position: 'relative' }}
+    >
+      {loading && (
+        <Box 
+          sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            backgroundColor: 'rgba(255,255,255,0.7)', 
+            zIndex: 9999,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      )}
+      <Container maxWidth="xl">
+        <Box sx={{ py: 4 }}>
+          <PageHeader
+            title="Visualizations"
+            subtitle="Create and manage your data visualizations"
+            action={
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                {previewCharts.length > 0 && (
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={() => {
+                      handleClearVisualizations();
+                      // After clearing, open the file selection dialog
+                      setOpenDialog(true);
+                      setSelectedXAxis('');
+                      setSelectedYAxis('');
+                      setAxisSelectionOpen(false);
+                    }}
+                  >
+                    New Visualization
+                  </Button>
+                )}
                 <Button
-                  variant="outlined"
-                  color="primary"
+                  variant="contained"
                   startIcon={<AddIcon />}
-                  onClick={() => {
-                    handleClearVisualizations();
-                    // After clearing, open the file selection dialog
-                    setOpenDialog(true);
-                    setSelectedXAxis('');
-                    setSelectedYAxis('');
-                    setAxisSelectionOpen(false);
-                  }}
+                  onClick={() => setOpenDialog(true)}
                 >
-                  New Visualization
+                  Create Visualization
                 </Button>
-              )}
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setOpenDialog(true)}
-              >
-                Create Visualization
-              </Button>
-            </Box>
-          }
-        />
-
-        {loading && <LinearProgress sx={{ mb: 2 }} />}
-        
-        {error && (
-          <Alert 
-            severity="error" 
-            sx={{ mb: 3 }}
-            action={
-              <Button
-                color="inherit"
-                size="small"
-                onClick={testApiConnection}
-              >
-                Test Connection
-              </Button>
+              </Box>
             }
-          >
-            {error}
-          </Alert>
-        )}
+          />
 
-        {/* Show file not found message when appropriate */}
-        {fileNotFound && previewCharts.length > 0 && (
-          <Alert 
-            severity="warning" 
-            sx={{ mb: 3 }}
-            action={
-              <Button
-                color="inherit"
-                size="small"
-                onClick={handleClearVisualizations}
-              >
-                Clear Visualizations
-              </Button>
-            }
-          >
-            The file <strong>{previewFile?.name}</strong> used to generate these visualizations has been deleted.
-            You can still view the charts, but you won't be able to update them.
-          </Alert>
-        )}
-        
-        {!fileNotFound && previewCharts.length > 0 && previewFile && (
-          <Box>
+          {loading && <LinearProgress sx={{ mb: 2 }} />}
+          
+          {error && (
             <Alert 
-              severity="info" 
+              severity="error" 
+              sx={{ mb: 3 }}
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={testApiConnection}
+                >
+                  Test Connection
+                </Button>
+              }
+            >
+              {error}
+            </Alert>
+          )}
+
+          {/* Show file not found message when appropriate */}
+          {fileNotFound && previewCharts.length > 0 && (
+            <Alert 
+              severity="warning" 
               sx={{ mb: 3 }}
               action={
                 <Button
@@ -2819,180 +2822,319 @@ function Visualizations() {
                   size="small"
                   onClick={handleClearVisualizations}
                 >
-                  Clear All
+                  Clear Visualizations
                 </Button>
               }
             >
-              Showing visualizations for file: <strong>{previewFile.name}</strong>
+              The file <strong>{previewFile?.name}</strong> used to generate these visualizations has been deleted.
+              You can still view the charts, but you won't be able to update them.
             </Alert>
-          </Box>
-        )}
-
-        {/* AI Recommended Visualizations Section */}
-        {previewCharts.filter(chart => chart.isAIRecommended).length > 0 && (
-          <Paper sx={{ 
-            mb: 4, 
-            p: 3, 
-            bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
-            borderRadius: 2,
-            boxShadow: theme.palette.mode === 'dark' ? '0 2px 10px rgba(0, 0, 0, 0.2)' : '0 2px 10px rgba(0, 0, 0, 0.05)',
-            border: 1,
-            borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-              <CheckCircleIcon color="primary" sx={{ mr: 1 }} />
-              <Typography variant="h5" component="h2">
-                AI Recommended Visualizations
-              </Typography>
+          )}
+          
+          {!fileNotFound && previewCharts.length > 0 && previewFile && (
+            <Box>
+              <Alert 
+                severity="info" 
+                sx={{ mb: 3 }}
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={handleClearVisualizations}
+                  >
+                    Clear All
+                  </Button>
+                }
+              >
+                Showing visualizations for file: <strong>{previewFile.name}</strong>
+              </Alert>
             </Box>
-            
-            <Typography variant="body1" color="text.secondary" paragraph>
-              Based on your data structure, here are the most effective visualizations for {previewFile?.name}
-            </Typography>
-            
-            {/* Sort the filtered charts by confidence score */}
-            <Grid container spacing={3}>
-              {previewCharts
-                .filter(chart => chart.isAIRecommended)
-                .sort((a, b) => b.confidence - a.confidence)
-                .map((chart, index) => {
+          )}
+
+          {/* AI Recommended Visualizations Section */}
+          {previewCharts.filter(chart => chart.isAIRecommended).length > 0 && (
+            <Paper sx={{ 
+              mb: 4, 
+              p: 2, 
+              bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+              borderRadius: 2,
+              boxShadow: theme.palette.mode === 'dark' ? '0 2px 10px rgba(0, 0, 0, 0.2)' : '0 2px 10px rgba(0, 0, 0, 0.05)',
+              border: 1,
+              borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+              width: '100%',
+              maxWidth: 1200,
+              mx: 'auto'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <CheckCircleIcon color="primary" sx={{ mr: 1 }} />
+                <Typography variant="h5" component="h2">
+                  AI Recommended Visualizations
+                </Typography>
+              </Box>
+              
+              <Typography variant="body1" color="text.secondary" paragraph>
+                Based on your data structure, here are the most effective visualizations for {previewFile?.name}
+              </Typography>
+              
+              {/* Sort the filtered charts by confidence score */}
+              <Grid container spacing={2}>
+                {previewCharts
+                  .filter(chart => chart.isAIRecommended)
+                  .sort((a, b) => b.confidence - a.confidence)
+                  .map((chart, index) => {
+                    // Generate a consistent key for each chart
+                    const chartKey = `ai-${chart.chartType}`;
+                    
+                    return (
+                    <Grid item xs={12} md={6} key={`ai-${chart.chartType}-${index}`}>
+                      <Card sx={{ 
+                        height: '100%',
+                        minHeight: 420,
+                        maxHeight: 500,
+                        bgcolor: 'background.paper',
+                        backgroundImage: 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        boxShadow: '0 6px 12px rgba(25, 118, 210, 0.3)',
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        border: '2px solid #1976d2',
+                        transform: 'scale(1.0)',
+                        transition: 'transform 0.2s ease-in-out',
+                        zIndex: 1
+                      }}>
+                        <Box sx={{ 
+                          bgcolor: '#1976d2', 
+                          color: 'white',
+                          p: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          <Typography variant="h6" component="div">
+                            {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                          </Typography>
+                        </Box>
+                        <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
+                          {chart.description}
+                        </Typography>
+                        <Box sx={{ 
+                          p: 1.5, 
+                          height: 250, 
+                          position: 'relative', 
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <canvas 
+                            ref={el => {
+                              if (el) chartPreviewRefs.current[chartKey] = el;
+                            }}
+                            style={{ width: '100%', height: '100%' }}
+                            id={`chart-${chartKey}-${index}`}
+                            data-chart-type={chart.chartType}
+                            data-is-ai="true"
+                            data-x-axis={chart.xAxis}
+                            data-y-axis={chart.yAxis}
+                          />
+                        </Box>
+                        <Box sx={{ p: 1.5, mt: 'auto' }}>
+                          <Button 
+                            variant="contained"
+                            color="primary"
+                            fullWidth
+                            onClick={() => handleSaveChart(chart)}
+                            disabled={fileNotFound}
+                            sx={{
+                              boxShadow: 2
+                            }}
+                          >
+                            Save Visualization
+                          </Button>
+                        </Box>
+                      </Card>
+                    </Grid>
+                  )})}
+              </Grid>
+              
+              {/* Add Create Custom Chart button below AI recommendations */}
+              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="medium"
+                  startIcon={<AddIcon />}
+                  onClick={handleCreateCustomChart}
+                  sx={{
+                    px: 3,
+                    py: 1,
+                    borderRadius: 2,
+                    boxShadow: 2,
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  Create Custom Chart
+                </Button>
+              </Box>
+            </Paper>
+          )}
+          
+          {/* Custom Visualizations Section */}
+          {previewCharts.filter(chart => !chart.isAIRecommended).length > 0 && (
+            <Paper sx={{ 
+              mb: 4, 
+              p: 2, 
+              bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+              borderRadius: 2,
+              boxShadow: theme.palette.mode === 'dark' ? '0 2px 10px rgba(0, 0, 0, 0.2)' : '0 2px 10px rgba(0, 0, 0, 0.05)',
+              border: 1,
+              borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+              width: '100%',
+              maxWidth: 1200,
+              mx: 'auto'
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h5" component="h2">
+                  Custom Visualizations
+                </Typography>
+              </Box>
+              
+              <Grid container spacing={2}>
+                {previewCharts.filter(chart => !chart.isAIRecommended).map((chart, index) => {
                   // Generate a consistent key for each chart
-                  const chartKey = `ai-${chart.chartType}`;
+                  const chartKey = `custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`;
                   
                   return (
-                  <Grid item xs={12} sm={6} key={`ai-${chart.chartType}-${index}`}>
-                    <Card sx={{ 
-                      height: '100%',
-                      minHeight: 500,
-                      maxHeight: 600,
-                      bgcolor: 'background.paper',
-                      backgroundImage: 'none',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      boxShadow: '0 6px 12px rgba(25, 118, 210, 0.3)',
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                      border: '2px solid #1976d2',
-                      transform: 'scale(1.02)',
-                      transition: 'transform 0.2s ease-in-out',
-                      zIndex: 1
-                    }}>
-                      <Box sx={{ 
-                        bgcolor: '#1976d2', 
-                        color: 'white',
-                        p: 2,
+                    <Grid item xs={12} md={6} key={`custom-${chart.chartType}-${index}`}>
+                      <Card sx={{ 
+                        height: '100%',
+                        minHeight: 420,
+                        maxHeight: 500,
+                        bgcolor: 'background.paper',
+                        backgroundImage: 'none',
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
+                        flexDirection: 'column',
+                        boxShadow: '0 6px 12px rgba(25, 118, 210, 0.3)',
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        border: '2px solid #1976d2',
+                        transform: 'scale(1.0)',
+                        transition: 'transform 0.2s ease-in-out',
+                        zIndex: 1
                       }}>
-                        <Typography variant="h6" component="div">
-                          {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                        <Box sx={{ 
+                          bgcolor: 'primary.main', 
+                          color: 'white',
+                          p: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          <Typography variant="h6" component="div">
+                            {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                          </Typography>
+                        </Box>
+                        <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
+                          {chart.yAxis} by {chart.xAxis}
                         </Typography>
-                      </Box>
-                      <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
-                        {chart.description}
-                      </Typography>
-                      <Box sx={{ 
-                        p: 2, 
-                        height: 300, 
-                        position: 'relative', 
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <canvas 
-                          ref={el => {
-                            if (el) chartPreviewRefs.current[chartKey] = el;
-                          }}
-                          style={{ width: '100%', height: '100%' }}
-                          id={`chart-${chartKey}-${index}`}
-                          data-chart-type={chart.chartType}
-                          data-is-ai="true"
-                          data-x-axis={chart.xAxis}
-                          data-y-axis={chart.yAxis}
-                        />
-                      </Box>
-                      <Box sx={{ p: 2, mt: 'auto' }}>
-                        <Button 
-                          variant="contained"
-                          color="primary"
-                          fullWidth
-                          onClick={() => handleSaveChart(chart)}
-                          disabled={fileNotFound}
-                          sx={{
-                            boxShadow: 2
-                          }}
-                        >
-                          Save Visualization
-                        </Button>
-                      </Box>
-                    </Card>
-                  </Grid>
-                )})}
-            </Grid>
-            
-            {/* Add Create Custom Chart button below AI recommendations */}
-            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-              <Button
-                variant="contained"
+                        <Box sx={{ 
+                          p: 1.5, 
+                          height: 250, 
+                          position: 'relative', 
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <canvas 
+                            ref={el => {
+                              if (el) chartPreviewRefs.current[chartKey] = el;
+                            }}
+                            style={{ width: '100%', height: '100%' }}
+                            id={`chart-${chartKey}-${index}`}
+                            data-chart-type={chart.chartType}
+                            data-is-ai="false"
+                            data-x-axis={chart.xAxis}
+                            data-y-axis={chart.yAxis}
+                          />
+                        </Box>
+                        <Box sx={{ p: 1.5, mt: 'auto' }}>
+                          <Button 
+                            variant="contained" 
+                            color="primary"
+                            fullWidth
+                            onClick={() => handleSaveChart(chart)}
+                            disabled={fileNotFound}
+                            sx={{
+                              boxShadow: 2
+                            }}
+                          >
+                            Save Visualization
+                          </Button>
+                        </Box>
+                      </Card>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            </Paper>
+          )}
+
+          {/* Placeholder when no visualizations are available */}
+          {previewCharts.length === 0 && !loading && (
+            <Box 
+              sx={{ 
+                mt: 4, 
+                p: 4, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                height: '100%',
+                width: '100%',
+                borderRadius: 2,
+                bgcolor: 'background.paper',
+                backgroundImage: 'none',
+                boxShadow: 1
+              }}
+            >
+              <ChartIcon sx={{ width: 80, height: 80, color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No visualizations yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary" align="center" sx={{ maxWidth: 400, mb: 4 }}>
+                Create your first visualization by uploading a file. We'll automatically recommend the best charts for your data.
+              </Typography>
+              <Button 
+                variant="contained" 
                 color="primary"
-                size="large"
                 startIcon={<AddIcon />}
-                onClick={handleCreateCustomChart}
-                sx={{
-                  px: 4,
-                  py: 1.5,
-                  borderRadius: 2,
-                  boxShadow: 3,
-                  fontSize: '1rem'
-                }}
+                onClick={handleCreateClick}
               >
-                Create Custom Chart
+                Create Visualization
               </Button>
             </Box>
-          </Paper>
-        )}
-        
-        {/* Custom Visualizations Section */}
-        {previewCharts.filter(chart => !chart.isAIRecommended).length > 0 && (
-          <Paper sx={{ 
-            mb: 4, 
-            p: 3, 
-            bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
-            borderRadius: 2,
-            boxShadow: theme.palette.mode === 'dark' ? '0 2px 10px rgba(0, 0, 0, 0.2)' : '0 2px 10px rgba(0, 0, 0, 0.05)',
-            border: 1,
-            borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h5" component="h2">
-                Custom Visualizations
+          )}
+
+          {/* Saved Visualizations Section */}
+          {visualizations.length > 0 && (
+            <Box sx={{ mt: 6 }}>
+              <Typography variant="h5" sx={{ mb: 3 }}>
+                Saved Visualizations
               </Typography>
-            </Box>
-            
-            <Grid container spacing={3}>
-              {previewCharts.filter(chart => !chart.isAIRecommended).map((chart, index) => {
-                // Generate a consistent key for each chart
-                const chartKey = `custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`;
-                
-                return (
-                  <Grid item xs={12} sm={6} key={`custom-${chart.chartType}-${index}`}>
+              <Grid container spacing={3}>
+                {visualizations.map((viz) => (
+                  <Grid item xs={12} sm={6} key={viz._id}>
                     <Card sx={{ 
                       height: '100%',
-                      minHeight: 500,
-                      maxHeight: 600,
                       bgcolor: 'background.paper',
                       backgroundImage: 'none',
                       display: 'flex',
                       flexDirection: 'column',
-                      boxShadow: '0 6px 12px rgba(25, 118, 210, 0.3)',
+                      boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
                       borderRadius: 2,
                       overflow: 'hidden',
-                      border: '2px solid #1976d2',
-                      transform: 'scale(1.02)',
-                      transition: 'transform 0.2s ease-in-out',
-                      zIndex: 1
                     }}>
                       <Box sx={{ 
                         bgcolor: 'primary.main', 
@@ -3003,769 +3145,657 @@ function Visualizations() {
                         justifyContent: 'space-between'
                       }}>
                         <Typography variant="h6" component="div">
-                          {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                          {viz.name}
                         </Typography>
                       </Box>
                       <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
-                        {chart.yAxis} by {chart.xAxis}
+                        {viz.description}
                       </Typography>
-                      <Box sx={{ 
-                        p: 2, 
-                        height: 300, 
-                        position: 'relative', 
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
+                      <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
                         <canvas 
-                          ref={el => {
-                            if (el) chartPreviewRefs.current[chartKey] = el;
-                          }}
+                          ref={el => chartPreviewRefs.current[`viz-${viz._id}`] = el}
                           style={{ width: '100%', height: '100%' }}
-                          id={`chart-${chartKey}-${index}`}
-                          data-chart-type={chart.chartType}
-                          data-is-ai="false"
-                          data-x-axis={chart.xAxis}
-                          data-y-axis={chart.yAxis}
                         />
                       </Box>
                       <Box sx={{ p: 2, mt: 'auto' }}>
                         <Button 
                           variant="contained" 
-                          color="primary"
                           fullWidth
-                          onClick={() => handleSaveChart(chart)}
-                          disabled={fileNotFound}
-                          sx={{
-                            boxShadow: 2
-                          }}
+                          onClick={() => handleViewVisualization(viz)}
                         >
-                          Save Visualization
+                          View
                         </Button>
                       </Box>
                     </Card>
                   </Grid>
-                );
-              })}
-            </Grid>
-          </Paper>
-        )}
+                ))}
+              </Grid>
+            </Box>
+          )}
+        </Box>
 
-        {/* Placeholder when no visualizations are available */}
-        {previewCharts.length === 0 && !loading && (
-          <Box 
-            sx={{ 
-              mt: 4, 
-              p: 4, 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              height: '100%',
-              width: '100%',
+        {/* File Selection Dialog */}
+        <Dialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          fullWidth
+          maxWidth="md"
+          PaperProps={{
+            sx: {
+              bgcolor: 'background.paper',
+              backgroundImage: 'none',
+            }
+          }}
+        >
+          <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            {axisSelectionOpen ? 'Create Custom Visualization' : 'Create Visualization'}
+          </DialogTitle>
+          <DialogContent sx={{ p: 3 }}>
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
+            )}
+
+            <Typography variant="subtitle1" gutterBottom sx={{ mt: 1, color: 'text.secondary' }}>
+              {axisSelectionOpen 
+                ? 'Choose a file and configure custom chart settings:' 
+                : 'Choose a file to analyze and visualize:'}
+            </Typography>
+            
+            {!axisSelectionOpen && (
+              <Alert severity="info" sx={{ mb: 3 }}>
+                <Typography variant="body2">
+                  When you select a file, our AI will automatically generate the best visualizations based on your data.
+                </Typography>
+              </Alert>
+            )}
+            
+            {loading ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 4 }}>
+                <CircularProgress sx={{ mb: 2 }} />
+                <Typography variant="body2" color="text.secondary">
+                  Analyzing your data and generating recommendations...
+                </Typography>
+              </Box>
+            ) : (
+              <List sx={{ 
+                borderRadius: 1, 
+                border: '1px solid',
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', 
+                overflow: 'hidden',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : '#f8f8f8'
+              }}>
+                {files.map((file) => (
+                  <ListItem
+                    key={file._id}
+                    button
+                    divider
+                    sx={{ 
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'white', 
+                      '&:hover': {
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? 'rgba(255, 255, 255, 0.1)' 
+                          : 'rgba(25, 118, 210, 0.08)'
+                      }
+                    }}
+                    onClick={() => {
+                      if (axisSelectionOpen) {
+                        // If in custom chart mode, just select the file but don't auto-generate
+                        setSelectedFile(file);
+                      } else {
+                        // Otherwise, trigger AI analysis
+                        handleFileSelect(file);
+                      }
+                    }}
+                  >
+                    <ListItemIcon>
+                      <ChartIcon color="primary" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={<Typography fontWeight="medium">{file.name}</Typography>}
+                      secondary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                          <Chip 
+                            size="small" 
+                            label={file.type.split('/')[1].toUpperCase()} 
+                            color={file.type.includes('csv') ? 'success' : file.type.includes('json') ? 'info' : 'primary'}
+                            sx={{ mr: 1, height: 20, fontSize: '0.7rem' }}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            {(file.size / 1024).toFixed(2)} KB
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </DialogContent>
+          <Box sx={{ 
+            p: 3, 
+            display: 'flex', 
+            justifyContent: 'flex-end',
+            borderTop: '1px solid',
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+          }}>
+            <Button onClick={handleCloseDialog} variant="outlined">
+              Cancel
+            </Button>
+          </Box>
+        </Dialog>
+
+        {/* Axis Selection Dialog */}
+        <Dialog
+          open={axisSelectionOpen}
+          onClose={() => {
+            setAxisSelectionOpen(false);
+            setError(null);
+          }}
+          fullWidth
+          maxWidth="md"
+          PaperProps={{
+            sx: {
               borderRadius: 2,
               bgcolor: 'background.paper',
               backgroundImage: 'none',
-              boxShadow: 1
-            }}
-          >
-            <ChartIcon sx={{ width: 80, height: 80, color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              No visualizations yet
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+              overflow: 'hidden'
+            }
+          }}
+        >
+          <Box sx={{ 
+            bgcolor: 'primary.main', 
+            color: 'white', 
+            py: 2, 
+            px: 3,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <Typography variant="h6">
+              Custom Chart - Select Columns
             </Typography>
-            <Typography variant="body2" color="text.secondary" align="center" sx={{ maxWidth: 400, mb: 4 }}>
-              Create your first visualization by uploading a file. We'll automatically recommend the best charts for your data.
-            </Typography>
-            <Button 
-              variant="contained" 
-              color="primary"
-              startIcon={<AddIcon />}
-              onClick={handleCreateClick}
+            <Chip 
+              label={selectedFile?.name || 'No file selected'} 
+              size="small" 
+              color="default"
+              sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
+            />
+          </Box>
+          <DialogContent sx={{ p: 3 }}>
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
+            )}
+            
+            {loading ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 4 }}>
+                <CircularProgress sx={{ mb: 2 }} />
+                <Typography variant="body2" color="text.secondary">
+                  Analyzing file and identifying columns...
+                </Typography>
+              </Box>
+            ) : (
+              <>
+                <Box sx={{ 
+                  mb: 3, 
+                  p: 3, 
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)', 
+                  borderRadius: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  border: 1,
+                  borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+                }}>
+                  <Box>
+                    <Typography variant="h6">Data Summary</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {analysis?.rowCount || 0} rows analyzed across {analysis?.columns?.length || 0} columns
+                    </Typography>
+                  </Box>
+                  {analysis && analysis.columns && analysis.columns.length > 0 ? (
+                    <Chip 
+                      label="Ready for visualization" 
+                      color="success" 
+                      icon={<CheckCircleIcon />} 
+                      sx={{ fontWeight: 'medium' }}
+                    />
+                  ) : (
+                    <Chip 
+                      label="Waiting for analysis" 
+                      color="warning" 
+                      sx={{ fontWeight: 'medium' }}
+                    />
+                  )}
+                </Box>
+                
+                <Typography variant="h6" gutterBottom>
+                  Select Data Axes
+                </Typography>
+                
+                <Grid container spacing={3} sx={{ mb: 4 }}>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" gutterBottom color="text.secondary">
+                      Chart Type
+                    </Typography>
+                    <Box sx={{ 
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 2,
+                      mt: 1
+                    }}>
+                      {['bar', 'line', 'pie', 'scatter'].map((chartType) => (
+                        <Paper
+                          key={chartType}
+                          elevation={selectedChartType === chartType ? 3 : 1}
+                          sx={{ 
+                            p: 2,
+                            borderRadius: 2,
+                            cursor: 'pointer',
+                            bgcolor: selectedChartType === chartType 
+                              ? theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.light' 
+                              : theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+                            border: '1px solid',
+                            borderColor: selectedChartType === chartType 
+                              ? 'primary.main' 
+                              : theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                            color: selectedChartType === chartType 
+                              ? theme.palette.mode === 'dark' ? 'white' : 'primary.main'
+                              : 'text.primary',
+                            minWidth: 100,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flex: '1 0 auto',
+                            transition: 'all 0.2s ease-in-out',
+                            '&:hover': {
+                              bgcolor: selectedChartType === chartType 
+                                ? theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.light' 
+                                : theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                              transform: 'translateY(-2px)',
+                            }
+                          }}
+                          onClick={() => setSelectedChartType(chartType)}
+                        >
+                          {chartType === 'bar' ? <BarChartIcon sx={{ fontSize: 36, mb: 1 }} /> : 
+                           chartType === 'line' ? <ShowChartIcon sx={{ fontSize: 36, mb: 1 }} /> : 
+                           chartType === 'pie' ? <PieChartIcon sx={{ fontSize: 36, mb: 1 }} /> : 
+                           <ScatterPlotIcon sx={{ fontSize: 36, mb: 1 }} />}
+                          <Typography variant="body1" fontWeight={selectedChartType === chartType ? 'bold' : 'normal'}>
+                            {chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart
+                          </Typography>
+                        </Paper>
+                      ))}
+                    </Box>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle1" gutterBottom color="text.secondary">
+                      X-Axis (Categories)
+                    </Typography>
+                    <Box sx={{ 
+                      border: '1px solid',
+                      borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)', 
+                      borderRadius: 1, 
+                      p: 0,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' 
+                    }}>
+                      <Select
+                        value={selectedXAxis}
+                        onChange={(e) => setSelectedXAxis(e.target.value)}
+                        displayEmpty
+                        fullWidth
+                        disabled={loading}
+                        MenuProps={{
+                          PaperProps: {
+                            sx: {
+                              maxHeight: 300,
+                              bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+                              color: theme.palette.text.primary,
+                            }
+                          }
+                        }}
+                        sx={{
+                          height: '56px',
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                          '& .MuiSelect-icon': {
+                            color: theme.palette.text.secondary,
+                          }
+                        }}
+                      >
+                        <MenuItem value="" disabled>
+                          {loading ? 'Loading columns...' : 'Select X-Axis Column'}
+                        </MenuItem>
+                        {getFallbackColumns().map((column) => (
+                          <MenuItem key={column} value={column}>{column}</MenuItem>
+                        ))}
+                      </Select>
+                    </Box>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle1" gutterBottom color="text.secondary">
+                      Y-Axis (Values)
+                    </Typography>
+                    <Box sx={{ 
+                      border: '1px solid',
+                      borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                      borderRadius: 1,
+                      p: 0,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' 
+                    }}>
+                      <Select
+                        value={selectedYAxis}
+                        onChange={(e) => setSelectedYAxis(e.target.value)}
+                        displayEmpty
+                        fullWidth
+                        disabled={loading}
+                        MenuProps={{
+                          PaperProps: {
+                            sx: {
+                              maxHeight: 300,
+                              bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+                              color: theme.palette.text.primary,
+                            }
+                          }
+                        }}
+                        sx={{
+                          height: '56px',
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'transparent',
+                          },
+                          '& .MuiSelect-icon': {
+                            color: theme.palette.text.secondary,
+                          }
+                        }}
+                      >
+                        <MenuItem value="" disabled>
+                          {loading ? 'Loading columns...' : 'Select Y-Axis Column'}
+                        </MenuItem>
+                        {getFallbackColumns().map((column) => (
+                          <MenuItem key={column} value={column}>{column}</MenuItem>
+                        ))}
+                      </Select>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </>
+            )}
+          </DialogContent>
+          <Box sx={{ 
+            p: 3, 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            gap: 2,
+            borderTop: '1px solid',
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+          }}>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setAxisSelectionOpen(false);
+                setError(null);
+              }}
             >
-              Create Visualization
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              disabled={!selectedXAxis || !selectedYAxis || loading}
+              onClick={handleGenerateCharts}
+            >
+              Generate Charts
             </Button>
           </Box>
-        )}
+        </Dialog>
 
-        {/* Saved Visualizations Section */}
-        {visualizations.length > 0 && (
-          <Box sx={{ mt: 6 }}>
-            <Typography variant="h5" sx={{ mb: 3 }}>
-              Saved Visualizations
-            </Typography>
-            <Grid container spacing={3}>
-              {visualizations.map((viz) => (
-                <Grid item xs={12} sm={6} key={viz._id}>
-                  <Card sx={{ 
-                    height: '100%',
-                    bgcolor: 'background.paper',
-                    backgroundImage: 'none',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                  }}>
-                    <Box sx={{ 
-                      bgcolor: 'primary.main', 
-                      color: 'white',
-                      p: 2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between'
-                    }}>
-                      <Typography variant="h6" component="div">
-                        {viz.name}
-                      </Typography>
-                    </Box>
-                    <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
-                      {viz.description}
-                    </Typography>
-                    <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
-                      <canvas 
-                        ref={el => chartPreviewRefs.current[`viz-${viz._id}`] = el}
-                        style={{ width: '100%', height: '100%' }}
-                      />
-                    </Box>
-                    <Box sx={{ p: 2, mt: 'auto' }}>
-                      <Button 
-                        variant="contained" 
-                        fullWidth
-                        onClick={() => handleViewVisualization(viz)}
-                      >
-                        View
-                      </Button>
-                    </Box>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        )}
-      </Box>
-
-      {/* File Selection Dialog */}
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        fullWidth
-        maxWidth="md"
-        PaperProps={{
-          sx: {
-            bgcolor: 'background.paper',
-            backgroundImage: 'none',
-          }
-        }}
-      >
-        <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          {axisSelectionOpen ? 'Create Custom Visualization' : 'Create Visualization'}
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
-
-          <Typography variant="subtitle1" gutterBottom sx={{ mt: 1, color: 'text.secondary' }}>
-            {axisSelectionOpen 
-              ? 'Choose a file and configure custom chart settings:' 
-              : 'Choose a file to analyze and visualize:'}
-          </Typography>
-          
-          {!axisSelectionOpen && (
-            <Alert severity="info" sx={{ mb: 3 }}>
-              <Typography variant="body2">
-                When you select a file, our AI will automatically generate the best visualizations based on your data.
-              </Typography>
-            </Alert>
-          )}
-          
-          {loading ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 4 }}>
-              <CircularProgress sx={{ mb: 2 }} />
-              <Typography variant="body2" color="text.secondary">
-                Analyzing your data and generating recommendations...
-              </Typography>
-            </Box>
-          ) : (
-            <List sx={{ 
-              borderRadius: 1, 
-              border: '1px solid',
-              borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', 
+        {/* View Visualization Dialog */}
+        <Dialog
+          open={openViewDialog}
+          onClose={handleCloseViewDialog}
+          fullWidth
+          maxWidth="md"
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
               overflow: 'hidden',
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : '#f8f8f8'
-            }}>
-              {files.map((file) => (
-                <ListItem
-                  key={file._id}
-                  button
-                  divider
-                  sx={{ 
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'white', 
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.1)' 
-                        : 'rgba(25, 118, 210, 0.08)'
-                    }
-                  }}
-                  onClick={() => {
-                    if (axisSelectionOpen) {
-                      // If in custom chart mode, just select the file but don't auto-generate
-                      setSelectedFile(file);
-                    } else {
-                      // Otherwise, trigger AI analysis
-                      handleFileSelect(file);
-                    }
-                  }}
-                >
-                  <ListItemIcon>
-                    <ChartIcon color="primary" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={<Typography fontWeight="medium">{file.name}</Typography>}
-                    secondary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                        <Chip 
-                          size="small" 
-                          label={file.type.split('/')[1].toUpperCase()} 
-                          color={file.type.includes('csv') ? 'success' : file.type.includes('json') ? 'info' : 'primary'}
-                          sx={{ mr: 1, height: 20, fontSize: '0.7rem' }}
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          {(file.size / 1024).toFixed(2)} KB
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </DialogContent>
-        <Box sx={{ 
-          p: 3, 
-          display: 'flex', 
-          justifyContent: 'flex-end',
-          borderTop: '1px solid',
-          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-        }}>
-          <Button onClick={handleCloseDialog} variant="outlined">
-            Cancel
-          </Button>
-        </Box>
-      </Dialog>
-
-      {/* Axis Selection Dialog */}
-      <Dialog
-        open={axisSelectionOpen}
-        onClose={() => {
-          setAxisSelectionOpen(false);
-          setError(null);
-        }}
-        fullWidth
-        maxWidth="md"
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            bgcolor: 'background.paper',
-            backgroundImage: 'none',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-            overflow: 'hidden'
-          }
-        }}
-      >
-        <Box sx={{ 
-          bgcolor: 'primary.main', 
-          color: 'white', 
-          py: 2, 
-          px: 3,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <Typography variant="h6">
-            Custom Chart - Select Columns
-          </Typography>
-          <Chip 
-            label={selectedFile?.name || 'No file selected'} 
-            size="small" 
-            color="default"
-            sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
-          />
-        </Box>
-        <DialogContent sx={{ p: 3 }}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
-          
-          {loading ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 4 }}>
-              <CircularProgress sx={{ mb: 2 }} />
-              <Typography variant="body2" color="text.secondary">
-                Analyzing file and identifying columns...
-              </Typography>
-            </Box>
-          ) : (
-            <>
-              <Box sx={{ 
-                mb: 3, 
-                p: 3, 
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)', 
-                borderRadius: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                border: 1,
-                borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
-              }}>
-                <Box>
-                  <Typography variant="h6">Data Summary</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {analysis?.rowCount || 0} rows analyzed across {analysis?.columns?.length || 0} columns
-                  </Typography>
+              bgcolor: 'background.paper',
+            }
+          }}
+        >
+          <Box sx={{ bgcolor: 'primary.main', color: 'white', py: 2, px: 3 }}>
+            <Typography variant="h5">
+              {currentVisualization?.name || 'View Visualization'}
+            </Typography>
+          </Box>
+          <DialogContent sx={{ p: 0 }}>
+            {currentVisualization && (
+              <Box>
+                <Box sx={{ height: 400, p: 3 }}>
+                  <canvas ref={chartContainerRef} style={{ width: '100%', height: '100%' }}></canvas>
                 </Box>
-                {analysis && analysis.columns && analysis.columns.length > 0 ? (
-                  <Chip 
-                    label="Ready for visualization" 
-                    color="success" 
-                    icon={<CheckCircleIcon />} 
-                    sx={{ fontWeight: 'medium' }}
-                  />
-                ) : (
-                  <Chip 
-                    label="Waiting for analysis" 
-                    color="warning" 
-                    sx={{ fontWeight: 'medium' }}
-                  />
-                )}
-              </Box>
-              
-              <Typography variant="h6" gutterBottom>
-                Select Data Axes
-              </Typography>
-              
-              <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle1" gutterBottom color="text.secondary">
-                    Chart Type
+                
+                <Box sx={{ 
+                  p: 3, 
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#f5f5f5' 
+                }}>
+                  <Typography variant="h6" gutterBottom>Data Insights</Typography>
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    {currentVisualization.description || 'This visualization shows key patterns in your data. The chart type was selected based on your data structure and optimal visualization methods.'}
                   </Typography>
-                  <Box sx={{ 
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 2,
-                    mt: 1
-                  }}>
-                    {['bar', 'line', 'pie', 'scatter'].map((chartType) => (
-                      <Paper
-                        key={chartType}
-                        elevation={selectedChartType === chartType ? 3 : 1}
+                  
+                  <Box sx={{ mt: 3, display: 'flex', alignItems: 'center' }}>
+                    <Chip 
+                      label={`${currentVisualization.chartType.charAt(0).toUpperCase() + currentVisualization.chartType.slice(1)} Chart`}
+                      color="primary"
+                      icon={getVisualizationIcon(currentVisualization.chartType)}
+                      sx={{ mr: 1 }}
+                    />
+                    <Chip 
+                      label={`${currentVisualization.confidence || 90}% confidence`}
+                      color="success"
+                    />
+                    <Box sx={{ flexGrow: 1 }} />
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<EditIcon />}
+                      onClick={() => {
+                        handleCloseViewDialog();
+                        handleEditVisualization(currentVisualization);
+                      }}
+                      sx={{ mr: 1 }}
+                    >
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outlined" 
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => {
+                        handleCloseViewDialog();
+                        handleDeleteVisualization(currentVisualization._id);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </Box>
+                </Box>
+              </Box>
+            )}
+          </DialogContent>
+        </Dialog>
+        
+        {/* Edit Visualization Dialog - simplified */}
+        <Dialog
+          open={openEditDialog}
+          onClose={handleCloseEditDialog}
+          fullWidth
+          maxWidth="md"
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              bgcolor: 'background.paper',
+              backgroundImage: 'none',
+            }
+          }}
+        >
+          <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
+            Edit Visualization
+          </DialogTitle>
+          <DialogContent sx={{ p: 3, mt: 2 }}>
+            {currentVisualization && (
+              <Box sx={{ pt: 1 }}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" gutterBottom>Visualization Name</Typography>
+                  <input
+                    type="text"
+                    name="name"
+                    value={currentVisualization.name || ''}
+                    onChange={handleInputChange}
+                    placeholder="Enter a descriptive name"
+                    style={{ 
+                      width: '100%', 
+                      padding: '12px', 
+                      fontSize: '16px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      backgroundColor: theme.palette.mode === 'dark' ? '#333' : 'white',
+                      color: theme.palette.mode === 'dark' ? 'white' : 'black',
+                    }}
+                  />
+                </Box>
+                
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" gutterBottom>Description</Typography>
+                  <textarea
+                    name="description"
+                    value={currentVisualization.description || ''}
+                    onChange={handleInputChange}
+                    placeholder="Describe what insights this visualization provides"
+                    rows={3}
+                    style={{ 
+                      width: '100%', 
+                      padding: '12px', 
+                      fontSize: '16px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      backgroundColor: theme.palette.mode === 'dark' ? '#333' : 'white',
+                      color: theme.palette.mode === 'dark' ? 'white' : 'black',
+                    }}
+                  />
+                </Box>
+                
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" gutterBottom>Chart Type</Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                    {['bar', 'line', 'pie', 'scatter'].map(type => (
+                      <Box 
+                        key={type}
+                        onClick={() => setCurrentVisualization({
+                          ...currentVisualization,
+                          chartType: type
+                        })}
                         sx={{ 
-                          p: 2,
+                          border: '2px solid',
+                          borderColor: currentVisualization.chartType === type ? 'primary.main' : '#ddd',
                           borderRadius: 2,
-                          cursor: 'pointer',
-                          bgcolor: selectedChartType === chartType 
-                            ? theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.light' 
-                            : theme.palette.mode === 'dark' ? 'background.paper' : 'white',
-                          border: '1px solid',
-                          borderColor: selectedChartType === chartType 
-                            ? 'primary.main' 
-                            : theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-                          color: selectedChartType === chartType 
-                            ? theme.palette.mode === 'dark' ? 'white' : 'primary.main'
-                            : 'text.primary',
-                          minWidth: 100,
+                          p: 2,
+                          width: '110px',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          flex: '1 0 auto',
-                          transition: 'all 0.2s ease-in-out',
-                          '&:hover': {
-                            bgcolor: selectedChartType === chartType 
-                              ? theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.light' 
-                              : theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                            transform: 'translateY(-2px)',
-                          }
+                          cursor: 'pointer',
+                          bgcolor: currentVisualization.chartType === type 
+                            ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)') 
+                            : (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'transparent')
                         }}
-                        onClick={() => setSelectedChartType(chartType)}
                       >
-                        {chartType === 'bar' ? <BarChartIcon sx={{ fontSize: 36, mb: 1 }} /> : 
-                         chartType === 'line' ? <ShowChartIcon sx={{ fontSize: 36, mb: 1 }} /> : 
-                         chartType === 'pie' ? <PieChartIcon sx={{ fontSize: 36, mb: 1 }} /> : 
-                         <ScatterPlotIcon sx={{ fontSize: 36, mb: 1 }} />}
-                        <Typography variant="body1" fontWeight={selectedChartType === chartType ? 'bold' : 'normal'}>
-                          {chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart
+                        {type === 'bar' && <ChartIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
+                        {type === 'line' && <LineIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
+                        {type === 'pie' && <PieIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
+                        {type === 'scatter' && <ScatterIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
+                        <Typography variant="body2">
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
                         </Typography>
-                      </Paper>
+                      </Box>
                     ))}
                   </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle1" gutterBottom color="text.secondary">
-                    X-Axis (Categories)
-                  </Typography>
-                  <Box sx={{ 
-                    border: '1px solid',
-                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)', 
-                    borderRadius: 1, 
-                    p: 0,
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' 
-                  }}>
-                    <Select
-                      value={selectedXAxis}
-                      onChange={(e) => setSelectedXAxis(e.target.value)}
-                      displayEmpty
-                      fullWidth
-                      disabled={loading}
-                      MenuProps={{
-                        PaperProps: {
-                          sx: {
-                            maxHeight: 300,
-                            bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
-                            color: theme.palette.text.primary,
-                          }
-                        }
-                      }}
-                      sx={{
-                        height: '56px',
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: 'transparent',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: 'transparent',
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: 'transparent',
-                        },
-                        '& .MuiSelect-icon': {
-                          color: theme.palette.text.secondary,
-                        }
-                      }}
-                    >
-                      <MenuItem value="" disabled>
-                        {loading ? 'Loading columns...' : 'Select X-Axis Column'}
-                      </MenuItem>
-                      {getFallbackColumns().map((column) => (
-                        <MenuItem key={column} value={column}>{column}</MenuItem>
-                      ))}
-                    </Select>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="subtitle1" gutterBottom color="text.secondary">
-                    Y-Axis (Values)
-                  </Typography>
-                  <Box sx={{ 
-                    border: '1px solid',
-                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-                    borderRadius: 1,
-                    p: 0,
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' 
-                  }}>
-                    <Select
-                      value={selectedYAxis}
-                      onChange={(e) => setSelectedYAxis(e.target.value)}
-                      displayEmpty
-                      fullWidth
-                      disabled={loading}
-                      MenuProps={{
-                        PaperProps: {
-                          sx: {
-                            maxHeight: 300,
-                            bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
-                            color: theme.palette.text.primary,
-                          }
-                        }
-                      }}
-                      sx={{
-                        height: '56px',
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: 'transparent',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: 'transparent',
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: 'transparent',
-                        },
-                        '& .MuiSelect-icon': {
-                          color: theme.palette.text.secondary,
-                        }
-                      }}
-                    >
-                      <MenuItem value="" disabled>
-                        {loading ? 'Loading columns...' : 'Select Y-Axis Column'}
-                      </MenuItem>
-                      {getFallbackColumns().map((column) => (
-                        <MenuItem key={column} value={column}>{column}</MenuItem>
-                      ))}
-                    </Select>
-                  </Box>
-                </Grid>
-              </Grid>
-            </>
-          )}
-        </DialogContent>
-        <Box sx={{ 
-          p: 3, 
-          display: 'flex', 
-          justifyContent: 'flex-end', 
-          gap: 2,
-          borderTop: '1px solid',
-          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-        }}>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setAxisSelectionOpen(false);
-              setError(null);
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            disabled={!selectedXAxis || !selectedYAxis || loading}
-            onClick={handleGenerateCharts}
-          >
-            Generate Charts
-          </Button>
-        </Box>
-      </Dialog>
-
-      {/* View Visualization Dialog */}
-      <Dialog
-        open={openViewDialog}
-        onClose={handleCloseViewDialog}
-        fullWidth
-        maxWidth="md"
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            overflow: 'hidden',
-            bgcolor: 'background.paper',
-          }
-        }}
-      >
-        <Box sx={{ bgcolor: 'primary.main', color: 'white', py: 2, px: 3 }}>
-          <Typography variant="h5">
-            {currentVisualization?.name || 'View Visualization'}
-          </Typography>
-        </Box>
-        <DialogContent sx={{ p: 0 }}>
-          {currentVisualization && (
-            <Box>
-              <Box sx={{ height: 400, p: 3 }}>
-                <canvas ref={chartContainerRef} style={{ width: '100%', height: '100%' }}></canvas>
-              </Box>
-              
-              <Box sx={{ 
-                p: 3, 
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#f5f5f5' 
-              }}>
-                <Typography variant="h6" gutterBottom>Data Insights</Typography>
-                <Typography variant="body1" sx={{ mb: 2 }}>
-                  {currentVisualization.description || 'This visualization shows key patterns in your data. The chart type was selected based on your data structure and optimal visualization methods.'}
-                </Typography>
-                
-                <Box sx={{ mt: 3, display: 'flex', alignItems: 'center' }}>
-                  <Chip 
-                    label={`${currentVisualization.chartType.charAt(0).toUpperCase() + currentVisualization.chartType.slice(1)} Chart`}
-                    color="primary"
-                    icon={getVisualizationIcon(currentVisualization.chartType)}
-                    sx={{ mr: 1 }}
-                  />
-                  <Chip 
-                    label={`${currentVisualization.confidence || 90}% confidence`}
-                    color="success"
-                  />
-                  <Box sx={{ flexGrow: 1 }} />
-                  <Button 
-                    variant="outlined" 
-                    startIcon={<EditIcon />}
-                    onClick={() => {
-                      handleCloseViewDialog();
-                      handleEditVisualization(currentVisualization);
-                    }}
-                    sx={{ mr: 1 }}
-                  >
-                    Edit
-                  </Button>
-                  <Button 
-                    variant="outlined" 
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                    onClick={() => {
-                      handleCloseViewDialog();
-                      handleDeleteVisualization(currentVisualization._id);
-                    }}
-                  >
-                    Delete
-                  </Button>
                 </Box>
               </Box>
-            </Box>
-          )}
-        </DialogContent>
-      </Dialog>
-      
-      {/* Edit Visualization Dialog - simplified */}
-      <Dialog
-        open={openEditDialog}
-        onClose={handleCloseEditDialog}
-        fullWidth
-        maxWidth="md"
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            bgcolor: 'background.paper',
-            backgroundImage: 'none',
-          }
-        }}
-      >
-        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
-          Edit Visualization
-        </DialogTitle>
-        <DialogContent sx={{ p: 3, mt: 2 }}>
-          {currentVisualization && (
-            <Box sx={{ pt: 1 }}>
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" gutterBottom>Visualization Name</Typography>
-                <input
-                  type="text"
-                  name="name"
-                  value={currentVisualization.name || ''}
-                  onChange={handleInputChange}
-                  placeholder="Enter a descriptive name"
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px', 
-                    fontSize: '16px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    backgroundColor: theme.palette.mode === 'dark' ? '#333' : 'white',
-                    color: theme.palette.mode === 'dark' ? 'white' : 'black',
-                  }}
-                />
-              </Box>
-              
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" gutterBottom>Description</Typography>
-                <textarea
-                  name="description"
-                  value={currentVisualization.description || ''}
-                  onChange={handleInputChange}
-                  placeholder="Describe what insights this visualization provides"
-                  rows={3}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px', 
-                    fontSize: '16px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    backgroundColor: theme.palette.mode === 'dark' ? '#333' : 'white',
-                    color: theme.palette.mode === 'dark' ? 'white' : 'black',
-                  }}
-                />
-              </Box>
-              
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" gutterBottom>Chart Type</Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                  {['bar', 'line', 'pie', 'scatter'].map(type => (
-                    <Box 
-                      key={type}
-                      onClick={() => setCurrentVisualization({
-                        ...currentVisualization,
-                        chartType: type
-                      })}
-                      sx={{ 
-                        border: '2px solid',
-                        borderColor: currentVisualization.chartType === type ? 'primary.main' : '#ddd',
-                        borderRadius: 2,
-                        p: 2,
-                        width: '110px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        cursor: 'pointer',
-                        bgcolor: currentVisualization.chartType === type 
-                          ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)') 
-                          : (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'transparent')
-                      }}
-                    >
-                      {type === 'bar' && <ChartIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
-                      {type === 'line' && <LineIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
-                      {type === 'pie' && <PieIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
-                      {type === 'scatter' && <ScatterIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
-                      <Typography variant="body2">
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 0 }}>
-          <Button onClick={handleCloseEditDialog} variant="outlined">
-            Cancel
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={handleUpdateVisualization}
-            startIcon={<EditIcon />}
-          >
-            Save Changes
-          </Button>
-        </DialogActions>
-      </Dialog>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ p: 3, pt: 0 }}>
+            <Button onClick={handleCloseEditDialog} variant="outlined">
+              Cancel
+            </Button>
+            <Button 
+              variant="contained" 
+              onClick={handleUpdateVisualization}
+              startIcon={<EditIcon />}
+            >
+              Save Changes
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={openDeleteDialog}
-        onClose={handleCancelDelete}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            bgcolor: 'background.paper',
-            backgroundImage: 'none',
-          }
-        }}
-      >
-        <DialogTitle sx={{ bgcolor: 'error.main', color: 'white' }}>
-          Delete Visualization
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2, p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <DeleteIcon color="error" sx={{ mr: 2, fontSize: 32 }} />
-            <Typography variant="h6">
-              Are you sure?
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={openDeleteDialog}
+          onClose={handleCancelDelete}
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              bgcolor: 'background.paper',
+              backgroundImage: 'none',
+            }
+          }}
+        >
+          <DialogTitle sx={{ bgcolor: 'error.main', color: 'white' }}>
+            Delete Visualization
+          </DialogTitle>
+          <DialogContent sx={{ mt: 2, p: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <DeleteIcon color="error" sx={{ mr: 2, fontSize: 32 }} />
+              <Typography variant="h6">
+                Are you sure?
+              </Typography>
+            </Box>
+            <Typography>
+              This visualization will be permanently deleted. This action cannot be undone.
             </Typography>
-          </Box>
-          <Typography>
-            This visualization will be permanently deleted. This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 0 }}>
-          <Button onClick={handleCancelDelete} variant="outlined">
-            Cancel
-          </Button>
-          <Button onClick={handleConfirmDelete} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+          </DialogContent>
+          <DialogActions sx={{ p: 3, pt: 0 }}>
+            <Button onClick={handleCancelDelete} variant="outlined">
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmDelete} color="error" variant="contained">
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Container>
+    </Box>
   );
 }
 
