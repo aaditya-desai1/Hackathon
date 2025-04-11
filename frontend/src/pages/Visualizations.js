@@ -1,52 +1,84 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDataContext } from '../contexts/DataContext';
-import { 
-  Container, Box, Button, Typography, Grid, Paper, MenuItem, 
-  Select, FormControl, InputLabel, TextField, Dialog, 
-  DialogTitle, DialogContent, DialogActions, FormHelperText,
-  ListItemText, IconButton, Divider, DialogContentText,
-  CircularProgress, LinearProgress, useTheme, Alert,
-  Collapse, Card, CardContent, CardActions, CardHeader, Tab, Tabs, List,
-  ListItem, ListItemIcon, Snackbar, Chip, Switch, FormControlLabel,
-  ListItemSecondaryAction, Tooltip
+import {
+  Box,
+  Typography,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Grid,
+  Card,
+  CardContent,
+  CardHeader,
+  CardActions,
+  LinearProgress,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Divider,
+  Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
+  Snackbar,
+  Alert,
+  Tabs,
+  Tab,
+  Chip,
+  Switch,
+  FormControlLabel,
+  ListItemSecondaryAction,
+  Tooltip,
+  IconButton,
+  CircularProgress,
+  useTheme,
+  Container
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
-import AddIcon from '@mui/icons-material/Add';
-import RefreshIcon from '@mui/icons-material/Refresh';
+import { 
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Add as AddIcon,
+  Close as CloseIcon,
+  OpenInNew as OpenInNewIcon,
+  Download as DownloadIcon,
+  Share as ShareIcon,
+  Save as SaveIcon,
+  Visibility as ViewIcon,
+  Refresh as RefreshIcon,
+  Info as InfoIcon,
+  Settings as SettingsIcon,
+  Star as StarIcon,
+  ArrowBack as ArrowBackIcon,
+  FilterList as FilterListIcon,
+  FindInPage as FileSearchIcon,
+  CompareArrows as CompareArrowsIcon,
+  CheckCircle as CheckCircleIcon,
+  BarChart as ChartIcon
+} from '@mui/icons-material';
 import BarChartIcon from '@mui/icons-material/BarChart';
-import PieChartIcon from '@mui/icons-material/PieChart';
-import DeleteIcon from '@mui/icons-material/Delete';
-import GetAppIcon from '@mui/icons-material/GetApp';
-import ChartIcon from '@mui/icons-material/Insights';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
+import PieChartIcon from '@mui/icons-material/PieChart';
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
-import EditIcon from '@mui/icons-material/Edit';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import SaveIcon from '@mui/icons-material/Save';
-import CloseIcon from '@mui/icons-material/Close';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import DownloadIcon from '@mui/icons-material/Download';
-import ShareIcon from '@mui/icons-material/Share';
-import InfoIcon from '@mui/icons-material/Info';
-import SettingsIcon from '@mui/icons-material/Settings';
-import StarIcon from '@mui/icons-material/Star';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import FileSearchIcon from '@mui/icons-material/FindInPage';
-import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import Chart from 'chart.js/auto';
 import PageHeader from '../components/common/PageHeader';
-import ErrorAlert from '../components/common/ErrorAlert';
+import { Chart, registerables } from 'chart.js/auto';
 import { fetchApi } from '../services/api';
 import { generateChartConfig, fetchChartDataFromAPI } from '../utils/chartUtils';
-import { formatFileSize } from '../utils/formatters';
 import { useAuth } from '../contexts/AuthContext';
+
+// Register all chart components
+Chart.register(...registerables);
 
 function Visualizations() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { refreshData } = useDataContext();
+  const theme = useTheme();
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -72,7 +104,6 @@ function Visualizations() {
   const [chartPreviewInstances, setChartPreviewInstances] = useState({});
   const [fileNotFound, setFileNotFound] = useState(false);
   const { isAuthenticated, currentUser } = useAuth();
-  const { refreshData } = useDataContext();
 
   useEffect(() => {
     fetchFiles();
@@ -3012,68 +3043,6 @@ function Visualizations() {
     }
   };
   
-  // Clean up chart instances and add auth event listeners
-  useEffect(() => {
-    // Function to clear all visualizations data
-    const clearAllVisualizations = () => {
-      console.log('Clearing all visualizations data');
-      
-      // Clean up any existing chart instances
-      if (chartInstance) {
-        chartInstance.destroy();
-      }
-      
-      Object.values(chartPreviewInstances).forEach(instance => {
-        if (instance) instance.destroy();
-      });
-      
-      // Clear state
-      setPreviewCharts([]);
-      setChartPreviewInstances({});
-      setAnalysis(null);
-      setSelectedFile(null);
-      setPreviewFile(null);
-      
-      // Clean localStorage
-      cleanLocalStorage();
-    };
-    
-    // Register a global function that can be called by other components
-    window._clearVisualizationCache = clearAllVisualizations;
-    
-    // Event listeners for login/logout
-    const handleUserLogin = () => {
-      console.log('User login detected, clearing visualizations cache');
-      clearAllVisualizations();
-    };
-    
-    const handleUserLogout = () => {
-      console.log('User logout detected, clearing visualizations cache');
-      clearAllVisualizations();
-    };
-    
-    // Add event listeners
-    window.addEventListener('user-login', handleUserLogin);
-    window.addEventListener('user-logout', handleUserLogout);
-    
-    // Clean up event listeners and chart instances on unmount
-    return () => {
-      window.removeEventListener('user-login', handleUserLogin);
-      window.removeEventListener('user-logout', handleUserLogout);
-      
-      if (chartInstance) {
-        chartInstance.destroy();
-      }
-      
-      Object.values(chartPreviewInstances).forEach(instance => {
-        if (instance) instance.destroy();
-      });
-      
-      // Remove global function reference
-      delete window._clearVisualizationCache;
-    };
-  }, [chartInstance, chartPreviewInstances]);
-  
   return (
     <Box 
       component="div" 
@@ -3136,8 +3105,7 @@ function Visualizations() {
           {loading && <LinearProgress sx={{ mb: 2 }} />}
           
           {error && (
-            <ErrorAlert 
-              message={error}
+            <Alert 
               severity="error" 
               sx={{ mb: 3 }}
               action={
@@ -3149,13 +3117,14 @@ function Visualizations() {
                   Test Connection
                 </Button>
               }
-            />
+            >
+              {error}
+            </Alert>
           )}
 
           {/* Show file not found message when appropriate */}
           {fileNotFound && previewCharts.length > 0 && (
-            <ErrorAlert 
-              message={`The file ${previewFile?.name} used to generate these visualizations has been deleted. You can still view the charts, but you won't be able to update them.`}
+            <Alert 
               severity="warning" 
               sx={{ mb: 3 }}
               action={
@@ -3167,43 +3136,29 @@ function Visualizations() {
                   Clear Visualizations
                 </Button>
               }
-            />
+            >
+              The file <strong>{previewFile?.name}</strong> used to generate these visualizations has been deleted.
+              You can still view the charts, but you won't be able to update them.
+            </Alert>
           )}
           
           {!fileNotFound && previewCharts.length > 0 && previewFile && (
             <Box>
-              <ErrorAlert 
-                message={`Showing visualizations for file: ${previewFile.name}`}
+              <Alert 
                 severity="info" 
                 sx={{ mb: 3 }}
                 action={
-                  <Box>
-                    <Button
-                      color="inherit"
-                      size="small"
-                      startIcon={<AddIcon />}
-                      onClick={() => {
-                        handleClearVisualizations();
-                        setOpenDialog(true);
-                      }}
-                    >
-                      New
-                    </Button>
-                    <Button
-                      color="inherit"
-                      size="small"
-                      startIcon={<RefreshIcon />}
-                      onClick={() => {
-                        if (selectedFile) {
-                          handleFileSelect(selectedFile);
-                        }
-                      }}
-                    >
-                      Refresh
-                    </Button>
-                  </Box>
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={handleClearVisualizations}
+                  >
+                    Clear All
+                  </Button>
                 }
-              />
+              >
+                Showing visualizations for file: <strong>{previewFile.name}</strong>
+              </Alert>
             </Box>
           )}
 
@@ -3494,9 +3449,9 @@ function Visualizations() {
           </DialogTitle>
           <DialogContent sx={{ p: 3 }}>
             {error && (
-              <ErrorAlert severity="error" sx={{ mb: 3 }}>
+              <Alert severity="error" sx={{ mb: 3 }}>
                 {error}
-              </ErrorAlert>
+              </Alert>
             )}
 
             <Typography variant="subtitle1" gutterBottom sx={{ mt: 1, color: 'text.secondary' }}>
@@ -3506,11 +3461,11 @@ function Visualizations() {
             </Typography>
             
             {!axisSelectionOpen && (
-              <ErrorAlert 
-                message="When you select a file, our AI will automatically generate the best visualizations based on your data."
-                severity="info" 
-                sx={{ mb: 3 }}
-              />
+              <Alert severity="info" sx={{ mb: 3 }}>
+                <Typography variant="body2">
+                  When you select a file, our AI will automatically generate the best visualizations based on your data.
+                </Typography>
+              </Alert>
             )}
             
             {loading ? (
@@ -3628,9 +3583,9 @@ function Visualizations() {
           </Box>
           <DialogContent sx={{ p: 3 }}>
             {error && (
-              <ErrorAlert severity="error" sx={{ mb: 3 }}>
+              <Alert severity="error" sx={{ mb: 3 }}>
                 {error}
-              </ErrorAlert>
+              </Alert>
             )}
             
             {loading ? (
