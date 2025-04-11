@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "vercel-build": "cd frontend && npm install && npm install react-scripts && node vercel-build.js"
+    "vercel-build": "cd frontend && npm install && npm install -g react-scripts && node vercel-build.js"
   },
   "engines": {
     "node": "22.x"
