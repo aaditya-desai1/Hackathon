@@ -14,7 +14,7 @@ export const getApiBaseUrl = () => {
     return 'https://express-backend-7m2c.onrender.com';
   }
   // In development, use the local backend
-  return 'http://localhost:5001';
+  return 'http://localhost:5000';
 };
 
 const API_BASE_URL = getApiBaseUrl();
