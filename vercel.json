@@ -26,6 +26,10 @@
       "dest": "/manifest.json"
     },
     {
+      "src": "/asset-manifest.json",
+      "dest": "/asset-manifest.json"
+    },
+    {
       "src": "/(.*\\.(js|css|png|jpg|jpeg|svg|gif))",
       "dest": "/$1"
     },

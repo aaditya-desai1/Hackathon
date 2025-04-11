@@ -1,6 +1,7 @@
 // This is a custom build script for Vercel deployment
 const path = require('path');
 const fs = require('fs-extra');
+const { execSync } = require('child_process');
 
 console.log('Starting custom Vercel build process...');
 
@@ -270,9 +271,49 @@ try {
     fs.mkdirSync(buildDir, { recursive: true });
   }
 
-  // First try the manual build approach
-  console.log('Creating a manual React build as the primary method...');
-  createManualReactBuild(buildDir);
+  // First try to run the actual React build process
+  try {
+    console.log('Attempting to run the actual React build process...');
+    
+    try {
+      // First try with npx
+      console.log('Trying with npx...');
+      execSync('npx react-scripts build', {
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          CI: 'false',
+          DISABLE_ESLINT_PLUGIN: 'true'
+        }
+      });
+    } catch (npxError) {
+      console.log('npx approach failed, trying direct node require...');
+      
+      // If npx fails, try direct require of the build script
+      const reactScriptsBuildPath = path.join(__dirname, 'node_modules', 'react-scripts', 'scripts', 'build.js');
+      if (fs.existsSync(reactScriptsBuildPath)) {
+        console.log(`Found build script at: ${reactScriptsBuildPath}`);
+        // Set required environment variables for build script
+        process.env.SKIP_PREFLIGHT_CHECK = 'true';
+        process.env.DISABLE_ESLINT_PLUGIN = 'true';
+        process.env.CI = 'false';
+        
+        // Execute the build script directly
+        require(reactScriptsBuildPath);
+      } else {
+        throw new Error('Could not find react-scripts build script');
+      }
+    }
+    
+    console.log('React build process completed successfully!');
+  } catch (buildError) {
+    console.error('Error running React build:', buildError);
+    console.log('Falling back to manual build...');
+    
+    // First try the manual build approach
+    console.log('Creating a manual React build as the primary method...');
+    createManualReactBuild(buildDir);
+  }
   
   // Verify the build directory has content
   const files = fs.readdirSync(buildDir);
