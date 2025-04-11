@@ -15,6 +15,8 @@ import LandingPage from './pages/LandingPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import { motion, AnimatePresence } from 'framer-motion';
+import { pageTransition } from './utils/animations';
 
 // Create Theme Context
 export const ColorModeContext = createContext({
@@ -25,8 +27,21 @@ export const ColorModeContext = createContext({
 // Custom hook to use the color mode context
 export const useColorMode = () => useContext(ColorModeContext);
 
-// Use the DataContext from the external file
-import { useDataContext } from './contexts/DataContext';
+// Create a motion component for routing
+const PageTransition = ({ children }) => (
+  <motion.div
+    variants={pageTransition}
+    initial="initial"
+    animate="enter"
+    exit="exit"
+    style={{ 
+      width: '100%', 
+      height: '100%'
+    }}
+  >
+    {children}
+  </motion.div>
+);
 
 function AppRoutes() {
   const location = useLocation();
@@ -37,55 +52,67 @@ function AppRoutes() {
   }, [location]);
 
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/landing" element={<LandingPage />} />
-      <Route 
-        path="/dashboard" 
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/files" 
-        element={
-          <ProtectedRoute>
-            <FileManager />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/visualizations" 
-        element={
-          <ProtectedRoute>
-            <Visualizations />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/saved-visualizations" 
-        element={
-          <ProtectedRoute>
-            <SavedVisualizations />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/settings" 
-        element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        } 
-      />
-      <Route path="/help" element={<Help />} />
-      <Route path="/about" element={<AboutUs />} />
-      <Route path="/" element={<Navigate to="/landing" replace />} />
-      <Route path="*" element={<Navigate to="/landing" replace />} />
-    </Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
+        <Route path="/signup" element={<PageTransition><Signup /></PageTransition>} />
+        <Route path="/landing" element={<PageTransition><LandingPage /></PageTransition>} />
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute>
+              <PageTransition>
+                <Dashboard />
+              </PageTransition>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/files" 
+          element={
+            <ProtectedRoute>
+              <PageTransition>
+                <FileManager />
+              </PageTransition>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/visualizations" 
+          element={
+            <ProtectedRoute>
+              <PageTransition>
+                <Visualizations />
+              </PageTransition>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/saved-visualizations" 
+          element={
+            <ProtectedRoute>
+              <PageTransition>
+                <SavedVisualizations />
+              </PageTransition>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/settings" 
+          element={
+            <ProtectedRoute>
+              <PageTransition>
+                <Settings />
+              </PageTransition>
+            </ProtectedRoute>
+          } 
+        />
+        <Route path="/help" element={<PageTransition><Help /></PageTransition>} />
+        <Route path="/about" element={<PageTransition><AboutUs /></PageTransition>} />
+        <Route path="/" element={<Navigate to="/landing" replace />} />
+        <Route path="*" element={<Navigate to="/landing" replace />} />
+      </Routes>
+    </AnimatePresence>
   );
 }
 

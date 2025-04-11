@@ -18,8 +18,16 @@ import { alpha } from '@mui/material/styles';
 import { useColorMode } from '../../App';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { fadeIn } from '../../utils/animations';
 
 const drawerWidth = 240;
+
+// Create a motion component for MUI components
+const MotionAppBar = motion(AppBar);
+const MotionIconButton = motion(IconButton);
+const MotionButton = motion(Button);
+const MotionTypography = motion(Typography);
 
 function Header({ drawerOpen, toggleDrawer }) {
   const theme = useTheme();
@@ -37,98 +45,123 @@ function Header({ drawerOpen, toggleDrawer }) {
   };
 
   return (
-    <AppBar
+    <MotionAppBar
       position="fixed"
       color="default"
       elevation={0}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
       sx={{
         zIndex: (theme) => theme.zIndex.drawer + 1,
         backgroundColor: 'background.paper',
         borderBottom: '1px solid',
         borderColor: 'divider',
         width: '100%',
-        transition: theme.transitions.create(['margin', 'width'], {
-          easing: theme.transitions.easing.sharp,
-          duration: theme.transitions.duration.leavingScreen,
-        }),
+        height: 64,
       }}
     >
-      <Toolbar>
-        <IconButton
-          edge="start"
-          color="inherit"
-          aria-label="toggle drawer"
-          onClick={toggleDrawer}
-          sx={{
-            marginRight: 2,
-            display: isAuthenticated ? 'flex' : 'none',
-          }}
-        >
-          {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
-        </IconButton>
-        <Typography
-          component="h1"
-          variant="h6"
-          color="inherit"
-          noWrap
-          sx={{ display: { xs: 'none', sm: 'block' }, fontWeight: 'bold' }}
-        >
-          DataViz App
-        </Typography>
-
-        <Box sx={{ flexGrow: 1 }} />
-
-        {/* User name display when authenticated */}
-        {isAuthenticated && currentUser && (
-          <Typography
-            variant="body2"
+      <Toolbar sx={{ height: '100%', px: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <MotionIconButton
+            edge="start"
             color="inherit"
-            sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}
+            aria-label="toggle drawer"
+            onClick={toggleDrawer}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            sx={{
+              mr: 2,
+              display: isAuthenticated ? 'flex' : 'none',
+            }}
           >
-            Hello, {currentUser.username}
-          </Typography>
-        )}
-
-        {/* Authentication Button */}
-        {isAuthenticated ? (
-          <Button
-            variant="outlined"
+            {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
+          </MotionIconButton>
+          <MotionTypography
+            component="h1"
+            variant="h6"
             color="inherit"
-            onClick={handleLogout}
-            startIcon={<LogoutIcon />}
-            size="small"
-            sx={{ mr: 2 }}
+            noWrap
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.3 }}
+            sx={{ display: { xs: 'none', sm: 'block' }, fontWeight: 'bold' }}
           >
-            Logout
-          </Button>
-        ) : (
-          <Button
-            variant="outlined"
-            color="inherit"
-            onClick={handleLogin}
-            startIcon={<LoginIcon />}
-            size="small"
-            sx={{ mr: 2 }}
-          >
-            Login
-          </Button>
-        )}
+            DataViz Pro
+          </MotionTypography>
+        </Box>
 
-        {/* Light/Dark Mode Toggle */}
-        <IconButton
-          size="large"
-          aria-label="toggle dark mode"
-          onClick={colorMode.toggleColorMode}
-          color="inherit"
-          sx={{
-            mr: 1,
-            '&:hover': { backgroundColor: alpha(theme.palette.common.black, 0.05) },
-          }}
-        >
-          {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
-        </IconButton>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          {/* User name display when authenticated */}
+          {isAuthenticated && currentUser && (
+            <MotionTypography
+              variant="body2"
+              color="inherit"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}
+            >
+              Hello, {currentUser.username}
+            </MotionTypography>
+          )}
+
+          {/* Authentication Button */}
+          {isAuthenticated ? (
+            <MotionButton
+              variant="outlined"
+              color="inherit"
+              onClick={handleLogout}
+              startIcon={<LogoutIcon />}
+              size="small"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              sx={{ mr: 2 }}
+            >
+              Logout
+            </MotionButton>
+          ) : (
+            <MotionButton
+              variant="outlined"
+              color="inherit"
+              onClick={handleLogin}
+              startIcon={<LoginIcon />}
+              size="small"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              sx={{ mr: 2 }}
+            >
+              Login
+            </MotionButton>
+          )}
+
+          {/* Light/Dark Mode Toggle */}
+          <MotionIconButton
+            size="large"
+            aria-label="toggle dark mode"
+            onClick={colorMode.toggleColorMode}
+            color="inherit"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            sx={{
+              mr: 0,
+              '&:hover': { backgroundColor: alpha(theme.palette.common.black, 0.05) },
+            }}
+          >
+            {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+          </MotionIconButton>
+        </Box>
       </Toolbar>
-    </AppBar>
+    </MotionAppBar>
   );
 }
 
