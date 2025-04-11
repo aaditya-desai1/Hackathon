@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box } from '@mui/material';
 import Header from './Header';
 import Sidebar from './Sidebar';
@@ -6,7 +6,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 
 function Layout({ children }) {
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  // Initialize drawer state from localStorage or default to open
+  const [drawerOpen, setDrawerOpen] = useState(() => {
+    const savedState = localStorage.getItem('sidebarOpen');
+    return savedState !== null ? JSON.parse(savedState) : true;
+  });
+  
   const { isAuthenticated } = useAuth();
   const location = useLocation();
 
@@ -14,8 +19,16 @@ function Layout({ children }) {
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
 
   const toggleDrawer = () => {
-    setDrawerOpen(!drawerOpen);
+    const newState = !drawerOpen;
+    setDrawerOpen(newState);
+    // Save to localStorage whenever state changes
+    localStorage.setItem('sidebarOpen', JSON.stringify(newState));
   };
+
+  // Save drawer state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('sidebarOpen', JSON.stringify(drawerOpen));
+  }, [drawerOpen]);
 
   return (
     <Box sx={{ display: 'flex' }}>
