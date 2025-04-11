@@ -87,6 +87,43 @@ function Visualizations() {
       setOpenDialog(true);
       window.history.replaceState({}, document.title);
     }
+    
+    // Handle case when navigating from file manager with a fileId
+    if (location.state?.fileId) {
+      console.log('File ID detected in location state:', location.state.fileId);
+      
+      // Set a flag to process the file after files are loaded
+      const fileIdToSelect = location.state.fileId;
+      window.history.replaceState({}, document.title);
+      
+      // Find and select the file once files are loaded
+      const selectFileWhenLoaded = async () => {
+        try {
+          console.log('Fetching specific file with ID:', fileIdToSelect);
+          const response = await fetchApi(`/api/files/${fileIdToSelect}`);
+          
+          if (!response.ok) {
+            console.error('Failed to fetch file details:', response.status);
+            return;
+          }
+          
+          const data = await response.json();
+          console.log('Received file data:', data);
+          
+          if (data.success && data.file) {
+            // Select the file and open the dialog
+            handleFileSelect(data.file);
+            setOpenDialog(true);
+          } else {
+            console.error('File not found or invalid response:', data);
+          }
+        } catch (error) {
+          console.error('Error selecting file by ID:', error);
+        }
+      };
+      
+      selectFileWhenLoaded();
+    }
   }, [location]);
 
   const fetchFiles = async (retryCount = 0) => {
@@ -2330,11 +2367,6 @@ function Visualizations() {
                   <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
                     {suggestion.type.charAt(0).toUpperCase() + suggestion.type.slice(1)} Chart
                   </Typography>
-                  <Chip
-                    label={`${suggestion.confidence}% match`}
-                    color="primary"
-                    size="small"
-                  />
                 </Box>
                 
                 <Box sx={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
@@ -2770,50 +2802,25 @@ function Visualizations() {
                     backgroundImage: 'none',
                     display: 'flex',
                     flexDirection: 'column',
-                      boxShadow: index === 0 ? '0 6px 12px rgba(25, 118, 210, 0.3)' : '0 4px 8px rgba(0,0,0,0.1)',
+                    boxShadow: '0 6px 12px rgba(25, 118, 210, 0.3)',
                     borderRadius: 2,
                     overflow: 'hidden',
-                      border: index === 0 ? '2px solid #1976d2' : 'none',
-                      transform: index === 0 ? 'scale(1.02)' : 'scale(1)',
-                      transition: 'transform 0.2s ease-in-out',
-                      zIndex: index === 0 ? 1 : 'auto'
+                    border: '2px solid #1976d2',
+                    transform: 'scale(1.02)',
+                    transition: 'transform 0.2s ease-in-out',
+                    zIndex: 1
                   }}>
-                    <Box sx={{ 
-                        bgcolor: index === 0 ? '#1976d2' : 'primary.main', 
-                      color: 'white',
-                      p: 2,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between'
-                    }}>
-                      <Typography variant="h6" component="div">
-                          {index === 0 && <StarIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: '0.9em' }} />}
-                        {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
-                      </Typography>
-                      <Chip 
-                        label={`${chart.confidence}% match`} 
-                        color={chart.confidence > 80 ? 'success' : chart.confidence > 70 ? 'primary' : 'default'} 
-                        size="small"
-                          sx={{ 
-                            fontWeight: 'bold', 
-                            color: 'white', 
-                            bgcolor: chart.confidence > 80 ? '#2e7d32' : chart.confidence > 70 ? '#1976d2' : '#757575'
-                          }}
-                      />
-                    </Box>
-                      <Typography variant="subtitle2" sx={{ 
-                        px: 2, 
-                        py: 1, 
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)',
-                        fontWeight: index === 0 ? 'bold' : 'normal'
-                      }}>
-                      {chart.description}
-                        {index === 0 && (
-                          <Box component="span" sx={{ display: 'block', color: 'primary.main', mt: 0.5, fontSize: '0.85em' }}>
-                            Best visualization for your data!
-                          </Box>
-                        )}
-                    </Typography>
+                    <CardHeader
+                      title={
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
+                            {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                          </Typography>
+                        </Box>
+                      }
+                      subheader={chart.description}
+                      sx={{ pb: 0 }}
+                    />
                     <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
                       <canvas 
                         ref={el => chartPreviewRefs.current[`ai-${chart.chartType}`] = el}
@@ -2823,16 +2830,16 @@ function Visualizations() {
                     </Box>
                     <Box sx={{ p: 2, mt: 'auto' }}>
                       <Button 
-                          variant={index === 0 ? "contained" : "outlined"}
-                          color={index === 0 ? "primary" : "inherit"}
+                        variant="contained"
+                        color="primary"
                         fullWidth
                         onClick={() => handleSaveChart(chart)}
                         disabled={fileNotFound}
-                          sx={{
-                            boxShadow: index === 0 ? 2 : 0
-                          }}
+                        sx={{
+                          boxShadow: 2
+                        }}
                       >
-                          {index === 0 ? 'Save Best Visualization' : 'Save Visualization'}
+                        Save Visualization
                       </Button>
                     </Box>
                   </Card>
@@ -2868,9 +2875,13 @@ function Visualizations() {
                     backgroundImage: 'none',
                     display: 'flex',
                     flexDirection: 'column',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                    boxShadow: '0 6px 12px rgba(25, 118, 210, 0.3)',
                     borderRadius: 2,
                     overflow: 'hidden',
+                    border: '2px solid #1976d2',
+                    transform: 'scale(1.02)',
+                    transition: 'transform 0.2s ease-in-out',
+                    zIndex: 1
                   }}>
                     <Box sx={{ 
                       bgcolor: 'primary.main', 
@@ -2897,9 +2908,13 @@ function Visualizations() {
                     <Box sx={{ p: 2, mt: 'auto' }}>
                       <Button 
                         variant="contained" 
+                        color="primary"
                         fullWidth
                         onClick={() => handleSaveChart(chart)}
                         disabled={fileNotFound}
+                        sx={{
+                          boxShadow: 2
+                        }}
                       >
                         Save Visualization
                       </Button>

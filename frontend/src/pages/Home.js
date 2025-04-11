@@ -12,6 +12,7 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import StorageIcon from '@mui/icons-material/Storage';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { useAuth } from '../contexts/AuthContext';
 
 function Home() {
   const [stats, setStats] = useState({
@@ -24,6 +25,7 @@ function Home() {
   const activityChartRef = useRef(null);
   const storageChartRef = useRef(null);
   const theme = useTheme();
+  const { isAuthenticated } = useAuth();
   
   useEffect(() => {
     // Simulate fetching dashboard data
@@ -183,8 +185,125 @@ function Home() {
     }
   };
   
+  const goToDashboard = () => {
+    navigate('/dashboard');
+  };
+
+  const goToLogin = () => {
+    navigate('/login');
+  };
+
+  const goToSignup = () => {
+    navigate('/signup');
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      {!isAuthenticated ? (
+        <>
+          <Box sx={{ my: 4, textAlign: 'center' }}>
+            <Typography variant="h2" component="h1" gutterBottom>
+              Welcome to DataViz Pro
+            </Typography>
+            <Typography variant="h5" color="text.secondary" paragraph>
+              Powerful data visualization tool to transform your data into meaningful insights
+            </Typography>
+          </Box>
+
+          <Paper elevation={3} sx={{ p: 4, borderRadius: 2, mb: 4 }}>
+            <Box sx={{ textAlign: 'center', mb: 3 }}>
+              <Typography variant="h4" gutterBottom>
+                Get Started Today
+              </Typography>
+              <Typography variant="body1" paragraph>
+                Create an account or sign in to access the full features of DataViz Pro.
+              </Typography>
+            </Box>
+            
+            <Grid container spacing={2} justifyContent="center">
+              <Grid item>
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  size="large"
+                  onClick={goToSignup}
+                >
+                  Sign Up
+                </Button>
+              </Grid>
+              <Grid item>
+                <Button 
+                  variant="outlined" 
+                  color="primary" 
+                  size="large"
+                  onClick={goToLogin}
+                >
+                  Sign In
+                </Button>
+              </Grid>
+            </Grid>
+          </Paper>
+        </>
+      ) : (
+        <>
+          <Typography variant="h4" gutterBottom component="h1">
+            Dashboard
+          </Typography>
+          
+          {/* Stats Overview */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper
+                sx={{
+                  p: 2,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: 140,
+                  bgcolor: 'background.paper',
+                  borderLeft: 4,
+                  borderColor: 'primary.main',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                elevation={2}
+              >
+                <Typography component="h2" variant="h6" color="primary" gutterBottom>
+                  Total Files
+                </Typography>
+                <Typography component="p" variant="h3">
+                  {stats.totalFiles}
+                </Typography>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    right: -10,
+                    bottom: -15,
+                    opacity: 0.2,
+                    transform: 'rotate(-15deg)'
+                  }}
+                >
+                  <DescriptionIcon sx={{ fontSize: 100, color: 'primary.main' }} />
+                </Box>
+              </Paper>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <Paper
+                sx={{
+                  p: 2,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: 140,
+                  bgcolor: 'background.paper',
+                  borderLeft: 4,
+                  borderColor: 'secondary.main',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                elevation={2}
+              >
+                <Typography component="h2" variant="h6" color="secondary" gutterBottom>
+                  Visualizations
       <Typography variant="h4" gutterBottom component="h1">
         Dashboard
       </Typography>
@@ -485,6 +604,53 @@ function Home() {
           </Card>
         </Grid>
       </Grid>
+
+      {!isAuthenticated ? (
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 2, mt: 6 }}>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Typography variant="h4" gutterBottom>
+              Get Started Today
+            </Typography>
+            <Typography variant="body1" paragraph>
+              Create an account or sign in to access the full features of DataViz Pro.
+            </Typography>
+          </Box>
+          
+          <Grid container spacing={2} justifyContent="center">
+            <Grid item>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                size="large"
+                onClick={goToSignup}
+              >
+                Sign Up
+              </Button>
+            </Grid>
+            <Grid item>
+              <Button 
+                variant="outlined" 
+                color="primary" 
+                size="large"
+                onClick={goToLogin}
+              >
+                Sign In
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
+      ) : (
+        <Box sx={{ textAlign: 'center', mt: 6 }}>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            size="large"
+            onClick={goToDashboard}
+          >
+            Go to Dashboard
+          </Button>
+        </Box>
+      )}
     </Container>
   );
 }

@@ -125,4 +125,32 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📧 Contact
 
-Project Link: [https://github.com/aaditya-desai1/Hackathon.git](https://github.com/aaditya-desai1/Hackathon.git) 
+Project Link: [https://github.com/aaditya-desai1/Hackathon.git](https://github.com/aaditya-desai1/Hackathon.git)
+
+## Authentication
+
+The application supports both traditional email/password authentication and Google Sign-In:
+
+### Setup Google Authentication
+
+1. Create a project in the [Google Cloud Console](https://console.cloud.google.com/)
+2. Configure the OAuth consent screen
+3. Create OAuth credentials (Web application type)
+4. Add your domain to the authorized JavaScript origins (e.g., `http://localhost:3000` for local development and your production domain)
+5. Add the client ID to the following files:
+   - `frontend/.env` and `frontend/.env.production`: Set `REACT_APP_GOOGLE_CLIENT_ID=your-client-id`
+   - `backend/.env`: Set `GOOGLE_CLIENT_ID=your-client-id` and `GOOGLE_CLIENT_SECRET=your-client-secret`
+6. For Vercel deployment, add the following environment variables:
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+
+### Deploying to Vercel
+
+For the application to work correctly on Vercel, make sure to set the following environment variables in your Vercel project:
+
+- `MONGODB_URI`: Your MongoDB connection string
+- `JWT_SECRET`: A secure string for JWT token generation
+- `GOOGLE_CLIENT_ID`: Your Google OAuth client ID
+- `GOOGLE_CLIENT_SECRET`: Your Google OAuth client secret
+
+You can add these as environment variables in the Vercel project settings or use the Vercel CLI: 

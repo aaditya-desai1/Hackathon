@@ -2,75 +2,37 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "frontend/build" }
+      "src": "backend/server.js",
+      "use": "@vercel/node"
     },
     {
-      "src": "backend/server.js",
-      "use": "@vercel/node",
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
       "config": {
-        "maxDuration": 60,
-        "memory": 1024
+        "distDir": "build"
       }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/backend/server.js"
+      "dest": "backend/server.js"
     },
     {
-      "src": "/uploads/(.*)",
-      "dest": "/backend/server.js"
-    },
-    {
-      "src": "/health",
-      "dest": "/backend/server.js"
-    },
-    {
-      "src": "/static/(.*)",
-      "dest": "/frontend/build/static/$1"
-    },
-    {
-      "src": "/favicon.ico",
-      "dest": "/frontend/build/favicon.ico"
-    },
-    {
-      "src": "/manifest.json",
-      "dest": "/frontend/build/manifest.json"
-    },
-    {
-      "src": "/robots.txt",
-      "dest": "/frontend/build/robots.txt"
-    },
-    {
-      "src": "/dashboard",
-      "dest": "/frontend/build/index.html"
-    },
-    {
-      "src": "/files",
-      "dest": "/frontend/build/index.html"
-    },
-    {
-      "src": "/visualizations",
-      "dest": "/frontend/build/index.html"
-    },
-    {
-      "src": "/settings",
-      "dest": "/frontend/build/index.html"
-    },
-    {
-      "src": "/help",
-      "dest": "/frontend/build/index.html"
-    },
-    {
-      "src": "/about",
-      "dest": "/frontend/build/index.html"
+      "src": "/(.*\\.(js|json|css|ico|png|jpg|jpeg|svg|gif|woff|woff2|ttf|eot)$)",
+      "dest": "frontend/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/build/index.html"
+      "dest": "frontend/index.html"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "MONGODB_URI": "@datavizpro-mongodb-uri",
+    "JWT_SECRET": "@datavizpro-jwt-secret",
+    "GOOGLE_CLIENT_ID": "@datavizpro-google-client-id",
+    "GOOGLE_CLIENT_SECRET": "@datavizpro-google-client-secret"
+  },
+  "public": false
 } 
