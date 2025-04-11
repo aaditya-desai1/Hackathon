@@ -12,7 +12,10 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import StorageIcon from '@mui/icons-material/Storage';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+<<<<<<< HEAD
 import { useAuth } from '../contexts/AuthContext';
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 
 function Home() {
   const [stats, setStats] = useState({
@@ -25,7 +28,10 @@ function Home() {
   const activityChartRef = useRef(null);
   const storageChartRef = useRef(null);
   const theme = useTheme();
+<<<<<<< HEAD
   const { isAuthenticated } = useAuth();
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   
   useEffect(() => {
     // Simulate fetching dashboard data
@@ -185,6 +191,7 @@ function Home() {
     }
   };
   
+<<<<<<< HEAD
   const goToDashboard = () => {
     navigate('/dashboard');
   };
@@ -304,6 +311,10 @@ function Home() {
               >
                 <Typography component="h2" variant="h6" color="secondary" gutterBottom>
                   Visualizations
+=======
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       <Typography variant="h4" gutterBottom component="h1">
         Dashboard
       </Typography>
@@ -604,6 +615,7 @@ function Home() {
           </Card>
         </Grid>
       </Grid>
+<<<<<<< HEAD
 
       {!isAuthenticated ? (
         <Paper elevation={3} sx={{ p: 4, borderRadius: 2, mt: 6 }}>
@@ -651,6 +663,8 @@ function Home() {
           </Button>
         </Box>
       )}
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     </Container>
   );
 }

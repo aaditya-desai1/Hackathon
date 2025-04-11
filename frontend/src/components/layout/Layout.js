@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { Box } from '@mui/material';
 import Header from './Header';
@@ -39,6 +40,24 @@ function Layout({ children }) {
         <Sidebar drawerOpen={drawerOpen} toggleDrawer={toggleDrawer} />
       )}
       
+=======
+import React, { useState } from 'react';
+import { Box } from '@mui/material';
+import Header from './Header';
+import Sidebar from './Sidebar';
+
+function Layout({ children }) {
+  const [drawerOpen, setDrawerOpen] = useState(true);
+
+  const toggleDrawer = () => {
+    setDrawerOpen(!drawerOpen);
+  };
+
+  return (
+    <Box sx={{ display: 'flex' }}>
+      <Header drawerOpen={drawerOpen} toggleDrawer={toggleDrawer} />
+      <Sidebar drawerOpen={drawerOpen} toggleDrawer={toggleDrawer} />
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       <Box
         component="main"
         sx={{
@@ -48,11 +67,14 @@ function Layout({ children }) {
           minHeight: '100vh',
           backgroundColor: 'background.default',
           marginTop: '64px', // Height of the header
+<<<<<<< HEAD
           marginLeft: isAuthenticated && !isAuthPage && drawerOpen ? '240px' : (isAuthenticated && !isAuthPage ? theme => theme.spacing(7) : 0),
           transition: theme => theme.transitions.create(['margin'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen,
           }),
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
         }}
       >
         {children}

@@ -5,6 +5,7 @@ import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import FileManager from './pages/FileManager';
 import Visualizations from './pages/Visualizations';
+<<<<<<< HEAD
 import SavedVisualizations from './pages/SavedVisualizations';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
@@ -14,6 +15,11 @@ import Signup from './pages/Signup';
 import LandingPage from './pages/LandingPage';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+=======
+import Settings from './pages/Settings';
+import Help from './pages/Help';
+import AboutUs from './pages/AboutUs';
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 
 // Create Theme Context
 export const ColorModeContext = createContext({
@@ -21,6 +27,7 @@ export const ColorModeContext = createContext({
   mode: 'light',
 });
 
+<<<<<<< HEAD
 // Create Data Context for managing data updates across components
 export const DataContext = createContext({
   refreshData: () => {},
@@ -33,6 +40,11 @@ export const useColorMode = () => useContext(ColorModeContext);
 // Custom hook to use the data context
 export const useDataContext = () => useContext(DataContext);
 
+=======
+// Custom hook to use the color mode context
+export const useColorMode = () => useContext(ColorModeContext);
+
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 function AppRoutes() {
   const location = useLocation();
 
@@ -43,6 +55,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+<<<<<<< HEAD
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/landing" element={<LandingPage />} />
@@ -90,6 +103,16 @@ function AppRoutes() {
       <Route path="/about" element={<AboutUs />} />
       <Route path="/" element={<Navigate to="/landing" replace />} />
       <Route path="*" element={<Navigate to="/landing" replace />} />
+=======
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/files" element={<FileManager />} />
+      <Route path="/visualizations" element={<Visualizations />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/help" element={<Help />} />
+      <Route path="/about" element={<AboutUs />} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     </Routes>
   );
 }
@@ -101,14 +124,18 @@ function App() {
     return savedMode || 'light';
   });
 
+<<<<<<< HEAD
   // State for the data context
   const [lastUpdate, setLastUpdate] = useState(Date.now());
 
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   // Update localStorage when theme changes
   useEffect(() => {
     localStorage.setItem('themeMode', mode);
   }, [mode]);
 
+<<<<<<< HEAD
   // Add regular polling for data updates
   useEffect(() => {
     // Set up an interval to automatically refresh data every 5 seconds
@@ -120,6 +147,8 @@ function App() {
     return () => clearInterval(refreshInterval);
   }, []);
 
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   const colorMode = useMemo(
     () => ({
       toggleColorMode: () => {
@@ -133,6 +162,7 @@ function App() {
     [mode]
   );
 
+<<<<<<< HEAD
   // Create data context value
   const dataContextValue = useMemo(
     () => ({
@@ -142,6 +172,8 @@ function App() {
     [lastUpdate]
   );
 
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   // Create theme based on mode
   const theme = useMemo(
     () =>
@@ -204,6 +236,7 @@ function App() {
   );
 
   return (
+<<<<<<< HEAD
     <AuthProvider>
       <ColorModeContext.Provider value={colorMode}>
         <DataContext.Provider value={dataContextValue}>
@@ -218,6 +251,18 @@ function App() {
         </DataContext.Provider>
       </ColorModeContext.Provider>
     </AuthProvider>
+=======
+    <ColorModeContext.Provider value={colorMode}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <HashRouter>
+          <Layout>
+            <AppRoutes />
+          </Layout>
+        </HashRouter>
+      </ThemeProvider>
+    </ColorModeContext.Provider>
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   );
 }
 

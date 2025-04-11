@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+<<<<<<< HEAD
 import { useDataContext } from '../App';
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 import {
   Box,
   Typography,
@@ -32,7 +35,10 @@ import FileUploader from '../components/file/FileUploader';
 function FileManager() {
   const location = useLocation();
   const navigate = useNavigate();
+<<<<<<< HEAD
   const { refreshData } = useDataContext();
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   const [openUploadDialog, setOpenUploadDialog] = useState(false);
   const [openPreviewDialog, setOpenPreviewDialog] = useState(false);
   const [previewData, setPreviewData] = useState(null);
@@ -43,8 +49,11 @@ function FileManager() {
   const theme = useTheme();
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [fileToDelete, setFileToDelete] = useState(null);
+<<<<<<< HEAD
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [openDeleteAllDialog, setOpenDeleteAllDialog] = useState(false);
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 
   // Helper function to format dates
   const formatDate = (dateString) => {
@@ -106,6 +115,7 @@ function FileManager() {
       
       console.log('Fetching files from:', url);
       
+<<<<<<< HEAD
       // Get auth token
       const token = localStorage.getItem('authToken');
       if (!token) {
@@ -121,6 +131,9 @@ function FileManager() {
         }
       });
       
+=======
+      const response = await fetch(url);
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       if (!response.ok) {
         console.error(`Failed to fetch files: ${response.status} ${response.statusText}`);
         throw new Error(`Failed to fetch files: ${response.status} ${response.statusText}`);
@@ -155,9 +168,12 @@ function FileManager() {
     // Refresh the file list immediately
     await fetchFiles();
     
+<<<<<<< HEAD
     // Notify other components that data has changed
     refreshData();
     
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     // Wait a moment before closing the dialog to show success
     setTimeout(() => {
       handleCloseUploadDialog();
@@ -174,6 +190,7 @@ function FileManager() {
       
       console.log('Deleting file from:', url);
       
+<<<<<<< HEAD
       // Get auth token
       const token = localStorage.getItem('authToken');
       if (!token) {
@@ -181,12 +198,18 @@ function FileManager() {
         throw new Error('Authentication required. Please log in again.');
       }
       
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       // Make the real API call to delete a file
       const response = await fetch(url, { 
         method: 'DELETE',
         headers: {
+<<<<<<< HEAD
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
+=======
+          'Content-Type': 'application/json'
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
         }
       });
       
@@ -200,9 +223,12 @@ function FileManager() {
       // Refresh the file list
       await fetchFiles();
       
+<<<<<<< HEAD
       // Notify other components that data has changed
       refreshData();
       
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       // Close dialog
       setOpenDeleteDialog(false);
       setFileToDelete(null);
@@ -238,6 +264,7 @@ function FileManager() {
       
       console.log('Fetching file preview from:', url);
       
+<<<<<<< HEAD
       // Get auth token
       const token = localStorage.getItem('authToken');
       if (!token) {
@@ -251,6 +278,10 @@ function FileManager() {
           'Authorization': `Bearer ${token}`
         }
       });
+=======
+      // Get the file from the API
+      const response = await fetch(url);
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       
       if (!response.ok) {
         console.error(`Failed to get file preview: ${response.status} ${response.statusText}`);
@@ -264,7 +295,11 @@ function FileManager() {
         throw new Error(data.error || 'Failed to load preview');
       }
       
+<<<<<<< HEAD
       // Create the preview data structure with file metadata
+=======
+      // Create the preview data structure
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       const previewData = {
         _id: fileId,
         name: data.file?.name || 'Unknown file',
@@ -316,6 +351,7 @@ function FileManager() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+<<<<<<< HEAD
   const handleConfirmDeleteAll = () => {
     setOpenDeleteAllDialog(false);
     deleteAllFiles();
@@ -351,10 +387,32 @@ function FileManager() {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
+=======
+  const handleDeleteAllFiles = async () => {
+    try {
+      if (!window.confirm('Are you sure you want to delete ALL files from the database? This action cannot be undone.')) {
+        return;
+      }
+      
+      setLoading(true);
+      
+      // Use environment-aware API endpoint
+      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+      const url = `${API_BASE_URL}/api/files/cleanup-database`;
+      
+      console.log('Cleaning up database from:', url);
+      
+      // Call the cleanup endpoint
+      const response = await fetch(url, { 
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
         }
       });
       
       if (!response.ok) {
+<<<<<<< HEAD
         console.error(`Failed to delete all files: ${response.status} ${response.statusText}`);
         throw new Error(`Failed to delete all files: ${response.status} ${response.statusText}`);
       }
@@ -420,6 +478,26 @@ function FileManager() {
     };
   }, []);
 
+=======
+        throw new Error('Failed to clean up database');
+      }
+      
+      const result = await response.json();
+      console.log('Cleanup result:', result);
+      
+      // Refresh the file list
+      await fetchFiles();
+      
+      alert(`Successfully removed ${result.filesDeleted} files from the database.`);
+    } catch (error) {
+      console.error('Error cleaning up database:', error);
+      alert(`Error cleaning up database: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -427,6 +505,7 @@ function FileManager() {
           File Manager
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
+<<<<<<< HEAD
           {files.length > 0 && !isDeletingAll && (
             <Button
               variant="outlined"
@@ -448,13 +527,28 @@ function FileManager() {
               Deleting...
             </Button>
           )}
+=======
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={handleDeleteAllFiles}
+            sx={{ display: files.length > 0 ? 'flex' : 'none' }}
+          >
+            Delete All Files
+          </Button>
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
           <Button
             variant="contained"
             color="primary"
             onClick={() => setOpenUploadDialog(true)}
+<<<<<<< HEAD
             disabled={isDeletingAll}
           >
             {isDeletingAll ? "Please wait..." : "Upload New File"}
+=======
+          >
+            Upload New File
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
           </Button>
         </Box>
       </Box>
@@ -735,6 +829,7 @@ function FileManager() {
           </Button>
         </DialogActions>
       </Dialog>
+<<<<<<< HEAD
 
       {/* Delete All Files confirmation dialog */}
       <Dialog
@@ -791,6 +886,8 @@ function FileManager() {
           </Button>
         </DialogActions>
       </Dialog>
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     </Container>
   );
 }
