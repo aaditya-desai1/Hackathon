@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDataContext } from '../App';
 import {
@@ -19,29 +19,47 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  Chip,
   Divider,
-  Alert,
-  IconButton,
-  useTheme,
-  CircularProgress,
   Paper,
-  Container,
+  FormControl,
+  InputLabel,
   Select,
   MenuItem,
+  TextField,
+  Snackbar,
+  Alert,
+  Tabs,
+  Tab,
+  Chip,
+  Switch,
+  FormControlLabel,
+  ListItemSecondaryAction,
+  Tooltip,
+  IconButton,
+  CircularProgress,
+  useTheme,
+  Container
 } from '@mui/material';
-import {
-  BarChart as ChartIcon,
-  Add as AddIcon,
-  FilterList as FilterListIcon,
-  FindInPage as FileSearchIcon,
-  Edit as EditIcon,
+import { 
   Delete as DeleteIcon,
-  CompareArrows as CompareArrowsIcon,
+  Edit as EditIcon,
+  Add as AddIcon,
   Close as CloseIcon,
-  CheckCircle as CheckCircleIcon,
+  OpenInNew as OpenInNewIcon,
+  Download as DownloadIcon,
+  Share as ShareIcon,
+  Save as SaveIcon,
+  Visibility as ViewIcon,
+  Refresh as RefreshIcon,
+  Info as InfoIcon,
+  Settings as SettingsIcon,
   Star as StarIcon,
   ArrowBack as ArrowBackIcon,
+  FilterList as FilterListIcon,
+  FindInPage as FileSearchIcon,
+  CompareArrows as CompareArrowsIcon,
+  CheckCircle as CheckCircleIcon,
+  BarChart as ChartIcon
 } from '@mui/icons-material';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
@@ -50,7 +68,7 @@ import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import PageHeader from '../components/common/PageHeader';
 import { Chart, registerables } from 'chart.js/auto';
 import { fetchApi } from '../services/api';
-import { extractDataFromChartInstance, fetchChartDataFromAPI } from '../utils/chartUtils';
+import { generateChartConfig, fetchChartDataFromAPI } from '../utils/chartUtils';
 import { useAuth } from '../contexts/AuthContext';
 
 // Register all chart components
@@ -1806,37 +1824,25 @@ function Visualizations() {
   // Function to get chart data from the API
   const getChartDataFromAPI = async (chart) => {
     try {
-      console.log('Getting chart data for saving:', chart);
+      if (!chart || !chart.fileId || !chart.yAxis) {
+        return null;
+      }
       
-      // First try to get data from existing chart instance
+      // Try to get the chart instance to extract data directly from it
       const chartKey = chart.isAIRecommended ? 
         `ai-${chart.chartType}` : 
         `custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`;
       
       const chartInstance = chartPreviewInstances[chartKey];
       
-      // If we have an active chart instance, get its data directly
+      // If we have a chart instance, extract data directly from it
       if (chartInstance && chartInstance.data) {
-        console.log('Found chart instance, extracting data directly:', chartInstance);
+        console.log('Extracting data from chart instance');
         
+        // Extract labels and values from chart instance
         const extractedLabels = chartInstance.data.labels || [];
-        let extractedValues = [];
+        const extractedValues = chartInstance.data.datasets?.[0]?.data || [];
         
-        // Extract values based on chart type
-        if (chart.chartType === 'pie' || chart.chartType === 'doughnut') {
-          // For pie charts, values are in the first dataset's data
-          extractedValues = chartInstance.data.datasets[0]?.data || [];
-        } else {
-          // For other charts, extract values from first dataset
-          extractedValues = chartInstance.data.datasets[0]?.data || [];
-        }
-        
-        console.log('Extracted data from chart instance:', {
-          labels: extractedLabels,
-          values: extractedValues
-        });
-        
-        // Return the extracted data if valid
         if (extractedLabels.length > 0 && extractedValues.length > 0) {
           return {
             labels: extractedLabels,
@@ -1926,7 +1932,12 @@ function Visualizations() {
       // Extract data from chart instance if available
       if (chartInstance && chartInstance.data) {
         console.log('Found chart instance, extracting data directly');
-        chartData = extractDataFromChartInstance(chartInstance, chart.chartType);
+        // Extract data directly from chart instance
+        chartData = {
+          labels: chartInstance.data.labels || [],
+          values: chartInstance.data.datasets?.[0]?.data || [],
+          datasets: chartInstance.data.datasets || []
+        };
         
         console.log('Extracted data from chart instance:', {
           labels: chartData.labels.slice(0, 5),
@@ -2154,15 +2165,8 @@ function Visualizations() {
   };
 
   const getVisualizationIcon = (type) => {
-    const iconSize = { fontSize: 80, opacity: 0.8 };
-    const colors = {
-      bar: '#1976d2',    // blue
-      scatter: '#9c27b0', // purple
-      line: '#2e7d32',    // green
-      pie: '#ed6c02'      // orange
-    };
-    
-    const iconColor = { color: colors[type] || colors.bar };
+    const iconSize = { fontSize: 40 };
+    const iconColor = { color: 'primary.main' };
     
     switch (type) {
       case 'bar':
@@ -2648,9 +2652,9 @@ function Visualizations() {
                 
                 <Box sx={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
                   {suggestion.type === 'bar' && <ChartIcon sx={{ fontSize: 50, color: '#1976d2' }} />}
-                  {suggestion.type === 'line' && <LineIcon sx={{ fontSize: 50, color: '#2e7d32' }} />}
-                  {suggestion.type === 'pie' && <PieIcon sx={{ fontSize: 50, color: '#ed6c02' }} />}
-                  {suggestion.type === 'scatter' && <ScatterIcon sx={{ fontSize: 50, color: '#9c27b0' }} />}
+                  {suggestion.type === 'line' && <ShowChartIcon sx={{ fontSize: 50, color: '#2e7d32' }} />}
+                  {suggestion.type === 'pie' && <PieChartIcon sx={{ fontSize: 50, color: '#ed6c02' }} />}
+                  {suggestion.type === 'scatter' && <ScatterPlotIcon sx={{ fontSize: 50, color: '#9c27b0' }} />}
                 </Box>
                 
                 <Typography variant="body2" color="text.secondary">
@@ -3909,9 +3913,9 @@ function Visualizations() {
                         }}
                       >
                         {type === 'bar' && <ChartIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
-                        {type === 'line' && <LineIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
-                        {type === 'pie' && <PieIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
-                        {type === 'scatter' && <ScatterIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
+                        {type === 'line' && <ShowChartIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
+                        {type === 'pie' && <PieChartIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
+                        {type === 'scatter' && <ScatterPlotIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
                         <Typography variant="body2">
                           {type.charAt(0).toUpperCase() + type.slice(1)}
                         </Typography>
