@@ -48,44 +48,38 @@ function Dashboard() {
   const [error, setError] = useState(null);
   const { isAuthenticated } = useAuth();
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (retryCount = 0) => {
     try {
+      setLoading(true);
+      setError(null);
+      
       console.log('Fetching dashboard data...');
       
-      if (!isAuthenticated) {
-        setStats({
-          totalFiles: 0,
-          totalVisualizations: 0,
-          recentFiles: [],
-          recentVisualizations: [],
-          savedVisualizations: 0
-        });
-        return;
-      }
-      
-      // Fetch files from the API with proper error handling
+      // Fetch files
       let filesData = { files: [] };
       try {
+        console.log('Fetching files for dashboard...');
         const filesResponse = await fetchApi('/api/files');
         filesData = await filesResponse.json();
-      } catch (fileError) {
-        console.error('Files fetch error:', fileError);
+        console.log('Files data fetched:', filesData);
+      } catch (filesError) {
+        console.error('Files fetch error:', filesError);
+        // Continue with empty array rather than failing completely
       }
       
-      // Fetch visualizations from the API with proper error handling
+      // Fetch visualizations
       let vizData = { visualizations: [] };
       try {
-        console.log('Fetching visualizations data...');
+        console.log('Fetching visualizations for dashboard...');
         const vizResponse = await fetchApi('/api/visualizations');
         vizData = await vizResponse.json();
-        console.log('Visualizations API response data:', vizData);
-        console.log('Number of visualizations retrieved:', vizData.visualizations ? vizData.visualizations.length : 0);
+        console.log('Visualizations data fetched:', vizData);
       } catch (vizError) {
         console.error('Visualizations fetch error:', vizError);
+        // Continue with empty array rather than failing completely
       }
       
-      // Fetch saved visualizations count specifically
+      // Fetch saved visualizations count
       let savedVizCount = 0;
       try {
         console.log('Fetching saved visualizations count...');
@@ -128,6 +122,15 @@ function Dashboard() {
       setStats(dashboardData);
     } catch (error) {
       console.error('Dashboard data fetch error:', error);
+      
+      if (retryCount < 2) {
+        // Wait and retry
+        const retryDelay = 1000 * (retryCount + 1);
+        console.log(`Retrying dashboard data fetch in ${retryDelay}ms...`);
+        setTimeout(() => fetchData(retryCount + 1), retryDelay);
+        return;
+      }
+      
       setError('Failed to load dashboard data');
       // Set empty data on error
       setStats({

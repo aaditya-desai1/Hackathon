@@ -29,7 +29,21 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
+    // Add a global listener for auth-error events
+    const handleAuthError = (event) => {
+      console.log('Auth error event received:', event.detail);
+      setError(event.detail.message || 'Authentication error. Please login again.');
+      localStorage.removeItem('authToken');
+      setCurrentUser(null);
+    };
+    
+    window.addEventListener('auth-error', handleAuthError);
     loadUser();
+    
+    // Clean up event listener
+    return () => {
+      window.removeEventListener('auth-error', handleAuthError);
+    };
   }, []);
 
   // Login user

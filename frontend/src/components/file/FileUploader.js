@@ -292,7 +292,8 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
           'Authorization': `Bearer ${token}`
           // NOTE: Do NOT set Content-Type header for FormData/multipart
         },
-        credentials: 'include' // Include cookies for cross-domain requests
+        credentials: 'include', // Include cookies for cross-domain requests
+        mode: 'cors' // Ensure CORS mode is set properly
       });
       
       clearInterval(progressInterval);
@@ -317,6 +318,13 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
           console.error('Authentication error during file upload');
           localStorage.removeItem('authToken'); // Clear invalid token
           errorMessage = 'Your session has expired. Please login again.';
+          window.dispatchEvent(new CustomEvent('auth-error', { detail: { message: errorMessage }}));
+        }
+        
+        // Special handling for CORS errors
+        if (response.status === 0) {
+          console.error('Possible CORS error during file upload');
+          errorMessage = 'Network error: Could not connect to the server. This might be due to CORS restrictions.';
         }
         
         setErrorDetails(errorDetails);
