@@ -4,7 +4,10 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+<<<<<<< HEAD
 import { GoogleOAuthProvider } from '@react-oauth/google';
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 
 // Create a custom theme
 const theme = createTheme({
@@ -61,17 +64,24 @@ const theme = createTheme({
   },
 });
 
+<<<<<<< HEAD
 // Get Google Client ID from environment
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || 'your-google-client-id';
 
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
+<<<<<<< HEAD
       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
         <App />
       </GoogleOAuthProvider>
+=======
+      <App />
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     </ThemeProvider>
   </React.StrictMode>
 );

@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+<<<<<<< HEAD
     "vercel-build": "cd frontend && npm install && npm run build"
+=======
+    "vercel-build": "cd frontend && npm install && npm run build && cd ../backend && npm install"
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   },
   "engines": {
     "node": "22.x"

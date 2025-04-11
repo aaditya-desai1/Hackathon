@@ -1,6 +1,11 @@
+<<<<<<< HEAD
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDataContext } from '../App';
+=======
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 import {
   Box,
   Typography,
@@ -33,6 +38,7 @@ import {
 import {
   BarChart as ChartIcon,
   Add as AddIcon,
+<<<<<<< HEAD
   FilterList as FilterListIcon,
   FindInPage as FileSearchIcon,
   Edit as EditIcon,
@@ -52,15 +58,34 @@ import { Chart, registerables } from 'chart.js/auto';
 import { fetchApi } from '../services/api';
 import { extractDataFromChartInstance, fetchChartDataFromAPI } from '../utils/chartUtils';
 import { useAuth } from '../contexts/AuthContext';
+=======
+  Timeline as TimelineIcon,
+  BubbleChart as ScatterIcon,
+  ShowChart as LineIcon,
+  PieChart as PieIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  CheckCircle as CheckCircleIcon,
+  ArrowBack as ArrowBackIcon,
+} from '@mui/icons-material';
+import PageHeader from '../components/common/PageHeader';
+import { Chart, registerables } from 'chart.js/auto';
+import { fetchApi } from '../services/api';
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 
 // Register all chart components
 Chart.register(...registerables);
 
 function Visualizations() {
+<<<<<<< HEAD
   const navigate = useNavigate();
   const location = useLocation();
   const { refreshData } = useDataContext();
   const theme = useTheme();
+=======
+  const theme = useTheme();
+  const location = useLocation();
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   const [openDialog, setOpenDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -77,7 +102,10 @@ function Visualizations() {
   const [chartInstance, setChartInstance] = useState(null);
   const [selectedXAxis, setSelectedXAxis] = useState('');
   const [selectedYAxis, setSelectedYAxis] = useState('');
+<<<<<<< HEAD
   const [selectedChartType, setSelectedChartType] = useState('bar');
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   const [showChartOptions, setShowChartOptions] = useState(false);
   const [previewCharts, setPreviewCharts] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
@@ -85,16 +113,24 @@ function Visualizations() {
   const chartPreviewRefs = useRef({});
   const [chartPreviewInstances, setChartPreviewInstances] = useState({});
   const [fileNotFound, setFileNotFound] = useState(false);
+<<<<<<< HEAD
   const { isAuthenticated, currentUser } = useAuth();
 
   useEffect(() => {
     fetchFiles();
     // fetchVisualizations(); // Removed - saved visualizations now have their own page
+=======
+
+  useEffect(() => {
+    fetchFiles();
+    fetchVisualizations();
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     
     if (location.state?.openCreateDialog) {
       setOpenDialog(true);
       window.history.replaceState({}, document.title);
     }
+<<<<<<< HEAD
     
     // Handle case when navigating from file manager with a fileId
     if (location.state?.fileId) {
@@ -132,6 +168,8 @@ function Visualizations() {
       
       selectFileWhenLoaded();
     }
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   }, [location]);
 
   const fetchFiles = async (retryCount = 0) => {
@@ -204,6 +242,7 @@ function Visualizations() {
     
     try {
       console.log('Analyzing file with ID:', file._id);
+<<<<<<< HEAD
       
       // Get the auth token
       const token = localStorage.getItem('authToken');
@@ -240,12 +279,24 @@ function Visualizations() {
           console.error('Could not parse error response:', parseError);
         }
         throw new Error(errorMessage);
+=======
+      const response = await fetchApi(`/api/files/${file._id}/analyze`);
+      console.log('Analysis response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Analysis error details:', errorData);
+        throw new Error(errorData.error || 'Analysis failed');
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       }
       
       const analysisData = await response.json();
       console.log('Analysis result:', analysisData);
       
+<<<<<<< HEAD
       // Rest of the function remains unchanged
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       // Check the structure of analysis data and adapt as needed
       if (analysisData.success && analysisData.analysis) {
         // Extract column types from analysis
@@ -348,7 +399,11 @@ function Visualizations() {
       }
     } catch (error) {
       console.error('Error analyzing file:', error);
+<<<<<<< HEAD
       setError(error.message || 'Failed to analyze file');
+=======
+      setError('Failed to analyze file');
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     } finally {
       setLoading(false);
     }
@@ -359,6 +414,7 @@ function Visualizations() {
     // Create preview charts for all chart types with AI-recommended axes
     const previewData = [];
     
+<<<<<<< HEAD
     console.log('Generating AI recommended charts for file:', file.name);
     console.log('Analysis data:', analysisData);
     
@@ -823,11 +879,26 @@ function Visualizations() {
         description: `AI Recommended: Relationship between ${yAxis} and ${xAxis}`,
         fileId: file._id,
         confidence: scatterChartConfidence,
+=======
+    // Create AI recommendations for different chart types
+    ['bar', 'line', 'pie', 'scatter'].forEach(chartType => {
+      const xAxis = recommendedAxes[chartType].x;
+      const yAxis = recommendedAxes[chartType].y;
+      
+      if (xAxis && yAxis) {
+        previewData.push({
+          chartType,
+          name: `${file.name} - ${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`,
+          description: `AI Recommended: ${yAxis} by ${xAxis}`,
+          fileId: file._id,
+          confidence: chartType === 'bar' ? 85 : chartType === 'line' ? 75 : chartType === 'pie' ? 65 : 60,
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
           xAxis: xAxis,
           yAxis: yAxis,
           file: file,
           isAIRecommended: true
         });
+<<<<<<< HEAD
     } else {
       // Default scatter chart
       previewData.push({
@@ -915,10 +986,20 @@ function Visualizations() {
     
     // Sort preview data by confidence (highest first)
     previewData.sort((a, b) => b.confidence - a.confidence);
+=======
+      }
+    });
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     
     setPreviewFile(file);
     setPreviewCharts(previewData);
     
+<<<<<<< HEAD
+=======
+    // Close the file selection dialog
+    setOpenDialog(false);
+    
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     // Schedule rendering after the DOM updates
     setTimeout(() => {
       renderPreviewCharts(previewData);
@@ -985,6 +1066,7 @@ function Visualizations() {
     }
   };
 
+<<<<<<< HEAD
   // Function to handle creating a custom chart directly from AI recommendations section
   const handleCreateCustomChart = () => {
     if (previewFile) {
@@ -1049,6 +1131,8 @@ function Visualizations() {
     }
   };
 
+=======
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setAxisSelectionOpen(false);
@@ -1066,6 +1150,7 @@ function Visualizations() {
     setAxisSelectionOpen(false);
     setOpenDialog(false);
     
+<<<<<<< HEAD
     // Create a single custom chart of the selected type
     const previewData = [];
     
@@ -1085,12 +1170,39 @@ function Visualizations() {
       yAxis: selectedYAxis,
       file: selectedFile,
       isAIRecommended: false
+=======
+    // Create preview charts for all chart types
+    const previewData = [];
+    ['bar', 'line', 'pie', 'scatter'].forEach(chartType => {
+      const suggestion = analysis.visualizationSuggestions.find(s => s.type === chartType) || {
+        type: chartType,
+        confidence: chartType === 'bar' ? 85 : chartType === 'line' ? 75 : chartType === 'pie' ? 65 : 60
+      };
+      
+      previewData.push({
+        chartType,
+        name: `${selectedFile.name} - ${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`,
+        description: `Custom Chart: ${selectedYAxis} by ${selectedXAxis}`,
+        fileId: selectedFile._id,
+        confidence: suggestion.confidence,
+        xAxis: selectedXAxis,
+        yAxis: selectedYAxis,
+        file: selectedFile,
+        isAIRecommended: false
+      });
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     });
     
     setPreviewFile(selectedFile);
     setPreviewCharts(prevCharts => {
+<<<<<<< HEAD
       // Maintain existing charts
       return [...prevCharts, ...previewData];
+=======
+      // Maintain existing AI-recommended charts if any
+      const aiCharts = prevCharts.filter(chart => chart.isAIRecommended);
+      return [...aiCharts, ...previewData];
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     });
     
     // Schedule rendering after the DOM updates
@@ -1119,6 +1231,7 @@ function Visualizations() {
     
     const newInstances = {};
     
+<<<<<<< HEAD
     // Wait a bit longer to ensure DOM is fully ready before attempting to render charts
     setTimeout(() => {
       // Create chart instances for each chart type
@@ -1243,11 +1356,275 @@ function Visualizations() {
       
       // Skip the placeholder chart and directly fetch the real data
       fetchChartData(chart, ctx, instancesObject, chartKey);
+=======
+    // Create chart instances for each chart type
+    charts.forEach((chart, index) => {
+      // Generate a consistent key for each chart
+      const chartKey = chart.isAIRecommended ? 
+        `ai-${chart.chartType}` : 
+        `custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`;
+      
+      console.log(`Setting up chart: ${chartKey}`);
+      
+      // Schedule creation of chart instance after DOM update
+      setTimeout(() => {
+        if (chartPreviewRefs.current[chartKey]) {
+          console.log(`Creating chart instance for ${chartKey}`);
+          createChartInstance(chartKey, chart, newInstances);
+        } else {
+          console.warn(`Canvas reference not found for ${chartKey}`);
+        }
+      }, 1000); // Increased timeout to ensure DOM is ready
+    });
+    
+    // Update state after all chart instances are created
+    setTimeout(() => {
+      setChartPreviewInstances(newInstances);
+    }, 1500);
+  };
+  
+  const createChartInstance = async (chartKey, chart, instancesObject) => {
+    try {
+      // Destroy existing chart if any
+      if (instancesObject[chartKey]) {
+        instancesObject[chartKey].destroy();
+        delete instancesObject[chartKey];
+      }
+      
+      // Get the canvas element
+      const canvas = chartPreviewRefs.current[chartKey];
+      if (!canvas) {
+        console.error(`Canvas element not found for ${chartKey}`);
+        return;
+      }
+      
+      // Clear any existing Chart instances attached to this canvas
+      let existingChart;
+      try {
+        existingChart = Chart.getChart(canvas);
+        if (existingChart) {
+          existingChart.destroy();
+        }
+      } catch (err) {
+        console.log(`No existing chart found for canvas ${chartKey} or error destroying it:`, err);
+      }
+      
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        console.error(`Could not get 2d context for canvas ${chartKey}`);
+        return;
+      }
+      
+      // Set up mock data for charts - dynamically generate realistic data based on column names
+      let chartData;
+      let stockSymbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'META', 'TSLA', 'NFLX'];
+      let dateLabels = ['2023-01', '2023-02', '2023-03', '2023-04', '2023-05', '2023-06'];
+      
+      // Map specific column names to appropriate data
+      const isStockData = chart.xAxis === 'stock_symbol' || chart.xAxis.includes('stock') || chart.yAxis.includes('trading_volume');
+      const isTimeSeriesData = chart.xAxis.includes('date') || chart.xAxis.includes('month') || chart.xAxis.includes('time');
+      
+      let xAxisLabels = [];
+      
+      // Generate appropriate X-axis labels based on column name
+      if (isStockData && chart.xAxis === 'stock_symbol') {
+        // Use stock symbols for x-axis
+        xAxisLabels = stockSymbols.slice(0, 5);
+      } else if (isTimeSeriesData) {
+        // Use dates for time series data
+        xAxisLabels = dateLabels;
+      } else if (chart.xAxis.includes('category') || chart.xAxis.includes('type')) {
+        // For category columns
+        xAxisLabels = ['Category A', 'Category B', 'Category C', 'Category D', 'Category E'];
+      } else if (chart.xAxis.includes('region') || chart.xAxis.includes('location')) {
+        // For regional data
+        xAxisLabels = ['North', 'South', 'East', 'West', 'Central'];
+      } else {
+        // Generic labels as fallback
+        xAxisLabels = [`${chart.xAxis} 1`, `${chart.xAxis} 2`, `${chart.xAxis} 3`, `${chart.xAxis} 4`, `${chart.xAxis} 5`];
+      }
+      
+      // Generate appropriate Y-axis data based on column name
+      let yAxisData = [];
+      
+      if (chart.yAxis.includes('volume') || chart.yAxis.includes('amount')) {
+        // Volume-type data is usually high numbers
+        yAxisData = [12543, 8754, 15876, 9432, 7654, 11324];
+      } else if (chart.yAxis.includes('price') || chart.yAxis.includes('cost')) {
+        // Price-type data
+        yAxisData = [154.23, 187.56, 143.89, 172.45, 168.33, 192.78];
+      } else if (chart.yAxis.includes('percent') || chart.yAxis.includes('rate')) {
+        // Percentage data
+        yAxisData = [4.5, 3.2, 5.7, 2.8, 6.1, 3.9];
+      } else {
+        // Generic numeric data as fallback
+        yAxisData = [65, 59, 80, 81, 56, 55];
+      }
+      
+      // Ensure we have the right number of data points
+      yAxisData = yAxisData.slice(0, xAxisLabels.length);
+      
+      if (chart.chartType === 'scatter') {
+        // Scatter chart data - create x-y coordinate pairs
+        const scatterData = [];
+        
+        // Generate scatter plot data points
+        for (let i = 0; i < Math.min(xAxisLabels.length, yAxisData.length); i++) {
+          // For scatter, we need numeric x values
+          scatterData.push({
+            x: (i + 1) * 10,
+            y: yAxisData[i]
+          });
+        }
+        
+        chartData = {
+          datasets: [{
+            label: chart.yAxis || 'Value',
+            data: scatterData,
+            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            pointRadius: 6,
+            pointHoverRadius: 8
+          }]
+        };
+      } else if (chart.chartType === 'pie') {
+        // Pie chart data
+        chartData = {
+          labels: xAxisLabels,
+          datasets: [{
+            data: yAxisData,
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.7)',
+              'rgba(54, 162, 235, 0.7)',
+              'rgba(255, 206, 86, 0.7)',
+              'rgba(75, 192, 192, 0.7)',
+              'rgba(153, 102, 255, 0.7)'
+            ],
+            borderColor: [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)'
+            ],
+            borderWidth: 1
+          }]
+        };
+      } else if (chart.chartType === 'line') {
+        // Line chart data
+        chartData = {
+          labels: isTimeSeriesData ? dateLabels : xAxisLabels,
+          datasets: [{
+            label: chart.yAxis || 'Value',
+            data: yAxisData,
+            fill: false,
+            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            tension: 0.1
+          }]
+        };
+      } else {
+        // Bar chart (default)
+        chartData = {
+          labels: xAxisLabels,
+          datasets: [{
+            label: chart.yAxis || 'Value',
+            data: yAxisData,
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.7)',
+              'rgba(54, 162, 235, 0.7)',
+              'rgba(255, 206, 86, 0.7)',
+              'rgba(75, 192, 192, 0.7)',
+              'rgba(153, 102, 255, 0.7)'
+            ],
+            borderColor: [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)'
+            ],
+            borderWidth: 1
+          }]
+        };
+      }
+      
+      // Configure the chart type and options
+      const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+          duration: 1000,
+        },
+        plugins: {
+          legend: {
+            position: chart.chartType === 'pie' ? 'right' : 'top',
+            labels: {
+              color: theme.palette.text.primary,
+              font: {
+                size: 12
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)',
+            titleColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)',
+            bodyColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)',
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+            borderWidth: 1
+          }
+        },
+        scales: chart.chartType === 'pie' ? undefined : {
+          x: {
+            title: {
+              display: true,
+              text: chart.xAxis,
+              color: theme.palette.text.primary
+            },
+            ticks: {
+              color: theme.palette.text.secondary
+            },
+            grid: {
+              color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: chart.yAxis,
+              color: theme.palette.text.primary
+            },
+            ticks: {
+              color: theme.palette.text.secondary
+            },
+            grid: {
+              color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+            },
+            beginAtZero: true
+          }
+        }
+      };
+
+      console.log(`Creating chart: ${chartKey}, type: ${chart.chartType}`);
+      
+      // Create the chart instance
+      const chartInstance = new Chart(ctx, {
+        type: chart.chartType,
+        data: chartData,
+        options: options
+      });
+      
+      console.log(`Chart created successfully: ${chartKey}`);
+      
+      // Store the instance
+      instancesObject[chartKey] = chartInstance;
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     } catch (error) {
       console.error(`Error creating chart ${chartKey}:`, error);
     }
   };
 
+<<<<<<< HEAD
   // Fetch chart data and render it directly without showing fallback first
   const fetchChartData = async (chart, ctx, instancesObject, chartKey) => {
     try {
@@ -1957,6 +2334,42 @@ function Visualizations() {
       }
       
       // Prepare the config object with proper structure
+=======
+  const handleSaveChart = async (chart) => {
+    try {
+      // Save the chart as an image
+      const canvasRef = chartPreviewRefs.current[chart.chartType];
+      if (canvasRef) {
+        // Get the image data URL
+        const imageUrl = canvasRef.toDataURL("image/png");
+        
+        // Create a temporary link element to download the image
+        const downloadLink = document.createElement("a");
+        downloadLink.href = imageUrl;
+        downloadLink.download = `${chart.name}.png`;
+        
+        // Append to body, click, and remove
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        
+        console.log("Chart image saved locally");
+        
+        // Success message
+        alert("Chart saved to your downloads folder");
+      }
+      
+      // Ask if the user wants to save to the server as well
+      const saveToServer = window.confirm("Do you also want to save this visualization to your account?");
+      if (!saveToServer) {
+        return;
+      }
+      
+      setLoading(true);
+      setError(null);
+      
+      // Create a basic config from the selected axes
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       const config = {
         xAxis: {
           field: chart.xAxis,
@@ -1971,13 +2384,18 @@ function Visualizations() {
       };
       
       // Send request to create visualization
+<<<<<<< HEAD
       const response = await fetchApi('/api/visualizations', {
+=======
+      const response = await fetch('/api/visualizations', {
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           name: chart.name,
+<<<<<<< HEAD
           description: chart.description || `${chart.chartType} chart showing ${chart.yAxis} by ${chart.xAxis}`,
           fileId: chart.fileId,
           chartType: chart.chartType,
@@ -2001,6 +2419,30 @@ function Visualizations() {
       
       // Navigate to saved visualizations page
       navigate('/saved-visualizations');
+=======
+          description: chart.description,
+          fileId: chart.fileId,
+          chartType: chart.chartType,
+          confidence: chart.confidence,
+          config: config,
+          isAIGenerated: true
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create visualization');
+      }
+      
+      const result = await response.json();
+      console.log('Visualization created:', result);
+      
+      // Show success message
+      alert('Visualization saved successfully to your account!');
+      
+      // Refresh visualizations
+      await fetchVisualizations();
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     } catch (error) {
       console.error('Error creating visualization:', error);
       setError('Failed to create visualization: ' + error.message);
@@ -2013,7 +2455,14 @@ function Visualizations() {
   const handleViewVisualization = async (viz) => {
     try {
       // Get the visualization details
+<<<<<<< HEAD
       const response = await fetchApi(`/api/visualizations/${viz._id}`);
+=======
+      const response = await fetch(`/api/visualizations/${viz._id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch visualization details');
+      }
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       
       const data = await response.json();
       console.log('Visualization details:', data.visualization);
@@ -2039,7 +2488,14 @@ function Visualizations() {
   const handleEditVisualization = async (viz) => {
     try {
       // Get the visualization details
+<<<<<<< HEAD
       const response = await fetchApi(`/api/visualizations/${viz._id}`);
+=======
+      const response = await fetch(`/api/visualizations/${viz._id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch visualization details');
+      }
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       
       const data = await response.json();
       setCurrentVisualization(data.visualization);
@@ -2166,6 +2622,7 @@ function Visualizations() {
     
     switch (type) {
       case 'bar':
+<<<<<<< HEAD
         return <BarChartIcon sx={{ ...iconSize, ...iconColor }} />;
       case 'scatter':
         return <ScatterPlotIcon sx={{ ...iconSize, ...iconColor }} />;
@@ -2175,6 +2632,17 @@ function Visualizations() {
         return <PieChartIcon sx={{ ...iconSize, ...iconColor }} />;
       default:
         return <BarChartIcon sx={{ ...iconSize, ...iconColor }} />;
+=======
+        return <ChartIcon sx={{ ...iconSize, ...iconColor }} />;
+      case 'scatter':
+        return <ScatterIcon sx={{ ...iconSize, ...iconColor }} />;
+      case 'line':
+        return <LineIcon sx={{ ...iconSize, ...iconColor }} />;
+      case 'pie':
+        return <PieIcon sx={{ ...iconSize, ...iconColor }} />;
+      default:
+        return <TimelineIcon sx={{ ...iconSize, ...iconColor }} />;
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     }
   };
 
@@ -2207,6 +2675,7 @@ function Visualizations() {
 
   const renderChart = (visualization) => {
     try {
+<<<<<<< HEAD
       console.log('Rendering visualization:', visualization);
       
       if (!visualization) {
@@ -2362,11 +2831,36 @@ function Visualizations() {
           }
         
           // Chart options
+=======
+      if (!chartContainerRef.current || !visualization) {
+        console.error('Chart container ref or visualization is missing');
+        return;
+      }
+      
+      // Destroy previous chart instance if it exists
+      if (chartInstance) {
+        try {
+          console.log('Destroying previous chart instance');
+          chartInstance.destroy();
+        } catch (err) {
+          console.error('Error destroying previous chart:', err);
+        }
+      }
+      
+      const ctx = chartContainerRef.current.getContext('2d');
+      if (!ctx) {
+        console.error('Could not get 2d context for chart container');
+        return;
+      }
+
+      // Configure chart options
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       const options = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
+<<<<<<< HEAD
                 display: chartType === 'pie',
                 position: 'top',
             labels: {
@@ -2465,6 +2959,225 @@ function Visualizations() {
     }
   };
   
+=======
+            position: visualization.chartType === 'pie' ? 'right' : 'top',
+            labels: {
+              color: theme.palette.text.primary,
+              font: {
+                family: theme.typography.fontFamily,
+              }
+            }
+          },
+          title: {
+            display: true,
+            text: visualization.title || visualization.name || 'Chart',
+            color: theme.palette.text.primary,
+            font: {
+              family: theme.typography.fontFamily,
+              size: 16,
+              weight: 'bold'
+            }
+          },
+          tooltip: {
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)',
+            titleColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)',
+            bodyColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)',
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+            borderWidth: 1,
+            padding: 10
+          }
+        },
+        scales: visualization.chartType === 'pie' ? undefined : {
+          x: {
+            title: {
+              display: true,
+              text: visualization.xAxis || visualization.config?.xAxis?.label || 'X Axis',
+              color: theme.palette.text.primary
+            },
+            ticks: {
+              color: theme.palette.text.secondary
+            },
+            grid: {
+              color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: visualization.yAxis || visualization.config?.yAxis?.label || 'Y Axis',
+              color: theme.palette.text.primary
+            },
+            ticks: {
+              color: theme.palette.text.secondary
+            },
+            grid: {
+              color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+            },
+            beginAtZero: true
+          }
+        }
+      };
+
+      // Setup data based on column names and chart type
+      let data;
+      const chartType = visualization.chartType || 'bar';
+      const xAxis = visualization.xAxis || visualization.config?.xAxis?.field || '';
+      const yAxis = visualization.yAxis || visualization.config?.yAxis?.field || '';
+      
+      // Stock symbols and date labels for realistic data
+      let stockSymbols = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'META', 'TSLA', 'NFLX'];
+      let dateLabels = ['2023-01', '2023-02', '2023-03', '2023-04', '2023-05', '2023-06'];
+      
+      // Map specific column names to appropriate data
+      const isStockData = xAxis === 'stock_symbol' || xAxis.includes('stock') || yAxis.includes('trading_volume');
+      const isTimeSeriesData = xAxis.includes('date') || xAxis.includes('month') || xAxis.includes('time');
+      
+      let xAxisLabels = [];
+      
+      // Generate appropriate X-axis labels based on column name
+      if (isStockData && xAxis === 'stock_symbol') {
+        // Use stock symbols for x-axis
+        xAxisLabels = stockSymbols.slice(0, 5);
+      } else if (isTimeSeriesData) {
+        // Use dates for time series data
+        xAxisLabels = dateLabels;
+      } else if (xAxis.includes('category') || xAxis.includes('type')) {
+        // For category columns
+        xAxisLabels = ['Category A', 'Category B', 'Category C', 'Category D', 'Category E'];
+      } else if (xAxis.includes('region') || xAxis.includes('location')) {
+        // For regional data
+        xAxisLabels = ['North', 'South', 'East', 'West', 'Central'];
+      } else {
+        // Generic labels as fallback
+        xAxisLabels = [`${xAxis} 1`, `${xAxis} 2`, `${xAxis} 3`, `${xAxis} 4`, `${xAxis} 5`];
+      }
+      
+      // Generate appropriate Y-axis data based on column name
+      let yAxisData = [];
+      
+      if (yAxis.includes('volume') || yAxis.includes('amount')) {
+        // Volume-type data is usually high numbers
+        yAxisData = [12543, 8754, 15876, 9432, 7654, 11324];
+      } else if (yAxis.includes('price') || yAxis.includes('cost')) {
+        // Price-type data
+        yAxisData = [154.23, 187.56, 143.89, 172.45, 168.33, 192.78];
+      } else if (yAxis.includes('percent') || yAxis.includes('rate')) {
+        // Percentage data
+        yAxisData = [4.5, 3.2, 5.7, 2.8, 6.1, 3.9];
+      } else {
+        // Generic numeric data as fallback
+        yAxisData = [65, 59, 80, 81, 56, 55];
+      }
+      
+      // Ensure we have the right number of data points
+      yAxisData = yAxisData.slice(0, xAxisLabels.length);
+      
+      if (chartType === 'scatter') {
+        // For scatter charts, create paired x-y coordinates with realistic data
+        const scatterData = [];
+        
+        // Generate scatter plot data points
+        for (let i = 0; i < Math.min(xAxisLabels.length, yAxisData.length); i++) {
+          // For scatter, we need numeric x values
+          scatterData.push({
+            x: (i + 1) * 10,
+            y: yAxisData[i]
+          });
+        }
+        
+        data = {
+          datasets: [{
+            label: yAxis || 'Value',
+            data: scatterData,
+            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            pointRadius: 7,
+            pointHoverRadius: 9,
+          }]
+        };
+      } else if (chartType === 'pie') {
+        // For pie charts
+        data = {
+          labels: xAxisLabels,
+          datasets: [{
+            label: yAxis || 'Value',
+            data: yAxisData,
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.7)',
+              'rgba(54, 162, 235, 0.7)',
+              'rgba(255, 206, 86, 0.7)',
+              'rgba(75, 192, 192, 0.7)',
+              'rgba(153, 102, 255, 0.7)',
+              'rgba(255, 159, 64, 0.7)'
+            ],
+            borderColor: [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)',
+              'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+          }]
+        };
+      } else if (chartType === 'line') {
+        // For line charts - use proper time series data if available
+        data = {
+          labels: isTimeSeriesData ? dateLabels : xAxisLabels,
+          datasets: [{
+            label: yAxis || 'Value',
+            data: yAxisData,
+            fill: false,
+            backgroundColor: 'rgba(75, 192, 192, 0.7)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            tension: 0.1
+          }]
+        };
+      } else {
+        // For bar charts (default)
+        data = {
+          labels: xAxisLabels,
+          datasets: [{
+            label: yAxis || 'Value',
+            data: yAxisData,
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.7)',
+              'rgba(54, 162, 235, 0.7)',
+              'rgba(255, 206, 86, 0.7)',
+              'rgba(75, 192, 192, 0.7)',
+              'rgba(153, 102, 255, 0.7)',
+              'rgba(255, 159, 64, 0.7)'
+            ],
+            borderColor: chartType === 'line' ? 'rgba(75, 192, 192, 1)' : [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(153, 102, 255, 1)',
+              'rgba(255, 159, 64, 1)'
+            ],
+            borderWidth: 1
+          }]
+        };
+      }
+      
+      // Create the chart based on the type
+      console.log('Creating new chart of type:', chartType);
+      const newChart = new Chart(ctx, {
+        type: chartType,
+        data: data,
+        options: options
+      });
+      
+      console.log('Chart created successfully');
+      setChartInstance(newChart);
+    } catch (error) {
+      console.error('Error creating chart:', error);
+    }
+  };
+
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   // Add a separate useEffect to render the chart when visualization changes
   useEffect(() => {
     if (currentVisualization && openViewDialog) {
@@ -2521,6 +3234,7 @@ function Visualizations() {
               chartCount: parsedCharts.length
             });
             
+<<<<<<< HEAD
             // Set the file and charts first
             setPreviewFile(parsedFile);
             setPreviewCharts(parsedCharts);
@@ -2548,6 +3262,29 @@ function Visualizations() {
               console.log('Rendering restored charts...');
               renderPreviewCharts(parsedCharts);
             }, 2000); // Longer timeout for page refresh scenarios
+=======
+            // Check if the file still exists
+            const response = await fetch(`/api/files/${parsedFile._id}`);
+            if (!response.ok) {
+              // File doesn't exist anymore, but still show visualizations with warning
+              console.log('Saved file no longer exists, showing warning');
+              setPreviewFile(parsedFile);
+              setPreviewCharts(parsedCharts);
+              setFileNotFound(true);
+            } else {
+              // File exists, restore visualizations
+              console.log('File exists, restoring visualizations');
+              setPreviewFile(parsedFile);
+              setPreviewCharts(parsedCharts);
+              setFileNotFound(false);
+            }
+            
+            // Schedule rendering after component mounts
+            setTimeout(() => {
+              console.log('Rendering restored charts...');
+              renderPreviewCharts(parsedCharts);
+            }, 300);
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
           } catch (error) {
             console.error('Error restoring saved charts:', error);
             // Clear invalid data
@@ -2555,11 +3292,22 @@ function Visualizations() {
             localStorage.removeItem('previewFile');
           }
         }
+<<<<<<< HEAD
+=======
+      } else {
+        console.log('Already have charts loaded, not restoring from localStorage', {
+          currentChartCount: previewCharts.length
+        });
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       }
     };
     
     restoreAndValidateCharts();
+<<<<<<< HEAD
   }, []);
+=======
+  }, [previewCharts.length]);
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 
   // Update UI to show file not found warning
   useEffect(() => {
@@ -2567,6 +3315,7 @@ function Visualizations() {
       // Check if the preview file still exists
       if (previewFile && previewFile._id) {
         try {
+<<<<<<< HEAD
           // First attempt to find the file by ID
           const response = await fetch(`/api/files/${previewFile._id}`);
           
@@ -2591,6 +3340,12 @@ function Visualizations() {
             
             // If we got here, no matching file was found
             console.log('Preview file no longer exists and no matching file found, showing warning');
+=======
+          const response = await fetch(`/api/files/${previewFile._id}`);
+          if (!response.ok) {
+            // File doesn't exist anymore, show warning but keep visualizations
+            console.log('Preview file no longer exists, showing warning');
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
             setFileNotFound(true);
           } else {
             setFileNotFound(false);
@@ -2644,6 +3399,14 @@ function Visualizations() {
                   <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
                     {suggestion.type.charAt(0).toUpperCase() + suggestion.type.slice(1)} Chart
                   </Typography>
+<<<<<<< HEAD
+=======
+                  <Chip
+                    label={`${suggestion.confidence}% match`}
+                    color="primary"
+                    size="small"
+                  />
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
                 </Box>
                 
                 <Box sx={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
@@ -2675,8 +3438,14 @@ function Visualizations() {
     setChartPreviewInstances({});
     setPreviewFile(null);
     
+<<<<<<< HEAD
     // Use our more comprehensive clean function
     cleanLocalStorage();
+=======
+    // Also clear from localStorage
+    localStorage.removeItem('previewCharts');
+    localStorage.removeItem('previewFile');
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     
     // Show a brief confirmation
     setError(null);
@@ -2756,6 +3525,7 @@ function Visualizations() {
     }
   };
 
+<<<<<<< HEAD
   const createPlaceholderChart = async (ctx, chartType, instancesObject, chartKey, xAxisLabel, yAxisLabel) => {
     try {
       // Generate unique colors
@@ -3046,6 +3816,88 @@ function Visualizations() {
           {fileNotFound && previewCharts.length > 0 && (
             <Alert 
               severity="warning" 
+=======
+  return (
+    <Container maxWidth="xl">
+      <Box sx={{ py: 4 }}>
+        <PageHeader
+          title="Visualizations"
+          subtitle="Create and manage your data visualizations"
+          action={
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {previewCharts.length > 0 && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    handleClearVisualizations();
+                    // After clearing, open the file selection dialog
+                    setOpenDialog(true);
+                    setSelectedXAxis('');
+                    setSelectedYAxis('');
+                    setAxisSelectionOpen(false);
+                  }}
+                >
+                  New Visualization
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setOpenDialog(true)}
+              >
+                Create Visualization
+              </Button>
+            </Box>
+          }
+        />
+
+        {loading && <LinearProgress sx={{ mb: 2 }} />}
+        
+        {error && (
+          <Alert 
+            severity="error" 
+            sx={{ mb: 3 }}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={testApiConnection}
+              >
+                Test Connection
+              </Button>
+            }
+          >
+            {error}
+          </Alert>
+        )}
+
+        {/* Show file not found message when appropriate */}
+        {fileNotFound && previewCharts.length > 0 && (
+          <Alert 
+            severity="warning" 
+            sx={{ mb: 3 }}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={handleClearVisualizations}
+              >
+                Clear Visualizations
+              </Button>
+            }
+          >
+            The file <strong>{previewFile?.name}</strong> used to generate these visualizations has been deleted.
+            You can still view the charts, but you won't be able to update them.
+          </Alert>
+        )}
+        
+        {!fileNotFound && previewCharts.length > 0 && previewFile && (
+          <Box>
+            <Alert 
+              severity="info" 
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
               sx={{ mb: 3 }}
               action={
                 <Button
@@ -3053,6 +3905,7 @@ function Visualizations() {
                   size="small"
                   onClick={handleClearVisualizations}
                 >
+<<<<<<< HEAD
                   Clear Visualizations
                 </Button>
               }
@@ -3973,6 +4826,845 @@ function Visualizations() {
         </Dialog>
       </Container>
     </Box>
+=======
+                  Clear All
+                </Button>
+              }
+            >
+              Showing visualizations for file: <strong>{previewFile.name}</strong>
+            </Alert>
+          </Box>
+        )}
+
+        {/* AI Recommended Visualizations Section */}
+        {previewCharts.filter(chart => chart.isAIRecommended).length > 0 && (
+          <Paper sx={{ 
+            mb: 4, 
+            p: 3, 
+            bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' ? '0 2px 10px rgba(0, 0, 0, 0.2)' : '0 2px 10px rgba(0, 0, 0, 0.05)',
+            border: 1,
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+              <CheckCircleIcon color="primary" sx={{ mr: 1 }} />
+              <Typography variant="h5" component="h2">
+                AI Recommended Visualizations
+              </Typography>
+            </Box>
+            
+            <Typography variant="body1" color="text.secondary" paragraph>
+              Based on your data structure, here are the most effective visualizations for {previewFile?.name}
+            </Typography>
+            
+            <Grid container spacing={3}>
+              {previewCharts.filter(chart => chart.isAIRecommended).map((chart, index) => (
+                <Grid item xs={12} sm={6} key={`ai-${chart.chartType}-${index}`}>
+                  <Card sx={{ 
+                    height: '100%',
+                    bgcolor: 'background.paper',
+                    backgroundImage: 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                  }}>
+                    <Box sx={{ 
+                      bgcolor: 'primary.main', 
+                      color: 'white',
+                      p: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <Typography variant="h6" component="div">
+                        {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                      </Typography>
+                      <Chip 
+                        label={`${chart.confidence}% match`} 
+                        color={chart.confidence > 80 ? 'success' : chart.confidence > 70 ? 'primary' : 'default'} 
+                        size="small"
+                        sx={{ fontWeight: 'bold', color: 'white', bgcolor: chart.confidence > 80 ? '#2e7d32' : chart.confidence > 70 ? '#1976d2' : '#757575' }}
+                      />
+                    </Box>
+                    <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
+                      {chart.description}
+                    </Typography>
+                    <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
+                      <canvas 
+                        ref={el => chartPreviewRefs.current[`ai-${chart.chartType}`] = el}
+                        style={{ width: '100%', height: '100%' }}
+                        id={`chart-ai-${chart.chartType}-${index}`}
+                      />
+                    </Box>
+                    <Box sx={{ p: 2, mt: 'auto' }}>
+                      <Button 
+                        variant="contained" 
+                        fullWidth
+                        onClick={() => handleSaveChart(chart)}
+                        disabled={fileNotFound}
+                      >
+                        Save Visualization
+                      </Button>
+                    </Box>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <Button 
+                variant="outlined" 
+                color="primary"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  if (previewFile) {
+                    // If we already have a file selected, skip file selection and go straight to axis selection
+                    setSelectedFile(previewFile);
+                    setAxisSelectionOpen(true);
+                  } else {
+                    // Otherwise show file selection first
+                    setOpenDialog(true);
+                    setAxisSelectionOpen(true);
+                  }
+                }}
+              >
+                Create Custom Chart
+              </Button>
+            </Box>
+          </Paper>
+        )}
+        
+        {/* Custom Visualizations Section */}
+        {previewCharts.filter(chart => !chart.isAIRecommended).length > 0 && (
+          <Paper sx={{ 
+            mb: 4, 
+            p: 3, 
+            bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' ? '0 2px 10px rgba(0, 0, 0, 0.2)' : '0 2px 10px rgba(0, 0, 0, 0.05)',
+            border: 1,
+            borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h5" component="h2">
+                Custom Visualizations
+              </Typography>
+            </Box>
+            
+            <Grid container spacing={3}>
+              {previewCharts.filter(chart => !chart.isAIRecommended).map((chart, index) => (
+                <Grid item xs={12} sm={6} key={`custom-${chart.chartType}-${index}`}>
+                  <Card sx={{ 
+                    height: '100%',
+                    bgcolor: 'background.paper',
+                    backgroundImage: 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                  }}>
+                    <Box sx={{ 
+                      bgcolor: 'primary.main', 
+                      color: 'white',
+                      p: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <Typography variant="h6" component="div">
+                        {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                      </Typography>
+                    </Box>
+                    <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
+                      {chart.yAxis} by {chart.xAxis}
+                    </Typography>
+                    <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
+                      <canvas 
+                        ref={el => chartPreviewRefs.current[`custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`] = el}
+                        style={{ width: '100%', height: '100%' }}
+                        id={`chart-custom-${chart.chartType}-${index}`}
+                      />
+                    </Box>
+                    <Box sx={{ p: 2, mt: 'auto' }}>
+                      <Button 
+                        variant="contained" 
+                        fullWidth
+                        onClick={() => handleSaveChart(chart)}
+                        disabled={fileNotFound}
+                      >
+                        Save Visualization
+                      </Button>
+                    </Box>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Paper>
+        )}
+
+        {/* Placeholder when no visualizations are available */}
+        {previewCharts.length === 0 && !loading && (
+          <Box 
+            sx={{ 
+              mt: 4, 
+              p: 4, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              height: '100%',
+              width: '100%',
+              borderRadius: 2,
+              bgcolor: 'background.paper',
+              backgroundImage: 'none',
+              boxShadow: 1
+            }}
+          >
+            <ChartIcon sx={{ width: 80, height: 80, color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No visualizations yet
+            </Typography>
+            <Typography variant="body2" color="text.secondary" align="center" sx={{ maxWidth: 400, mb: 4 }}>
+              Create your first visualization by uploading a file. We'll automatically recommend the best charts for your data.
+            </Typography>
+            <Button 
+              variant="contained" 
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleCreateClick}
+            >
+              Create Visualization
+            </Button>
+          </Box>
+        )}
+
+        {/* Saved Visualizations Section */}
+        {visualizations.length > 0 && (
+          <Box sx={{ mt: 6 }}>
+            <Typography variant="h5" sx={{ mb: 3 }}>
+              Saved Visualizations
+            </Typography>
+            <Grid container spacing={3}>
+              {visualizations.map((viz) => (
+                <Grid item xs={12} sm={6} key={viz._id}>
+                  <Card sx={{ 
+                    height: '100%',
+                    bgcolor: 'background.paper',
+                    backgroundImage: 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                  }}>
+                    <Box sx={{ 
+                      bgcolor: 'primary.main', 
+                      color: 'white',
+                      p: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <Typography variant="h6" component="div">
+                        {viz.name}
+                      </Typography>
+                    </Box>
+                    <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
+                      {viz.description}
+                    </Typography>
+                    <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
+                      <canvas 
+                        ref={el => chartPreviewRefs.current[`viz-${viz._id}`] = el}
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    </Box>
+                    <Box sx={{ p: 2, mt: 'auto' }}>
+                      <Button 
+                        variant="contained" 
+                        fullWidth
+                        onClick={() => handleViewVisualization(viz)}
+                      >
+                        View
+                      </Button>
+                    </Box>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        )}
+      </Box>
+
+      {/* File Selection Dialog */}
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            bgcolor: 'background.paper',
+            backgroundImage: 'none',
+          }
+        }}
+      >
+        <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          {axisSelectionOpen ? 'Create Custom Visualization' : 'Create Visualization'}
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Typography variant="subtitle1" gutterBottom sx={{ mt: 1, color: 'text.secondary' }}>
+            {axisSelectionOpen 
+              ? 'Choose a file and configure custom chart settings:' 
+              : 'Choose a file to analyze and visualize:'}
+          </Typography>
+          
+          {!axisSelectionOpen && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                When you select a file, our AI will automatically generate the best visualizations based on your data.
+              </Typography>
+            </Alert>
+          )}
+          
+          {loading ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 4 }}>
+              <CircularProgress sx={{ mb: 2 }} />
+              <Typography variant="body2" color="text.secondary">
+                Analyzing your data and generating recommendations...
+              </Typography>
+            </Box>
+          ) : (
+            <List sx={{ 
+              borderRadius: 1, 
+              border: '1px solid',
+              borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', 
+              overflow: 'hidden',
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : '#f8f8f8'
+            }}>
+              {files.map((file) => (
+                <ListItem
+                  key={file._id}
+                  button
+                  divider
+                  sx={{ 
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'white', 
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.1)' 
+                        : 'rgba(25, 118, 210, 0.08)'
+                    }
+                  }}
+                  onClick={() => {
+                    if (axisSelectionOpen) {
+                      // If in custom chart mode, just select the file but don't auto-generate
+                      setSelectedFile(file);
+                    } else {
+                      // Otherwise, trigger AI analysis
+                      handleFileSelect(file);
+                    }
+                  }}
+                >
+                  <ListItemIcon>
+                    <ChartIcon color="primary" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={<Typography fontWeight="medium">{file.name}</Typography>}
+                    secondary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                        <Chip 
+                          size="small" 
+                          label={file.type.split('/')[1].toUpperCase()} 
+                          color={file.type.includes('csv') ? 'success' : file.type.includes('json') ? 'info' : 'primary'}
+                          sx={{ mr: 1, height: 20, fontSize: '0.7rem' }}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          {(file.size / 1024).toFixed(2)} KB
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <Box sx={{ 
+          p: 3, 
+          display: 'flex', 
+          justifyContent: 'flex-end',
+          borderTop: '1px solid',
+          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+        }}>
+          <Button onClick={handleCloseDialog} variant="outlined">
+            Cancel
+          </Button>
+        </Box>
+      </Dialog>
+
+      {/* Axis Selection Dialog */}
+      <Dialog
+        open={axisSelectionOpen}
+        onClose={() => {
+          setAxisSelectionOpen(false);
+          setError(null);
+        }}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            bgcolor: 'background.paper',
+            backgroundImage: 'none',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <Box sx={{ 
+          bgcolor: 'primary.main', 
+          color: 'white', 
+          py: 2, 
+          px: 3,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <Typography variant="h6">
+            Custom Chart - Select Columns
+          </Typography>
+          <Chip 
+            label={selectedFile?.name || 'No file selected'} 
+            size="small" 
+            color="default"
+            sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
+          />
+        </Box>
+        <DialogContent sx={{ p: 3 }}>
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+          
+          {loading ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 4 }}>
+              <CircularProgress sx={{ mb: 2 }} />
+              <Typography variant="body2" color="text.secondary">
+                Analyzing file and identifying columns...
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              <Box sx={{ 
+                mb: 3, 
+                p: 3, 
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)', 
+                borderRadius: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                border: 1,
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+              }}>
+                <Box>
+                  <Typography variant="h6">Data Summary</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {analysis?.rowCount || 0} rows analyzed across {analysis?.columns?.length || 0} columns
+                  </Typography>
+                </Box>
+                {analysis && analysis.columns && analysis.columns.length > 0 ? (
+                  <Chip 
+                    label="Ready for visualization" 
+                    color="success" 
+                    icon={<CheckCircleIcon />} 
+                    sx={{ fontWeight: 'medium' }}
+                  />
+                ) : (
+                  <Chip 
+                    label="Waiting for analysis" 
+                    color="warning" 
+                    sx={{ fontWeight: 'medium' }}
+                  />
+                )}
+              </Box>
+              
+              <Typography variant="h6" gutterBottom>
+                Select Data Axes
+              </Typography>
+              
+              <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle1" gutterBottom color="text.secondary">
+                    X-Axis (Categories)
+                  </Typography>
+                  <Box sx={{ 
+                    border: '1px solid',
+                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)', 
+                    borderRadius: 1, 
+                    p: 0,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' 
+                  }}>
+                    <Select
+                      value={selectedXAxis}
+                      onChange={(e) => setSelectedXAxis(e.target.value)}
+                      displayEmpty
+                      fullWidth
+                      disabled={loading}
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            maxHeight: 300,
+                            bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+                            color: theme.palette.text.primary,
+                          }
+                        }
+                      }}
+                      sx={{
+                        height: '56px',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'transparent',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'transparent',
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'transparent',
+                        },
+                        '& .MuiSelect-icon': {
+                          color: theme.palette.text.secondary,
+                        }
+                      }}
+                    >
+                      <MenuItem value="" disabled>
+                        {loading ? 'Loading columns...' : 'Select X-Axis Column'}
+                      </MenuItem>
+                      {getFallbackColumns().map((column) => (
+                        <MenuItem key={column} value={column}>{column}</MenuItem>
+                      ))}
+                    </Select>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="subtitle1" gutterBottom color="text.secondary">
+                    Y-Axis (Values)
+                  </Typography>
+                  <Box sx={{ 
+                    border: '1px solid',
+                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                    borderRadius: 1,
+                    p: 0,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' 
+                  }}>
+                    <Select
+                      value={selectedYAxis}
+                      onChange={(e) => setSelectedYAxis(e.target.value)}
+                      displayEmpty
+                      fullWidth
+                      disabled={loading}
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            maxHeight: 300,
+                            bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+                            color: theme.palette.text.primary,
+                          }
+                        }
+                      }}
+                      sx={{
+                        height: '56px',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'transparent',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'transparent',
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'transparent',
+                        },
+                        '& .MuiSelect-icon': {
+                          color: theme.palette.text.secondary,
+                        }
+                      }}
+                    >
+                      <MenuItem value="" disabled>
+                        {loading ? 'Loading columns...' : 'Select Y-Axis Column'}
+                      </MenuItem>
+                      {getFallbackColumns().map((column) => (
+                        <MenuItem key={column} value={column}>{column}</MenuItem>
+                      ))}
+                    </Select>
+                  </Box>
+                </Grid>
+              </Grid>
+            </>
+          )}
+        </DialogContent>
+        <Box sx={{ 
+          p: 3, 
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          gap: 2,
+          borderTop: '1px solid',
+          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+        }}>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setAxisSelectionOpen(false);
+              setError(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            disabled={!selectedXAxis || !selectedYAxis || loading}
+            onClick={handleGenerateCharts}
+          >
+            Generate Charts
+          </Button>
+        </Box>
+      </Dialog>
+
+      {/* View Visualization Dialog */}
+      <Dialog
+        open={openViewDialog}
+        onClose={handleCloseViewDialog}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            overflow: 'hidden',
+            bgcolor: 'background.paper',
+          }
+        }}
+      >
+        <Box sx={{ bgcolor: 'primary.main', color: 'white', py: 2, px: 3 }}>
+          <Typography variant="h5">
+            {currentVisualization?.name || 'View Visualization'}
+          </Typography>
+        </Box>
+        <DialogContent sx={{ p: 0 }}>
+          {currentVisualization && (
+            <Box>
+              <Box sx={{ height: 400, p: 3 }}>
+                <canvas ref={chartContainerRef} style={{ width: '100%', height: '100%' }}></canvas>
+              </Box>
+              
+              <Box sx={{ 
+                p: 3, 
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#f5f5f5' 
+              }}>
+                <Typography variant="h6" gutterBottom>Data Insights</Typography>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {currentVisualization.description || 'This visualization shows key patterns in your data. The chart type was selected based on your data structure and optimal visualization methods.'}
+                </Typography>
+                
+                <Box sx={{ mt: 3, display: 'flex', alignItems: 'center' }}>
+                  <Chip 
+                    label={`${currentVisualization.chartType.charAt(0).toUpperCase() + currentVisualization.chartType.slice(1)} Chart`}
+                    color="primary"
+                    icon={getVisualizationIcon(currentVisualization.chartType)}
+                    sx={{ mr: 1 }}
+                  />
+                  <Chip 
+                    label={`${currentVisualization.confidence || 90}% confidence`}
+                    color="success"
+                  />
+                  <Box sx={{ flexGrow: 1 }} />
+                  <Button 
+                    variant="outlined" 
+                    startIcon={<EditIcon />}
+                    onClick={() => {
+                      handleCloseViewDialog();
+                      handleEditVisualization(currentVisualization);
+                    }}
+                    sx={{ mr: 1 }}
+                  >
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="outlined" 
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => {
+                      handleCloseViewDialog();
+                      handleDeleteVisualization(currentVisualization._id);
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Visualization Dialog - simplified */}
+      <Dialog
+        open={openEditDialog}
+        onClose={handleCloseEditDialog}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            bgcolor: 'background.paper',
+            backgroundImage: 'none',
+          }
+        }}
+      >
+        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white' }}>
+          Edit Visualization
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, mt: 2 }}>
+          {currentVisualization && (
+            <Box sx={{ pt: 1 }}>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" gutterBottom>Visualization Name</Typography>
+                <input
+                  type="text"
+                  name="name"
+                  value={currentVisualization.name || ''}
+                  onChange={handleInputChange}
+                  placeholder="Enter a descriptive name"
+                  style={{ 
+                    width: '100%', 
+                    padding: '12px', 
+                    fontSize: '16px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    backgroundColor: theme.palette.mode === 'dark' ? '#333' : 'white',
+                    color: theme.palette.mode === 'dark' ? 'white' : 'black',
+                  }}
+                />
+              </Box>
+              
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" gutterBottom>Description</Typography>
+                <textarea
+                  name="description"
+                  value={currentVisualization.description || ''}
+                  onChange={handleInputChange}
+                  placeholder="Describe what insights this visualization provides"
+                  rows={3}
+                  style={{ 
+                    width: '100%', 
+                    padding: '12px', 
+                    fontSize: '16px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    backgroundColor: theme.palette.mode === 'dark' ? '#333' : 'white',
+                    color: theme.palette.mode === 'dark' ? 'white' : 'black',
+                  }}
+                />
+              </Box>
+              
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" gutterBottom>Chart Type</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                  {['bar', 'line', 'pie', 'scatter'].map(type => (
+                    <Box 
+                      key={type}
+                      onClick={() => setCurrentVisualization({
+                        ...currentVisualization,
+                        chartType: type
+                      })}
+                      sx={{ 
+                        border: '2px solid',
+                        borderColor: currentVisualization.chartType === type ? 'primary.main' : '#ddd',
+                        borderRadius: 2,
+                        p: 2,
+                        width: '110px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        bgcolor: currentVisualization.chartType === type 
+                          ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)') 
+                          : (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'transparent')
+                      }}
+                    >
+                      {type === 'bar' && <ChartIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
+                      {type === 'line' && <LineIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
+                      {type === 'pie' && <PieIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
+                      {type === 'scatter' && <ScatterIcon sx={{ fontSize: 32, mb: 1, color: 'primary.main' }} />}
+                      <Typography variant="body2">
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={handleCloseEditDialog} variant="outlined">
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleUpdateVisualization}
+            startIcon={<EditIcon />}
+          >
+            Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={openDeleteDialog}
+        onClose={handleCancelDelete}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            bgcolor: 'background.paper',
+            backgroundImage: 'none',
+          }
+        }}
+      >
+        <DialogTitle sx={{ bgcolor: 'error.main', color: 'white' }}>
+          Delete Visualization
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2, p: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <DeleteIcon color="error" sx={{ mr: 2, fontSize: 32 }} />
+            <Typography variant="h6">
+              Are you sure?
+            </Typography>
+          </Box>
+          <Typography>
+            This visualization will be permanently deleted. This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={handleCancelDelete} variant="outlined">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
+>>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   );
 }
 
