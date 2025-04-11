@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDataContext } from '../App';
+import { fetchApi } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Box,
   Typography,
@@ -18,6 +20,9 @@ import {
   Divider,
   Chip,
   Alert,
+  Paper,
+  CardActions,
+  Snackbar,
 } from '@mui/material';
 import {
   CloudDownload as DownloadIcon,
@@ -34,6 +39,7 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import PieChartIcon from '@mui/icons-material/PieChart';
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import { Chart, registerables } from 'chart.js/auto';
+import { renderChartToCanvas } from '../utils/chartUtils';
 
 // Register all chart components
 Chart.register(...registerables);
@@ -50,16 +56,20 @@ function SavedVisualizations() {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const chartContainerRef = useRef(null);
   const chartInstanceRef = useRef(null);
+  const { isAuthenticated } = useAuth();
 
   // Fetch saved visualizations
   useEffect(() => {
     const fetchVisualizations = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/visualizations');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch visualizations: ${response.status}`);
+        // Only fetch if user is authenticated
+        if (!isAuthenticated) {
+          setVisualizations([]);
+          return;
         }
+
+        const response = await fetchApi('/api/visualizations');
         const data = await response.json();
         setVisualizations(data.visualizations || []);
         setError(null);
@@ -72,7 +82,37 @@ function SavedVisualizations() {
     };
 
     fetchVisualizations();
-  }, [lastUpdate]);
+  }, [lastUpdate, isAuthenticated]);
+
+  // Register function to clear visualizations cache when needed (on logout)
+  useEffect(() => {
+    window._clearVisualizationCache = () => {
+      console.log('Clearing visualizations cache');
+      setVisualizations([]);
+    };
+    
+    // Listen for logout events to clear visualizations
+    const handleLogout = () => {
+      console.log('Logout event detected, clearing visualizations');
+      setVisualizations([]);
+    };
+    
+    // Listen for login events to clear visualizations
+    const handleLogin = () => {
+      console.log('Login event detected, clearing visualizations');
+      setVisualizations([]);
+    };
+    
+    window.addEventListener('user-logout', handleLogout);
+    window.addEventListener('user-login', handleLogin);
+    
+    // Cleanup on component unmount
+    return () => {
+      delete window._clearVisualizationCache;
+      window.removeEventListener('user-logout', handleLogout);
+      window.removeEventListener('user-login', handleLogin);
+    };
+  }, []);
 
   const handleViewVisualization = (viz) => {
     console.log('Opening visualization for viewing:', viz);
@@ -90,10 +130,7 @@ function SavedVisualizations() {
       console.log(`Fetching visualization data for ID: ${vizId}`);
       
       // First get the visualization metadata
-      const response = await fetch(`/api/visualizations/${vizId}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch visualization: ${response.status}`);
-      }
+      const response = await fetchApi(`/api/visualizations/${vizId}`);
       
       const data = await response.json();
       const visualization = data.visualization;
@@ -117,8 +154,7 @@ function SavedVisualizations() {
           console.log(`Fetching fresh chart data from API for file ${fileId}`);
           
           // Prepare API URL to get the actual data
-          const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
-          let dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${fileId}&yAxis=${yAxis}`;
+          let dataUrl = `/api/data/chart?fileId=${fileId}&yAxis=${yAxis}`;
           
           if (xAxis) {
             dataUrl += `&xAxis=${xAxis}`;
@@ -126,29 +162,25 @@ function SavedVisualizations() {
           
           console.log(`Chart data API URL: ${dataUrl}`);
           
-          const dataResponse = await fetch(dataUrl);
-          if (dataResponse.ok) {
-            const chartDataResult = await dataResponse.json();
+          const dataResponse = await fetchApi(dataUrl);
+          const chartDataResult = await dataResponse.json();
+          
+          if (chartDataResult.success && chartDataResult.chartData) {
+            console.log('Retrieved fresh chart data from API:', chartDataResult.chartData);
             
-            if (chartDataResult.success && chartDataResult.chartData) {
-              console.log('Retrieved fresh chart data from API:', chartDataResult.chartData);
-              
-              // Update the visualization with fresh data
-              visualization.data = {
-                labels: chartDataResult.chartData.labels || [],
-                values: chartDataResult.chartData.values || [],
-                datasets: []
-              };
-              
-              console.log('Updated visualization with fresh data:', {
-                labels: visualization.data.labels?.slice(0, 5),
-                values: visualization.data.values?.slice(0, 5),
-                labelCount: visualization.data.labels?.length,
-                valueCount: visualization.data.values?.length
-              });
-            }
-          } else {
-            console.error('Failed to fetch fresh chart data:', dataResponse.status);
+            // Update the visualization with fresh data
+            visualization.data = {
+              labels: chartDataResult.chartData.labels || [],
+              values: chartDataResult.chartData.values || [],
+              datasets: []
+            };
+            
+            console.log('Updated visualization with fresh data:', {
+              labels: visualization.data.labels?.slice(0, 5),
+              values: visualization.data.values?.slice(0, 5),
+              labelCount: visualization.data.labels?.length,
+              valueCount: visualization.data.values?.length
+            });
           }
         }
       }
@@ -173,7 +205,8 @@ function SavedVisualizations() {
 
   const handleCloseViewDialog = () => {
     setOpenViewDialog(false);
-    // Destroy chart instance to prevent memory leaks
+    
+    // Clean up chart instance when dialog is closed
     if (chartInstanceRef.current) {
       chartInstanceRef.current.destroy();
       chartInstanceRef.current = null;
@@ -231,13 +264,9 @@ function SavedVisualizations() {
     if (!currentVisualization) return;
     
     try {
-      const response = await fetch(`/api/visualizations/${currentVisualization._id}`, {
+      const response = await fetchApi(`/api/visualizations/${currentVisualization._id}`, {
         method: 'DELETE',
       });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to delete: ${response.status}`);
-      }
       
       // Remove deleted visualization from state
       setVisualizations(visualizations.filter(v => v._id !== currentVisualization._id));
@@ -442,6 +471,25 @@ function SavedVisualizations() {
     }
   };
 
+  // Add a function to completely clear visualization localStorage
+  const clearVisualizationCache = () => {
+    console.log('Completely cleaning visualization data from localStorage');
+    localStorage.removeItem('previewCharts');
+    localStorage.removeItem('previewFile');
+    localStorage.removeItem('analysisCache');
+    
+    // Clear any other visualization-related items
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.includes('chart') || key?.includes('visualization') || key?.includes('preview')) {
+        localStorage.removeItem(key);
+      }
+    }
+    
+    // Refresh the page to apply changes
+    window.location.reload();
+  };
+
   return (
     <Container maxWidth="xl">
       <Box sx={{ py: 3 }}>
@@ -450,6 +498,18 @@ function SavedVisualizations() {
           icon={<SaveIcon />}
           subtitle="View and download your saved data visualizations"
         />
+
+        {/* Add a button to clear visualization cache - only show if there's an issue */}
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button 
+            variant="outlined" 
+            color="secondary" 
+            onClick={clearVisualizationCache}
+            startIcon={<DeleteIcon />}
+          >
+            Clear Visualization Cache
+          </Button>
+        </Box>
 
         {loading && <CircularProgress sx={{ display: 'block', mx: 'auto', my: 4 }} />}
         

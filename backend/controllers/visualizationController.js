@@ -32,7 +32,7 @@ exports.createVisualization = async (req, res) => {
       return res.status(404).json({ success: false, message: 'File not found' });
     }
 
-    // Create the visualization
+    // Create the visualization with user ID from auth middleware
     const visualization = new Visualization({
       name,
       description,
@@ -43,10 +43,11 @@ exports.createVisualization = async (req, res) => {
       config,
       confidence,
       data,
-      user: req.user ? req.user._id : null
+      user: req.user._id // Get user ID from auth middleware
     });
 
     await visualization.save();
+    console.log(`Created visualization with ID ${visualization._id} for user ${req.user._id}`);
 
     res.status(201).json({
       success: true,
@@ -62,7 +63,8 @@ exports.createVisualization = async (req, res) => {
         data: visualization.data,
         confidence: visualization.confidence || 90,
         isAIGenerated: visualization.isAIGenerated,
-        createdAt: visualization.createdAt
+        createdAt: visualization.createdAt,
+        user: visualization.user
       }
     });
   } catch (error) {
@@ -74,20 +76,42 @@ exports.createVisualization = async (req, res) => {
 // Get all visualizations
 exports.getVisualizations = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required to access visualizations'
+      });
+    }
+
     // Filter by fileId if provided
-    const query = {};
+    const query = { user: req.user._id }; // Always filter by current user ID
+    
     if (req.query.fileId) {
       query.fileId = req.query.fileId;
     }
     
-    // Filter by user if authenticated
-    if (req.user) {
-      query.user = req.user._id;
-    }
+    // Check if we're just looking for saved visualizations (for dashboard counter)
+    const countOnly = req.query.saved === 'true';
 
+    console.log(`Fetching visualizations for user: ${req.user._id}`, countOnly ? '(count only)' : '');
+    
+    // If we only need the count, just get the count
+    if (countOnly) {
+      const count = await Visualization.countDocuments(query);
+      console.log(`Counted ${count} saved visualizations for user ${req.user._id}`);
+      
+      return res.status(200).json({
+        success: true,
+        count
+      });
+    }
+    
+    // Otherwise get all visualization data
     const visualizations = await Visualization.find(query)
       .sort({ createdAt: -1 })
       .populate('fileId', 'name type size');
+    
+    console.log(`Found ${visualizations.length} visualizations for user ${req.user._id}`);
     
     res.status(200).json({
       success: true,
@@ -101,7 +125,8 @@ exports.getVisualizations = async (req, res) => {
         config: viz.config,
         confidence: viz.confidence || (viz.isAIGenerated ? 85 : 90),
         isAIGenerated: viz.isAIGenerated,
-        createdAt: viz.createdAt
+        createdAt: viz.createdAt,
+        user: viz.user
       }))
     });
   } catch (error) {
@@ -113,6 +138,13 @@ exports.getVisualizations = async (req, res) => {
 // Get visualization by ID
 exports.getVisualizationById = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required to access visualization' 
+      });
+    }
+
     const visualization = await Visualization.findById(req.params.id)
       .populate('fileId', 'filename originalname dataColumns');
     
@@ -121,8 +153,11 @@ exports.getVisualizationById = async (req, res) => {
     }
 
     // Check if user owns the visualization
-    if (req.user && visualization.user && req.user.id !== visualization.user.toString()) {
-      return res.status(403).json({ success: false, message: 'Not authorized to access this visualization' });
+    if (!visualization.user || visualization.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You do not have permission to access this visualization' 
+      });
     }
 
     // Return complete visualization data including chart data if available
@@ -140,7 +175,8 @@ exports.getVisualizationById = async (req, res) => {
         data: visualization.data || {},
         isAIGenerated: visualization.isAIGenerated,
         createdAt: visualization.createdAt,
-        updatedAt: visualization.updatedAt
+        updatedAt: visualization.updatedAt,
+        user: visualization.user
       }
     });
   } catch (error) {
@@ -152,6 +188,13 @@ exports.getVisualizationById = async (req, res) => {
 // Update visualization
 exports.updateVisualization = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required to update visualization' 
+      });
+    }
+
     const { name, description, chartType, config } = req.body;
     
     // Find the visualization
@@ -162,8 +205,11 @@ exports.updateVisualization = async (req, res) => {
     }
 
     // Check if user owns the visualization
-    if (req.user && visualization.user && req.user.id !== visualization.user.toString()) {
-      return res.status(403).json({ success: false, message: 'Not authorized to update this visualization' });
+    if (!visualization.user || visualization.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You do not have permission to update this visualization' 
+      });
     }
 
     // Update fields
@@ -173,6 +219,7 @@ exports.updateVisualization = async (req, res) => {
     if (config) visualization.config = config;
 
     await visualization.save();
+    console.log(`Visualization ${req.params.id} updated by user ${req.user._id}`);
 
     res.status(200).json({
       success: true,
@@ -184,7 +231,8 @@ exports.updateVisualization = async (req, res) => {
         chartType: visualization.chartType,
         config: visualization.config,
         isAIGenerated: visualization.isAIGenerated,
-        updatedAt: visualization.updatedAt
+        updatedAt: visualization.updatedAt,
+        user: visualization.user
       }
     });
   } catch (error) {
@@ -196,6 +244,13 @@ exports.updateVisualization = async (req, res) => {
 // Delete visualization
 exports.deleteVisualization = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required to delete visualization' 
+      });
+    }
+
     const visualization = await Visualization.findById(req.params.id);
     
     if (!visualization) {
@@ -203,12 +258,16 @@ exports.deleteVisualization = async (req, res) => {
     }
 
     // Check if user owns the visualization
-    if (req.user && visualization.user && req.user.id !== visualization.user.toString()) {
-      return res.status(403).json({ success: false, message: 'Not authorized to delete this visualization' });
+    if (!visualization.user || visualization.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'You do not have permission to delete this visualization' 
+      });
     }
 
     // Use deleteOne instead of remove (which is deprecated)
     await Visualization.deleteOne({ _id: req.params.id });
+    console.log(`Visualization ${req.params.id} deleted by user ${req.user._id}`);
 
     res.status(200).json({ success: true, message: 'Visualization deleted successfully' });
   } catch (error) {
@@ -220,6 +279,13 @@ exports.deleteVisualization = async (req, res) => {
 // Generate AI visualization recommendation
 exports.generateAIVisualization = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required to generate AI visualizations' 
+      });
+    }
+
     const fileId = req.params.fileId;
     
     // Check if file exists
@@ -248,42 +314,56 @@ exports.generateAIVisualization = async (req, res) => {
     const primaryRecommendation = chartRecommendations[0] || {
       chartType: 'bar',
       confidence: 70,
-      reason: 'Default bar chart recommendation'
+      xAxis: file.dataColumns[0],
+      yAxis: file.dataColumns[1]
     };
-
-    // Create new visualization with AI recommendation
+    
+    // Create a new visualization based on the AI recommendation
     const visualization = new Visualization({
-      name: `${file.originalname.split('.')[0]} - AI Recommended Visualization`,
-      description: 'Automatically generated visualization based on data analysis',
-      fileId: file._id,
+      name: `${file.originalname || 'Data'} - ${primaryRecommendation.chartType} Chart`,
+      description: aiRecommendation.explanation || `AI recommended ${primaryRecommendation.chartType} chart visualization`,
+      fileId: fileId,
       chartType: primaryRecommendation.chartType,
-      config: aiRecommendation.config,
-      confidence: primaryRecommendation.confidence,
+      xAxis: primaryRecommendation.xAxis,
+      yAxis: primaryRecommendation.yAxis,
+      config: {
+        xAxis: {
+          field: primaryRecommendation.xAxis,
+          label: primaryRecommendation.xAxis
+        },
+        yAxis: {
+          field: primaryRecommendation.yAxis,
+          label: primaryRecommendation.yAxis
+        }
+      },
+      confidence: primaryRecommendation.confidence || 80,
       isAIGenerated: true,
-      user: req.user ? req.user.id : null
+      user: req.user._id
     });
-
+    
     await visualization.save();
-
+    console.log(`AI Visualization ${visualization._id} created for user ${req.user._id}`);
+    
     res.status(201).json({
       success: true,
       message: 'AI visualization created successfully',
-      recommendation: primaryRecommendation.reason,
-      chartRecommendations: chartRecommendations,
       visualization: {
         _id: visualization._id,
         name: visualization.name,
         description: visualization.description,
         fileId: visualization.fileId,
         chartType: visualization.chartType,
+        xAxis: visualization.xAxis,
+        yAxis: visualization.yAxis,
         config: visualization.config,
         confidence: visualization.confidence,
-        isAIGenerated: visualization.isAIGenerated,
-        createdAt: visualization.createdAt
-      }
+        isAIGenerated: true,
+        user: visualization.user
+      },
+      allRecommendations: chartRecommendations
     });
   } catch (error) {
-    console.error('AI visualization error:', error);
+    console.error('AI visualization generation error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 }; 

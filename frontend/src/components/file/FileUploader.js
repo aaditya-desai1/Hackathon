@@ -10,6 +10,8 @@ import {
   CircularProgress,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { fetchApi } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 function FileUploader({ onUploadSuccess, allowedTypes }) {
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -20,6 +22,7 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
   const [fileName, setFileName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [validating, setValidating] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   // Function to validate file content before upload
   const validateFileContent = async (file) => {
@@ -102,6 +105,12 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
 
   const uploadFile = async (file) => {
     if (!file) return;
+    
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      setError('You must be logged in to upload files');
+      return;
+    }
     
     setUploading(true);
     setError(null);
@@ -248,43 +257,42 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       const formData = new FormData();
       formData.append('file', fileToUpload);
       
-      // Use the absolute URL path for consistent behavior in all environments
+      console.log('Uploading file...');
+      
+      // Get auth token
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      // Determine API URL based on environment
       const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
-      const url = `${API_BASE_URL}/api/files/upload`;
+      const uploadUrl = `${API_BASE_URL}/api/files/upload`;
       
-      console.log('Uploading file to:', url);
-      console.log('Environment:', process.env.NODE_ENV);
-      console.log('File details:', {
-        name: fileToUpload.name,
-        type: fileToUpload.type,
-        size: fileToUpload.size,
-        lastModified: new Date(fileToUpload.lastModified).toISOString()
-      });
+      console.log(`Uploading to: ${uploadUrl}`);
       
-      const response = await fetch(url, {
+      // Use fetch directly with appropriate headers
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
-        // Do not set Content-Type header for FormData
+        headers: {
+          'Authorization': `Bearer ${token}`
+          // NOTE: Do NOT set Content-Type header for FormData/multipart
+        }
       });
       
       clearInterval(progressInterval);
       
       if (!response.ok) {
-        console.error('Upload failed with status:', response.status);
-        let errorMessage = `Upload failed with status ${response.status}`;
-        let details = null;
-        
+        // Try to extract error message from the response
+        let errorMessage = `HTTP error: ${response.status}`;
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
-          details = errorData;
-          console.error('Error details:', errorData);
-        } catch (parseError) {
-          console.error('Could not parse error response:', parseError);
-          details = { parseError: parseError.message };
+        } catch (e) {
+          // If we can't parse the JSON, just use the status text
+          errorMessage = `HTTP error: ${response.status} ${response.statusText}`;
         }
-        
-        setErrorDetails(details);
         throw new Error(errorMessage);
       }
       
@@ -309,8 +317,8 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       console.error('Upload error:', error);
       setError(error.message || 'Failed to upload file');
       setUploadProgress(0);
-    } finally {
       clearInterval(progressInterval);
+    } finally {
       setUploading(false);
     }
   };

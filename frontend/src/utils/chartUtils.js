@@ -52,6 +52,13 @@ export const fetchChartDataFromAPI = async (chart) => {
       throw new Error('Missing required chart data');
     }
     
+    // Get auth token
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      console.error('No authentication token found');
+      throw new Error('Authentication required to fetch chart data');
+    }
+    
     // Prepare API URL
     const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
     let dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${chart.fileId}&yAxis=${chart.yAxis}`;
@@ -62,7 +69,11 @@ export const fetchChartDataFromAPI = async (chart) => {
     
     console.log(`Fetching chart data from API: ${dataUrl}`);
     
-    const response = await fetch(dataUrl);
+    const response = await fetch(dataUrl, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
     
     if (response.ok) {
       const result = await response.json();
