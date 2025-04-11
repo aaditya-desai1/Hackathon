@@ -2,26 +2,15 @@
   "version": 2,
   "builds": [
     {
-<<<<<<< HEAD
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
         "distDir": "build"
       }
-=======
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "frontend/build" }
-    },
-    {
-      "src": "backend/server.js",
-      "use": "@vercel/node"
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     }
   ],
   "routes": [
     {
-<<<<<<< HEAD
       "src": "/(.*\\.(js|json|css|ico|png|jpg|jpeg|svg|gif|woff|woff2|ttf|eot)$)",
       "dest": "/$1"
     },
@@ -35,62 +24,4 @@
     "REACT_APP_API_URL": "@datavizpro-api-url"
   },
   "public": false
-=======
-      "src": "/api/(.*)",
-      "dest": "/backend/server.js"
-    },
-    {
-      "src": "/uploads/(.*)",
-      "dest": "/backend/server.js"
-    },
-    {
-      "src": "/health",
-      "dest": "/backend/server.js"
-    },
-    {
-      "src": "/static/(.*)",
-      "dest": "/frontend/build/static/$1"
-    },
-    {
-      "src": "/favicon.ico",
-      "dest": "/frontend/build/favicon.ico"
-    },
-    {
-      "src": "/manifest.json",
-      "dest": "/frontend/build/manifest.json"
-    },
-    {
-      "src": "/robots.txt",
-      "dest": "/frontend/build/robots.txt"
-    },
-    {
-      "src": "/dashboard",
-      "dest": "/frontend/build/index.html"
-    },
-    {
-      "src": "/files",
-      "dest": "/frontend/build/index.html"
-    },
-    {
-      "src": "/visualizations",
-      "dest": "/frontend/build/index.html"
-    },
-    {
-      "src": "/settings",
-      "dest": "/frontend/build/index.html"
-    },
-    {
-      "src": "/help",
-      "dest": "/frontend/build/index.html"
-    },
-    {
-      "src": "/about",
-      "dest": "/frontend/build/index.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/build/index.html"
-    }
-  ]
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 } 
