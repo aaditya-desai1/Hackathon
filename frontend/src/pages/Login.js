@@ -5,6 +5,7 @@ import {
   TextField, 
   Typography, 
   Container, 
+  Alert, 
   Paper,
   Link,
   IconButton
@@ -13,7 +14,6 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import GoogleLoginButton from '../components/auth/GoogleLoginButton';
-import ErrorAlert from '../components/common/ErrorAlert';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -71,11 +71,19 @@ const Login = () => {
           </Typography>
           
           {error && (
-            <ErrorAlert 
-              message={error} 
-              severity="error"
-              onRetry={loading ? undefined : handleSubmit}
-            />
+            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+              {error}
+              {error.includes('Invalid credentials') && (
+                <Box component="div" sx={{ mt: 1 }}>
+                  <Typography variant="body2">
+                    Tip: If you've just registered, try using those exact credentials.
+                  </Typography>
+                  <Typography variant="body2">
+                    You can also try registering with a new account using the Sign Up link below.
+                  </Typography>
+                </Box>
+              )}
+            </Alert>
           )}
           
           <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
