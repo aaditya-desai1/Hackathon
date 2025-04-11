@@ -4,6 +4,7 @@
 
 import { Chart as ChartJS } from 'chart.js/auto';
 import { getRandomColor } from './colorUtils';
+import { fetchApi } from '../services/api';
 
 /**
  * Generate chart configuration for Chart.js
@@ -12,41 +13,62 @@ import { getRandomColor } from './colorUtils';
  * @returns {Object} Chart.js compatible configuration
  */
 export const generateChartConfig = (chartData, chartType = 'bar') => {
-  // Handle empty data case
-  if (!chartData || !chartData.labels || !chartData.values) {
-    console.error('Invalid chart data provided:', chartData);
-    return {
-      data: {
-        labels: [],
-        datasets: [{
-          label: 'No data',
-          data: [],
-          backgroundColor: 'rgba(0, 0, 0, 0.1)',
-        }]
-      }
-    };
-  }
+  // Extract data
+  const labels = chartData.labels || [];
+  const values = chartData.values || [];
   
-  const { labels, values, datasets } = chartData;
-  const colors = labels.map(() => getRandomColor());
+  // Generate random colors for each data point
+  const colors = chartData.colors || Array(values.length).fill().map(() => {
+    const r = Math.floor(Math.random() * 255);
+    const g = Math.floor(Math.random() * 255);
+    const b = Math.floor(Math.random() * 255);
+    return `rgba(${r}, ${g}, ${b}, 0.6)`;
+  });
   
-  // If custom datasets are provided, use them
-  if (datasets && datasets.length > 0) {
-    return {
-      data: {
-        labels,
-        datasets
-      },
-      type: chartType,
-    };
-  }
-  
-  // Otherwise build a default dataset
+  // Create config object based on Chart.js structure
   return {
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: chartType === 'pie' || chartType === 'doughnut',
+          position: 'top',
+        },
+        title: {
+          display: !!chartData.title,
+          text: chartData.title || '',
+        },
+        tooltip: {
+          enabled: true,
+          mode: 'index',
+          intersect: false,
+        },
+      },
+      scales: (chartType === 'pie' || chartType === 'doughnut') ? undefined : {
+        x: {
+          title: {
+            display: true,
+            text: chartData.xAxisLabel || '',
+          },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 0,
+          },
+        },
+        y: {
+          title: {
+            display: true,
+            text: chartData.yAxisLabel || '',
+          },
+          beginAtZero: true,
+        },
+      },
+    },
     data: {
       labels,
       datasets: [{
-        label: 'Values',
+        label: chartData.label || 'Data',
         data: values,
         backgroundColor: colors,
         borderColor: colors.map(color => color.replace('0.6', '1')),
@@ -68,29 +90,13 @@ export const fetchChartDataFromAPI = async (chart) => {
       throw new Error('Missing required chart data');
     }
     
-    // Get auth token
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      console.error('No authentication token found');
-      throw new Error('Authentication required to fetch chart data');
-    }
+    // Build the query parameters for the API endpoint
+    const queryParams = `?fileId=${chart.fileId}&yAxis=${chart.yAxis}${chart.xAxis ? `&xAxis=${chart.xAxis}` : ''}`;
     
-    // Prepare API URL - use the same logic as the API service
-    const API_BASE_URL = process.env.REACT_APP_API_URL || 
-                       (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000');
-    let dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${chart.fileId}&yAxis=${chart.yAxis}`;
+    console.log(`Fetching chart data from API: /api/data/chart${queryParams}`);
     
-    if (chart.xAxis) {
-      dataUrl += `&xAxis=${chart.xAxis}`;
-    }
-    
-    console.log(`Fetching chart data from API: ${dataUrl}`);
-    
-    const response = await fetch(dataUrl, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+    // Use the fetchApi utility that handles auth and base URL correctly
+    const response = await fetchApi(`/api/data/chart${queryParams}`);
     
     if (response.ok) {
       const result = await response.json();

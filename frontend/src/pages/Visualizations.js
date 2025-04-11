@@ -1268,118 +1268,140 @@ function Visualizations() {
 
   // Fetch chart data and render it directly without showing fallback first
   const fetchChartData = async (chart, ctx, instancesObject, chartKey) => {
+    // If context isn't available or chart data is missing, exit early
+    if (!ctx || !chart || !chart.fileId || !chart.yAxis) {
+      console.warn('Invalid chart data or context:', { chart, hasContext: !!ctx });
+      return;
+    }
+    
+    console.log('Fetching chart data for:', {
+      chartType: chart.chartType,
+      fileId: chart.fileId,
+      xAxis: chart.xAxis || 'index',
+      yAxis: chart.yAxis
+    });
+    
+    // Determine if we need to use index as X-axis
+    const useIndexAsXAxis = !chart.xAxis;
+    
+    // Build chart data query params
+    const queryParams = `?fileId=${chart.fileId}&yAxis=${chart.yAxis}${chart.xAxis ? `&xAxis=${chart.xAxis}` : ''}`;
+    
+    // Initialize default chart data
+    let chartData = {
+      labels: [],
+      values: []
+    };
+    
     try {
-      // Check if chart data is valid
-      if (!chart || !chart.fileId || !chart.xAxis || !chart.yAxis) {
-        console.error('Invalid chart configuration:', chart);
-        removeLoadingOverlay(chartKey);
-        return;
-      }
-
-      // Determine if we're using index as x-axis (special case for scatter plots)
-      const useIndexAsXAxis = chart.chartType === 'scatter' && chart.xAxis === 'index';
+      console.log(`Fetching chart data from API: /api/data/chart${queryParams}`);
       
-      // Get auth token
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.error('No authentication token found for chart data');
-        removeLoadingOverlay(chartKey);
-        return;
-      }
+      const response = await fetchApi(`/api/data/chart${queryParams}`);
       
-      // Prepare API URL
-      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
-      let dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${chart.fileId}&yAxis=${chart.yAxis}`;
-      
-      if (!useIndexAsXAxis) {
-        dataUrl += `&xAxis=${chart.xAxis}`;
-      }
-      
-      console.log(`Fetching chart data from: ${dataUrl}`);
-      
-      // Set up the axis labels
-      const axisLabels = {
-        xAxis: useIndexAsXAxis ? 'Index' : chart.xAxis,
-        yAxis: chart.yAxis
-      };
-      
-      // Fetch the data
-      let chartData = null;
-      
-      try {
-        const response = await fetch(dataUrl, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+      if (response.ok) {
+        const result = await response.json();
         
-        if (response.ok) {
-          const result = await response.json();
+        if (result.success && 
+            result.chartData && 
+            result.chartData.values && 
+            Array.isArray(result.chartData.values) &&
+            result.chartData.values.length > 0) {
           
-          if (result.success && 
-              result.chartData && 
-              result.chartData.values && 
-              Array.isArray(result.chartData.values) &&
-              result.chartData.values.length > 0) {
-            
-            // Handle special case for index-based x-axis
-            if (useIndexAsXAxis) {
-              result.chartData.labels = Array.from(
-                { length: result.chartData.values.length }, 
-                (_, i) => i + 1
-              );
-            }
-            
-            // Ensure we have labels
-            if (!result.chartData.labels || !Array.isArray(result.chartData.labels)) {
-              result.chartData.labels = Array.from(
-                { length: result.chartData.values.length }, 
-                (_, i) => `Item ${i+1}`
-              );
-            }
-            
-            // Store valid chart data
-            chartData = result.chartData;
-            
-            console.log('Chart data received:', {
-              chartType: chart.chartType,
-              sampleLabels: chartData.labels.slice(0, 3),
-              sampleValues: chartData.values.slice(0, 3),
-              count: chartData.values.length
-            });
-          } else {
-            console.error('Invalid data structure or unsuccessful response:', result);
+          // Handle special case for index-based x-axis
+          if (useIndexAsXAxis) {
+            result.chartData.labels = Array.from(
+              { length: result.chartData.values.length }, 
+              (_, i) => i + 1
+            );
           }
+          
+          // Ensure we have labels
+          if (!result.chartData.labels || !Array.isArray(result.chartData.labels)) {
+            result.chartData.labels = Array.from(
+              { length: result.chartData.values.length }, 
+              (_, i) => `Item ${i+1}`
+            );
+          }
+          
+          // Store valid chart data
+          chartData = result.chartData;
+          
+          console.log('Chart data received:', {
+            chartType: chart.chartType,
+            sampleLabels: chartData.labels.slice(0, 3),
+            sampleValues: chartData.values.slice(0, 3),
+            count: chartData.values.length
+          });
         } else {
-          console.error(`API error: ${response.status} ${response.statusText}`);
+          console.error('Invalid data structure or unsuccessful response:', result);
         }
-      } catch (fetchError) {
-        console.error('Error fetching chart data:', fetchError);
+      } else {
+        console.error(`API error: ${response.status} ${response.statusText}`);
       }
+    } catch (fetchError) {
+      console.error('Error fetching chart data:', fetchError);
+    }
+    
+    // Destroy any existing chart instance
+    if (instancesObject[chartKey]) {
+      instancesObject[chartKey].destroy();
+      instancesObject[chartKey] = null;
+    }
+    
+    // Create a new chart instance
+    try {
+      // Create new chart instance here
+      // This code was previously here but was replaced with a comment
+      const chartConfig = generateChartConfig({
+        labels: chartData.labels,
+        values: chartData.values,
+        xAxisLabel: chart.xAxis || 'Index',
+        yAxisLabel: chart.yAxis
+      }, chart.chartType);
       
-      // Destroy any existing chart instance
-      if (instancesObject[chartKey]) {
-        instancesObject[chartKey].destroy();
-        instancesObject[chartKey] = null;
-      }
+      instancesObject[chartKey] = new Chart(ctx, {
+        type: chartConfig.type,
+        data: chartConfig.data,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: chart.chartType === 'pie' || chart.chartType === 'doughnut',
+              position: 'top',
+            },
+            title: {
+              display: true,
+              text: chart.name || `${chart.chartType} chart of ${chart.yAxis} by ${chart.xAxis || 'Index'}`,
+            },
+          },
+          // Special handling for non-categorical charts
+          scales: (chart.chartType === 'pie' || chart.chartType === 'doughnut') ? undefined : {
+            x: {
+              title: {
+                display: true,
+                text: chart.xAxis || 'Index',
+              },
+              ticks: {
+                maxRotation: 45,
+                minRotation: 0,
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: chart.yAxis,
+              },
+              beginAtZero: true,
+            }
+          }
+        }
+      });
       
-      // Render the chart with real data or fallback if needed
-      updateChartWithRealData(
-        ctx, 
-        chart.chartType, 
-        chartData ? chartData.labels : null, 
-        chartData ? chartData.values : null, 
-        axisLabels.yAxis, 
-        instancesObject, 
-        chartKey, 
-        axisLabels.xAxis
-      );
+      console.log(`Chart created: ${chartKey}`);
       
-      // Remove loading overlay
-      removeLoadingOverlay(chartKey);
-    } catch (error) {
-      console.error('Error in chart creation process:', error);
-      removeLoadingOverlay(chartKey);
+    } catch (chartError) {
+      console.error('Error creating chart instance:', chartError);
     }
   };
   
@@ -1819,89 +1841,6 @@ function Visualizations() {
     console.error(`Could not find canvas element with ID ${canvasId} using any method`);
     console.log('Available canvases:', Array.from(document.querySelectorAll('canvas')).map(c => c.id));
     return null;
-  };
-
-  // Function to get chart data from the API
-  const getChartDataFromAPI = async (chart) => {
-    try {
-      if (!chart || !chart.fileId || !chart.yAxis) {
-        return null;
-      }
-      
-      // Try to get the chart instance to extract data directly from it
-      const chartKey = chart.isAIRecommended ? 
-        `ai-${chart.chartType}` : 
-        `custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`;
-      
-      const chartInstance = chartPreviewInstances[chartKey];
-      
-      // If we have a chart instance, extract data directly from it
-      if (chartInstance && chartInstance.data) {
-        console.log('Extracting data from chart instance');
-        
-        // Extract labels and values from chart instance
-        const extractedLabels = chartInstance.data.labels || [];
-        const extractedValues = chartInstance.data.datasets?.[0]?.data || [];
-        
-        if (extractedLabels.length > 0 && extractedValues.length > 0) {
-          return {
-            labels: extractedLabels,
-            values: extractedValues,
-            datasets: chartInstance.data.datasets || []
-          };
-        }
-        
-        console.warn('Chart instance did not contain valid data, falling back to API');
-      } else {
-        console.warn('No chart instance found for', chartKey, 'falling back to API fetch');
-      }
-      
-      // Fallback to API fetch if chart instance data isn't available
-      
-      // Get auth token
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.error('No authentication token found');
-        throw new Error('Authentication required to fetch chart data');
-      }
-      
-      // Prepare API URL
-      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
-      let dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${chart.fileId}&yAxis=${chart.yAxis}`;
-      
-      if (chart.xAxis) {
-        dataUrl += `&xAxis=${chart.xAxis}`;
-      }
-      
-      console.log(`Fetching chart data from API: ${dataUrl}`);
-      
-      const response = await fetch(dataUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        
-        if (result.success && result.chartData) {
-          console.log('Retrieved chart data from API:', result.chartData);
-          return {
-            labels: result.chartData.labels || [],
-            values: result.chartData.values || [],
-            datasets: chart.datasets || []
-          };
-        }
-      } else {
-        console.error(`API Error ${response.status}: ${response.statusText}`);
-        throw new Error(`Failed to fetch chart data: ${response.status}`);
-      }
-      
-      throw new Error('No valid chart data returned from API');
-    } catch (err) {
-      console.error('Error getting chart data:', err);
-      return null;
-    }
   };
 
   const handleSaveChart = async (chart) => {
@@ -2967,6 +2906,76 @@ function Visualizations() {
     }
   };
 
+  const renderSavedChart = (visualization) => {
+    // ... existing function
+  };
+
+  // Function to get chart data from the API
+  const getChartDataFromAPI = async (chart) => {
+    try {
+      if (!chart || !chart.fileId || !chart.yAxis) {
+        return null;
+      }
+      
+      // Try to get the chart instance to extract data directly from it
+      const chartKey = chart.isAIRecommended ? 
+        `ai-${chart.chartType}` : 
+        `custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`;
+      
+      const chartInstance = chartPreviewInstances[chartKey];
+      
+      // If we have a chart instance, extract data directly from it
+      if (chartInstance && chartInstance.data) {
+        console.log('Extracting data from chart instance');
+        
+        // Extract labels and values from chart instance
+        const extractedLabels = chartInstance.data.labels || [];
+        const extractedValues = chartInstance.data.datasets?.[0]?.data || [];
+        
+        if (extractedLabels.length > 0 && extractedValues.length > 0) {
+          return {
+            labels: extractedLabels,
+            values: extractedValues,
+            datasets: chartInstance.data.datasets || []
+          };
+        }
+        
+        console.warn('Chart instance did not contain valid data, falling back to API');
+      } else {
+        console.warn('No chart instance found for', chartKey, 'falling back to API fetch');
+      }
+      
+      // Fallback to API fetch if chart instance data isn't available
+      // Build chart data query params
+      const queryParams = `?fileId=${chart.fileId}&yAxis=${chart.yAxis}${chart.xAxis ? `&xAxis=${chart.xAxis}` : ''}`;
+      
+      console.log(`Fetching chart data from API: /api/data/chart${queryParams}`);
+      
+      const response = await fetchApi(`/api/data/chart${queryParams}`);
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.success && result.chartData) {
+          console.log('Retrieved chart data from API:', result.chartData);
+          return {
+            labels: result.chartData.labels || [],
+            values: result.chartData.values || [],
+            datasets: chart.datasets || []
+          };
+        }
+      } else {
+        console.error(`API Error ${response.status}: ${response.statusText}`);
+        throw new Error(`Failed to fetch chart data: ${response.status}`);
+      }
+      
+      throw new Error('No valid chart data returned from API');
+    } catch (err) {
+      console.error('Error getting chart data:', err);
+      return null;
+    }
+  };
+  
   return (
     <Box 
       component="div" 

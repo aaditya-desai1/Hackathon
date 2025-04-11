@@ -107,20 +107,20 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      console.log('Attempting registration with debug mode');
+      console.log('Attempting registration for user:', { username, email });
       
-      // Try the debug version first (which uses direct fetch)
+      // First try regular registration without the debug mode
       try {
-        const debugData = await authApi.debugRegister(username, email, password);
-        console.log('Debug registration successful:', debugData);
+        const data = await authApi.register(username, email, password);
         
-        // Handle successful debug registration
-        if (debugData.token) {
-          localStorage.setItem('authToken', debugData.token);
-          setCurrentUser(debugData.user);
+        console.log('Registration response received:', data);
+        
+        if (data && data.token) {
+          localStorage.setItem('authToken', data.token);
+          setCurrentUser(data.user);
           
           // Trigger visualization clearing on registration
-          console.log('Triggering visualization clear on debug registration');
+          console.log('Registration successful, setting up user session');
           const loginEvent = new CustomEvent('user-login');
           window.dispatchEvent(loginEvent);
           
@@ -129,36 +129,55 @@ export const AuthProvider = ({ children }) => {
           }
           
           return true;
+        } else {
+          console.error('Registration returned no token:', data);
+          throw new Error('Registration failed. No token received from server.');
         }
-      } catch (debugErr) {
-        console.error('Debug registration failed, falling back to regular register:', debugErr);
-        // Continue to regular registration if debug fails
-      }
-      
-      // Regular registration (original code)
-      const data = await authApi.register(username, email, password);
-      
-      if (data.token) {
-        localStorage.setItem('authToken', data.token);
-        setCurrentUser(data.user);
+      } catch (mainErr) {
+        console.error('Main registration failed, trying debug mode:', mainErr);
         
-        // Trigger visualization clearing on registration
-        console.log('Triggering visualization clear on registration');
-        const loginEvent = new CustomEvent('user-login');
-        window.dispatchEvent(loginEvent);
-        
-        if (window._clearVisualizationCache) {
-          window._clearVisualizationCache();
+        // If main registration fails, try debug mode as fallback
+        try {
+          console.log('Falling back to debug registration mode');
+          const debugData = await authApi.debugRegister(username, email, password);
+          
+          if (debugData && debugData.token) {
+            localStorage.setItem('authToken', debugData.token);
+            setCurrentUser(debugData.user);
+            
+            console.log('Debug registration successful');
+            const loginEvent = new CustomEvent('user-login');
+            window.dispatchEvent(loginEvent);
+            
+            if (window._clearVisualizationCache) {
+              window._clearVisualizationCache();
+            }
+            
+            return true;
+          }
+        } catch (debugErr) {
+          console.error('Debug registration also failed:', debugErr);
+          // Re-throw the original error from the main registration attempt
+          throw mainErr;
         }
         
-        return true;
-      } else {
-        console.error('Registration failed: No token received', data);
-        throw new Error(data.error || 'Registration failed. No token received from server.');
+        // If we reach here, both attempts failed
+        throw mainErr;
       }
     } catch (err) {
-      console.error('Registration error:', err);
-      setError(err.message || 'Registration failed. Please try again.');
+      console.error('All registration attempts failed:', err);
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      // Try to extract a more specific error message
+      if (err.message && err.message.includes('already exists')) {
+        errorMessage = 'This email or username already exists. Please try a different one.';
+      } else if (err.message && err.message.includes('HTTP error 400')) {
+        errorMessage = 'Invalid registration data. Please check your information.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
       return false;
     } finally {
       setLoading(false);
