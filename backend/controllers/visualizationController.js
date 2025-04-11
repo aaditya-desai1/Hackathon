@@ -1,6 +1,6 @@
 const Visualization = require('../models/Visualization');
 const File = require('../models/File');
-const { parseCSV, parseJSON } = require('../utils/dataParser');
+const { parseCSV, parseJSON } = require('../utils/fileParser');
 const { recommendChartType } = require('../services/aiService');
 
 // Create new visualization
@@ -324,16 +324,16 @@ exports.generateAIVisualization = async (req, res) => {
       description: aiRecommendation.explanation || `AI recommended ${primaryRecommendation.chartType} chart visualization`,
       fileId: fileId,
       chartType: primaryRecommendation.chartType,
-      xAxis: primaryRecommendation.xAxis,
-      yAxis: primaryRecommendation.yAxis,
+      xAxis: primaryRecommendation.xAxis || primaryRecommendation.columns?.[0] || file.dataColumns[0],
+      yAxis: primaryRecommendation.yAxis || primaryRecommendation.columns?.[1] || file.dataColumns[1],
       config: {
         xAxis: {
-          field: primaryRecommendation.xAxis,
-          label: primaryRecommendation.xAxis
+          field: primaryRecommendation.xAxis || primaryRecommendation.columns?.[0] || file.dataColumns[0],
+          label: primaryRecommendation.xAxis || primaryRecommendation.columns?.[0] || file.dataColumns[0]
         },
         yAxis: {
-          field: primaryRecommendation.yAxis,
-          label: primaryRecommendation.yAxis
+          field: primaryRecommendation.yAxis || primaryRecommendation.columns?.[1] || file.dataColumns[1],
+          label: primaryRecommendation.yAxis || primaryRecommendation.columns?.[1] || file.dataColumns[1]
         }
       },
       confidence: primaryRecommendation.confidence || 80,
@@ -360,6 +360,7 @@ exports.generateAIVisualization = async (req, res) => {
         isAIGenerated: true,
         user: visualization.user
       },
+      chartRecommendations: chartRecommendations,
       allRecommendations: chartRecommendations
     });
   } catch (error) {

@@ -388,9 +388,12 @@ function Visualizations() {
       .then(data => {
         console.log('AI recommendations received:', data);
         
-        if (data.success && data.chartRecommendations) {
+        // Check for both chartRecommendations and allRecommendations (backward compatibility)
+        const recommendationsData = data.chartRecommendations || data.allRecommendations || [];
+        
+        if (data.success && recommendationsData.length > 0) {
           // Use the AI recommended chart types with confidence scores
-          const recommendations = data.chartRecommendations.map(rec => ({
+          const recommendations = recommendationsData.map(rec => ({
             chartType: rec.chartType,
             confidence: rec.confidence,
             reason: rec.reason,

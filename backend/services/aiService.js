@@ -11,14 +11,21 @@
  */
 exports.recommendChartType = async (data, columns, stats) => {
   try {
+    console.log('AI Service: Starting chart recommendation');
+    console.log('Data sample:', data.slice(0, 2));
+    console.log('Columns:', columns);
+    
     // 🅳 - Detect data types for each column
     const columnTypes = detectDataTypes(data, columns, stats);
+    console.log('Detected column types:', columnTypes);
     
     // 🅰 - Analyze patterns and relationships between columns
     const patterns = analyzePatterns(data, columnTypes, stats);
+    console.log('Analyzed patterns:', JSON.stringify(patterns).substring(0, 200) + '...');
     
     // 🆃 - Tag and recommend visualizations
     const recommendations = tagRecommendations(patterns, columnTypes);
+    console.log('Generated recommendations count:', recommendations.length);
     
     // Get the best chart type (first in the ranked list)
     const bestRecommendation = recommendations[0] || {
@@ -27,6 +34,7 @@ exports.recommendChartType = async (data, columns, stats) => {
       confidence: 0.7,
       reason: 'Default recommendation based on available data'
     };
+    console.log('Best recommendation:', bestRecommendation);
     
     // Configure the chart parameters
     const config = configureChart(
@@ -36,7 +44,7 @@ exports.recommendChartType = async (data, columns, stats) => {
       data
     );
     
-    return {
+    const result = {
       chartType: bestRecommendation.chart,
       config,
       explanation: bestRecommendation.reason,
@@ -47,6 +55,9 @@ exports.recommendChartType = async (data, columns, stats) => {
         columns: rec.columns
       }))
     };
+    
+    console.log('AI Service: Returning recommendations with count:', result.recommendations.length);
+    return result;
   } catch (error) {
     console.error('AI chart recommendation error:', error);
     
