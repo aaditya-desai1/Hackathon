@@ -49,10 +49,18 @@ export const fetchApi = async (endpoint, options = {}) => {
   }
   
   try {
+    // Check network connectivity
+    if (!navigator.onLine) {
+      console.error('[API] Browser reports offline status');
+      throw new Error('You are currently offline. Please check your internet connection and try again.');
+    }
+    
     console.log(`[API] About to fetch from: ${apiEndpoint}`);
     const response = await fetch(apiEndpoint, {
       ...options,
-      headers
+      headers,
+      credentials: 'include', // Include credentials for CORS requests
+      mode: 'cors' // Explicitly set CORS mode
     });
     console.log(`[API] Fetch response received, status: ${response.status}`);
     
@@ -82,6 +90,13 @@ export const fetchApi = async (endpoint, options = {}) => {
     return response;
   } catch (error) {
     console.error(`[API] Request failed: ${apiEndpoint}`, error);
+    
+    // Enhanced error handling for CORS issues
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      console.error('[API] This may be a CORS or network connectivity issue');
+      throw new Error('Network error. This could be due to connectivity issues or CORS restrictions.');
+    }
+    
     throw error;
   }
 };
