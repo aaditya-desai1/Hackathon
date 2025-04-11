@@ -13,10 +13,11 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { fetchApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
-// Import getApiBaseUrl directly from api.js where it's defined
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://express-backend-7m2c.onrender.com'
-  : 'http://localhost:5000';
+// Import the getApiBaseUrl function from api.js
+import { getApiBaseUrl } from '../../services/api';
+
+// Use the same method as the rest of the application
+const API_BASE_URL = getApiBaseUrl();
 
 function FileUploader({ onUploadSuccess, allowedTypes }) {
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -266,16 +267,22 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       // Get auth token
       const token = localStorage.getItem('authToken');
       if (!token) {
-        throw new Error('Authentication required');
+        console.error('No authentication token found in localStorage');
+        throw new Error('Authentication required. Please login again.');
       }
       
-      console.log('Uploading file to API...');
+      console.log('Uploading file to API...', {
+        url: `${API_BASE_URL}/api/files/upload`,
+        fileName: fileToUpload.name,
+        fileType: fileToUpload.type,
+        fileSize: fileToUpload.size,
+        tokenExists: !!token,
+        tokenLength: token ? token.length : 0
+      });
       
       // For file uploads, we need to use direct fetch with FormData
       // because fetchApi automatically sets Content-Type to application/json
       const uploadUrl = `${API_BASE_URL}/api/files/upload`;
-      
-      console.log(`Uploading to: ${uploadUrl}`);
       
       // Use fetch directly with appropriate headers
       const response = await fetch(uploadUrl, {
@@ -284,7 +291,8 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
         headers: {
           'Authorization': `Bearer ${token}`
           // NOTE: Do NOT set Content-Type header for FormData/multipart
-        }
+        },
+        credentials: 'include' // Include cookies for cross-domain requests
       });
       
       clearInterval(progressInterval);
@@ -292,13 +300,26 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       if (!response.ok) {
         // Try to extract error message from the response
         let errorMessage = `HTTP error: ${response.status}`;
+        let errorDetails = null;
+        
         try {
           const errorData = await response.json();
+          console.error('Upload error response:', errorData);
           errorMessage = errorData.error || errorMessage;
+          errorDetails = errorData;
         } catch (e) {
           // If we can't parse the JSON, just use the status text
           errorMessage = `HTTP error: ${response.status} ${response.statusText}`;
         }
+        
+        // Special handling for auth errors
+        if (response.status === 401) {
+          console.error('Authentication error during file upload');
+          localStorage.removeItem('authToken'); // Clear invalid token
+          errorMessage = 'Your session has expired. Please login again.';
+        }
+        
+        setErrorDetails(errorDetails);
         throw new Error(errorMessage);
       }
       

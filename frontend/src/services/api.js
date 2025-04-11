@@ -3,7 +3,7 @@
  */
 
 // Determine the API base URL based on the environment
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = () => {
   // Use environment variable if available
   if (process.env.REACT_APP_API_URL) {
     return process.env.REACT_APP_API_URL;
@@ -11,15 +11,7 @@ const getApiBaseUrl = () => {
   
   // Fallback logic
   if (process.env.NODE_ENV === 'production') {
-    // Try the updated Render URL or other alternatives
-    const backendUrls = [
-      'https://datavizpro-backend.onrender.com',
-      'https://express-backend-7m2c.onrender.com',
-      'https://datavizpro-api.onrender.com'
-    ];
-    
-    // For now, use the primary backend URL
-    return backendUrls[0];
+    return 'https://express-backend-7m2c.onrender.com';
   }
   // In development, use the local backend
   return 'http://localhost:5000';
