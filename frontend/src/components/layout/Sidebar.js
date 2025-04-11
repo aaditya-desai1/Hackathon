@@ -19,6 +19,7 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HelpIcon from '@mui/icons-material/Help';
 import InfoIcon from '@mui/icons-material/Info';
+import SaveIcon from '@mui/icons-material/Save';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import IconButton from '@mui/material/IconButton';
 
@@ -32,6 +33,7 @@ function Sidebar({ drawerOpen, toggleDrawer }) {
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'File Manager', icon: <DescriptionIcon />, path: '/files' },
     { text: 'Visualizations', icon: <BarChartIcon />, path: '/visualizations' },
+    { text: 'Saved Visualizations', icon: <SaveIcon />, path: '/saved-visualizations' },
   ];
 
   const secondaryMenuItems = [

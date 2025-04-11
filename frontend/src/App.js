@@ -5,6 +5,7 @@ import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import FileManager from './pages/FileManager';
 import Visualizations from './pages/Visualizations';
+import SavedVisualizations from './pages/SavedVisualizations';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
 import AboutUs from './pages/AboutUs';
@@ -66,6 +67,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Visualizations />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/saved-visualizations" 
+        element={
+          <ProtectedRoute>
+            <SavedVisualizations />
           </ProtectedRoute>
         } 
       />
