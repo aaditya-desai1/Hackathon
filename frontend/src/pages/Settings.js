@@ -199,12 +199,6 @@ function Settings() {
           </>
         )}
       </Paper>
-      
-      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-        <Button variant="contained" color="primary">
-          Save Settings
-        </Button>
-      </Box>
     </Container>
   );
 }

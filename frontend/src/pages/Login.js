@@ -72,14 +72,60 @@ const Login = () => {
           
           {error && (
             <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
-              {error.includes('Invalid credentials') && (
+              <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                {error}
+              </Typography>
+              
+              {/* Provide helpful suggestions based on common error types */}
+              {error.toLowerCase().includes('invalid credentials') && (
                 <Box component="div" sx={{ mt: 1 }}>
                   <Typography variant="body2">
-                    Tip: If you've just registered, try using those exact credentials.
+                    • Make sure your email and password are correct
                   </Typography>
                   <Typography variant="body2">
-                    You can also try registering with a new account using the Sign Up link below.
+                    • Check if caps lock is turned on
+                  </Typography>
+                  <Typography variant="body2">
+                    • If you just registered, try using those exact credentials
+                  </Typography>
+                </Box>
+              )}
+              
+              {error.toLowerCase().includes('network') && (
+                <Box component="div" sx={{ mt: 1 }}>
+                  <Typography variant="body2">
+                    • Check your internet connection
+                  </Typography>
+                  <Typography variant="body2">
+                    • The server might be temporarily down
+                  </Typography>
+                  <Typography variant="body2">
+                    • Try again in a few minutes
+                  </Typography>
+                </Box>
+              )}
+              
+              {error.toLowerCase().includes('server') && (
+                <Box component="div" sx={{ mt: 1 }}>
+                  <Typography variant="body2">
+                    • The server might be experiencing issues
+                  </Typography>
+                  <Typography variant="body2">
+                    • Please try again later
+                  </Typography>
+                </Box>
+              )}
+              
+              {/* General suggestion for other errors */}
+              {!error.toLowerCase().includes('invalid credentials') && 
+               !error.toLowerCase().includes('network') &&
+               !error.toLowerCase().includes('server') && (
+                <Box component="div" sx={{ mt: 1 }}>
+                  <Typography variant="body2">
+                    • If you don't have an account yet, please sign up
+                  </Typography>
+                  <Typography variant="body2">
+                    • If you forgot your password, contact the administrator
                   </Typography>
                 </Box>
               )}
