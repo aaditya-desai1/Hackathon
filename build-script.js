@@ -27,16 +27,40 @@ try {
     execSync('cd frontend && npm install', { stdio: 'inherit' });
   } else {
     console.log('Frontend dependencies already installed.');
+    
+    // Check if react-scripts is properly installed
+    if (!fs.existsSync(path.join(frontendDir, 'node_modules', 'react-scripts'))) {
+      console.log('react-scripts not found, reinstalling...');
+      execSync('cd frontend && npm install react-scripts@5.0.1', { stdio: 'inherit' });
+    }
   }
 
   // Try building the frontend
   try {
     console.log('Building frontend using npx...');
     
-    // Set permissions on react-scripts
+    // Set permissions on react-scripts - use multiple approaches
     try {
-      execSync('chmod +x frontend/node_modules/.bin/react-scripts', { stdio: 'inherit' });
-      console.log('Updated permissions on react-scripts');
+      console.log('Attempting to set permissions on react-scripts...');
+      
+      // Try multiple chmod approaches
+      try {
+        execSync('chmod +x frontend/node_modules/.bin/react-scripts', { stdio: 'inherit' });
+        console.log('Successfully set permissions via chmod +x');
+      } catch (e) {
+        console.warn('First chmod approach failed, trying alternative...');
+        try {
+          execSync('chmod 755 frontend/node_modules/.bin/react-scripts', { stdio: 'inherit' });
+          console.log('Successfully set permissions via chmod 755');
+        } catch (e2) {
+          console.warn('Second chmod approach failed, checking if file exists...');
+          if (fs.existsSync('frontend/node_modules/.bin/react-scripts')) {
+            console.log('react-scripts exists, continuing anyway');
+          } else {
+            console.warn('react-scripts binary not found!');
+          }
+        }
+      }
     } catch (permError) {
       console.warn('Warning: Failed to set permissions, will try npx anyway');
     }
@@ -57,7 +81,7 @@ try {
     
     // Try alternative build approach
     try {
-      console.log('Trying alternative build approach...');
+      console.log('Trying alternative build approach with direct script path...');
       execSync('cd frontend && node ./node_modules/react-scripts/scripts/build.js', { 
         stdio: 'inherit',
         env: { 
@@ -68,9 +92,33 @@ try {
       });
       console.log('Alternative build approach succeeded!');
     } catch (altBuildError) {
-      console.error('Alternative build also failed:', altBuildError);
-      console.log('Creating emergency fallback build...');
-      createFallbackBuild();
+      console.error('First alternative build failed:', altBuildError);
+      
+      // Try a second alternative approach using require
+      try {
+        console.log('Trying second alternative approach with Node require...');
+        
+        // Change to frontend directory
+        process.chdir('frontend');
+        
+        // Set necessary environment variables
+        process.env.CI = 'false';
+        process.env.DISABLE_ESLINT_PLUGIN = 'true';
+        process.env.SKIP_PREFLIGHT_CHECK = 'true';
+        
+        // Directly require the build script
+        console.log('Requiring build script...');
+        require('./node_modules/react-scripts/scripts/build');
+        
+        // Change back to root directory
+        process.chdir('..');
+        
+        console.log('Second alternative build approach succeeded!');
+      } catch (requireError) {
+        console.error('Second alternative build also failed:', requireError);
+        console.log('Creating emergency fallback build...');
+        createFallbackBuild();
+      }
     }
   }
 

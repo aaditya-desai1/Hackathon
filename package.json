@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "postinstall": "cd frontend && npm ci --only=production && chmod +x node_modules/.bin/react-scripts",
+    "postinstall": "cd frontend && npm install react-scripts@5.0.1 --no-save",
     "vercel-build": "npx cross-env CI=false DISABLE_ESLINT_PLUGIN=true node build-script.js",
     "start": "cd frontend && npm start",
     "build": "npx cross-env CI=false DISABLE_ESLINT_PLUGIN=true node build-script.js",
