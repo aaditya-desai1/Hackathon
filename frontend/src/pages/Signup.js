@@ -89,7 +89,7 @@ const Signup = () => {
             </Alert>
           )}
           
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
+          <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
             <TextField
               margin="normal"
               required
@@ -162,6 +162,7 @@ const Signup = () => {
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
               disabled={loading}
+              onClick={handleSubmit}
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
             </Button>

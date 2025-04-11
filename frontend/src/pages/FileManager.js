@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDataContext } from '../App';
 import {
@@ -21,13 +21,18 @@ import {
   Chip,
   CircularProgress,
   TablePagination,
-  useTheme
+  useTheme,
+  Alert
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
-  Visibility as ViewIcon
+  Visibility as ViewIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import FileUploader from '../components/file/FileUploader';
+import FileViewer from '../components/file/FileViewer';
+import DataContext from '../contexts/DataContext';
+import { fetchApi } from '../services/api';
 
 function FileManager() {
   const location = useLocation();
@@ -100,31 +105,9 @@ function FileManager() {
     try {
       setLoading(true);
       
-      // Use environment-aware API endpoint
-      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
-      const url = `${API_BASE_URL}/api/files`;
+      console.log('Fetching files...');
       
-      console.log('Fetching files from:', url);
-      
-      // Get auth token
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.error('No authentication token found');
-        setFiles([]);
-        return;
-      }
-      
-      // Include the authorization header
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        console.error(`Failed to fetch files: ${response.status} ${response.statusText}`);
-        throw new Error(`Failed to fetch files: ${response.status} ${response.statusText}`);
-      }
+      const response = await fetchApi('/api/files');
       
       const data = await response.json();
       console.log('Fetched files:', data);
@@ -168,30 +151,13 @@ function FileManager() {
     try {
       setLoading(true);
       
-      // Use environment-aware API endpoint
-      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
-      const url = `${API_BASE_URL}/api/files/${fileId}`;
+      console.log(`Deleting file ${fileId}...`);
       
-      console.log('Deleting file from:', url);
-      
-      // Get auth token
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.error('No authentication token found');
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
-      // Make the real API call to delete a file
-      const response = await fetch(url, { 
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await fetchApi(`/api/files/${fileId}`, { 
+        method: 'DELETE'
       });
       
       if (!response.ok) {
-        console.error(`Failed to delete file: ${response.status} ${response.statusText}`);
         throw new Error(`Failed to delete file: ${response.status} ${response.statusText}`);
       }
       

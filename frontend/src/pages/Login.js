@@ -34,7 +34,7 @@ const Login = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     
     if (!validateForm()) return;
     
@@ -86,7 +86,7 @@ const Login = () => {
             </Alert>
           )}
           
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
+          <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
             <TextField
               margin="normal"
               required
@@ -126,14 +126,16 @@ const Login = () => {
                 ),
               }}
             />
+            
             <Button
               type="submit"
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
               disabled={loading}
+              onClick={handleSubmit}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Signing In...' : 'Sign In'}
             </Button>
             
             {/* Google Login Button */}

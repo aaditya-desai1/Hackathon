@@ -13,6 +13,11 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { fetchApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
+// Import getApiBaseUrl directly from api.js where it's defined
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://express-backend-7m2c.onrender.com'
+  : 'http://localhost:5000';
+
 function FileUploader({ onUploadSuccess, allowedTypes }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
@@ -253,20 +258,21 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
         }
       }
       
-      // Prepare the form data with the processed file
+      // Create a FormData object to send the file
       const formData = new FormData();
       formData.append('file', fileToUpload);
-      
-      console.log('Uploading file...');
+      formData.append('fileName', fileToUpload.name);
       
       // Get auth token
       const token = localStorage.getItem('authToken');
       if (!token) {
-        throw new Error('Authentication required. Please log in again.');
+        throw new Error('Authentication required');
       }
       
-      // Determine API URL based on environment
-      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+      console.log('Uploading file to API...');
+      
+      // For file uploads, we need to use direct fetch with FormData
+      // because fetchApi automatically sets Content-Type to application/json
       const uploadUrl = `${API_BASE_URL}/api/files/upload`;
       
       console.log(`Uploading to: ${uploadUrl}`);

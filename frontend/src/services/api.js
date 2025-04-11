@@ -11,8 +11,8 @@ const getApiBaseUrl = () => {
   
   // Fallback logic
   if (process.env.NODE_ENV === 'production') {
-    // In production (Vercel), use the /api prefix
-    return '/api';
+    // In production, use the actual backend URL instead of relative path
+    return 'https://express-backend-7m2c.onrender.com';
   }
   // In development, use the local backend
   return 'http://localhost:5000';
@@ -27,12 +27,13 @@ const API_BASE_URL = getApiBaseUrl();
  * @returns {Promise} - Fetch promise
  */
 export const fetchApi = async (endpoint, options = {}) => {
-  // Remove /api prefix if it's already in the endpoint and we're in production
-  const apiEndpoint = process.env.NODE_ENV === 'production' && endpoint.startsWith('/api')
-    ? endpoint
-    : `${API_BASE_URL}${endpoint}`;
+  // Ensure endpoint starts with a slash
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  
+  // Don't modify the endpoint in production, use the full API_BASE_URL
+  const apiEndpoint = `${API_BASE_URL}${normalizedEndpoint}`;
     
-  console.log(`[API] Fetching: ${apiEndpoint} (${process.env.NODE_ENV} mode)`);
+  console.log(`[API] Fetching: ${endpoint} (${process.env.NODE_ENV} mode)`);
   console.log(`[API] Base URL: ${API_BASE_URL}`);
   console.log(`[API] Request options:`, options);
   
@@ -56,22 +57,17 @@ export const fetchApi = async (endpoint, options = {}) => {
     }
     
     console.log(`[API] About to fetch from: ${apiEndpoint}`);
-    console.log(`[API] Request details:`, { 
-      method: options.method || 'GET',
-      headers,
-      body: options.body ? JSON.parse(options.body) : undefined
-    });
     
     // IMPORTANT: Removed credentials and cors mode which can cause issues
     const response = await fetch(apiEndpoint, {
       ...options,
       headers,
-      // Remove credentials and cors mode to simplify the request
-      mode: 'cors' // Keep cors mode but remove credentials
+      // Keep cors mode but ensure credentials are properly handled
+      mode: 'cors',
+      credentials: 'same-origin'  // Changed to 'same-origin' to prevent CORS issues
     });
     
     console.log(`[API] Fetch response received, status: ${response.status}`);
-    console.log(`[API] Response headers:`, [...response.headers.entries()]);
     
     if (!response.ok) {
       // Try to parse error response
@@ -155,7 +151,8 @@ export const authApi = {
   login: async (email, password) => {
     console.log(`[AUTH] Attempting login for user: ${email}`);
     try {
-      console.log(`[AUTH] Making API request to /api/users/login`);
+      // Use direct endpoint path without /api prefix, the backend already has this
+      console.log(`[AUTH] Making API request to /users/login`);
       const response = await fetchApi('/api/users/login', {
         method: 'POST',
         body: JSON.stringify({ email, password })
