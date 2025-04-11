@@ -11,6 +11,7 @@ A powerful web-based data visualization tool that automates the process of creat
 - 🤖 **AI-Driven Chart Recommendations** - Get smart suggestions for the best chart types for your specific data
 - 🔄 **Real-time Updates** - See changes reflected immediately as you modify your data or visualization settings
 - 📱 **Responsive Design** - Works seamlessly across desktop and mobile devices
+- 🔒 **Secure Data Handling** - Enterprise-grade security for your sensitive data
 
 ## 🖼️ Screenshots
 
@@ -28,20 +29,24 @@ A powerful web-based data visualization tool that automates the process of creat
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React.js with Material-UI for a modern, responsive interface
-- **Backend**: Node.js with Express for a robust API layer
-- **Database**: MongoDB for flexible data storage
+- **Frontend**: React.js 18+ with Material-UI v5 for a modern, responsive interface
+- **Backend**: Node.js 18+ with Express for a robust API layer
+- **Database**: MongoDB with Mongoose ODM
 - **Visualization**: Chart.js and D3.js for powerful, interactive charts
 - **AI/ML**: TensorFlow.js for intelligent chart recommendations
-- **Authentication**: JWT-based user authentication system
+- **Authentication**: JWT-based user authentication with OAuth integrations
+- **State Management**: Redux Toolkit for efficient state management
+- **API Documentation**: Swagger/OpenAPI
 
 ## ⚙️ Prerequisites
 
-- Node.js (v14 or higher)
-- MongoDB
+- Node.js (v16 or higher)
+- MongoDB (v5.0 or higher)
 - npm or yarn
 
 ## 🚀 Setup Instructions
+
+### Standard Setup
 
 1. Clone the repository
    ```bash
@@ -111,7 +116,18 @@ npm test
 # Frontend tests
 cd frontend
 npm test
+
+# Run with coverage reports
+npm test -- --coverage
 ```
+
+## 🔄 CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+- **Continuous Integration**: Automated tests run on every pull request
+- **Continuous Deployment**: Automatic deployment to staging environment when PRs are merged to the development branch
+- **Production Deployment**: Manual trigger for deployment to production environment from the main branch
 
 ## 🤝 Contributing
 
@@ -166,4 +182,16 @@ The backend is deployed on Render. Detailed deployment instructions are availabl
 #### Environment Setup
 
 - **Frontend**: Set the `REACT_APP_API_URL` environment variable in Vercel to point to your Render backend.
-- **Backend**: Set all required environment variables in Render as outlined in the `RENDER_DEPLOYMENT.md` file. 
+- **Backend**: Set all required environment variables in Render as outlined in the `RENDER_DEPLOYMENT.md` file.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👏 Acknowledgements
+
+- [Chart.js](https://www.chartjs.org/) - Simple yet flexible JavaScript charting
+- [D3.js](https://d3js.org/) - Data-Driven Documents
+- [Material-UI](https://mui.com/) - React UI framework
+- [MongoDB](https://www.mongodb.com/) - Document database
+- [TensorFlow.js](https://www.tensorflow.org/js) - Machine learning for JavaScript 
