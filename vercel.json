@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "frontend/package.json",
+      "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
         "distDir": "build"
@@ -11,11 +11,22 @@
   ],
   "routes": [
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/static/(.*)",
       "dest": "/static/$1"
     },
     {
-      "src": "/(.*\\.(js|json|css|ico|png|jpg|jpeg|svg|gif|woff|woff2|ttf|eot)$)",
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/manifest.json"
+    },
+    {
+      "src": "/(.*\\.(js|css|png|jpg|jpeg|svg|gif))",
       "dest": "/$1"
     },
     {
@@ -26,6 +37,5 @@
   "env": {
     "NODE_ENV": "production",
     "REACT_APP_API_URL": "https://express-backend-7m2c.onrender.com"
-  },
-  "public": false
+  }
 } 
