@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDataContext } from '../App';
+import { useDataContext } from '../contexts/DataContext';
 import { fetchApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import {

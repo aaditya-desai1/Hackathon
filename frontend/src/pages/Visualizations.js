@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useDataContext } from '../App';
+import { useDataContext } from '../contexts/DataContext';
 import {
   Box,
   Typography,
