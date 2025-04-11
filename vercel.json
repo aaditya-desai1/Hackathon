@@ -6,7 +6,7 @@
       "use": "@vercel/static-build",
       "config": {
         "distDir": "build",
-        "installCommand": "npm install && cd frontend && npm install"
+        "installCommand": "npm install && cd frontend && npm install react-scripts@5.0.1"
       }
     }
   ],
