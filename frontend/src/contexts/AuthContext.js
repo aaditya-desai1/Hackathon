@@ -106,6 +106,36 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
+      
+      console.log('Attempting registration with debug mode');
+      
+      // Try the debug version first (which uses direct fetch)
+      try {
+        const debugData = await authApi.debugRegister(username, email, password);
+        console.log('Debug registration successful:', debugData);
+        
+        // Handle successful debug registration
+        if (debugData.token) {
+          localStorage.setItem('authToken', debugData.token);
+          setCurrentUser(debugData.user);
+          
+          // Trigger visualization clearing on registration
+          console.log('Triggering visualization clear on debug registration');
+          const loginEvent = new CustomEvent('user-login');
+          window.dispatchEvent(loginEvent);
+          
+          if (window._clearVisualizationCache) {
+            window._clearVisualizationCache();
+          }
+          
+          return true;
+        }
+      } catch (debugErr) {
+        console.error('Debug registration failed, falling back to regular register:', debugErr);
+        // Continue to regular registration if debug fails
+      }
+      
+      // Regular registration (original code)
       const data = await authApi.register(username, email, password);
       
       if (data.token) {
