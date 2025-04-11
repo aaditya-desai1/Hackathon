@@ -72,11 +72,12 @@ export const AuthProvider = ({ children }) => {
         return true;
       } else {
         console.error('Login failed: No token received', data);
-        throw new Error(data.error || 'Login failed. No token received from server.');
+        throw new Error('Invalid email or password');
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please check your credentials.');
+      // Set simplified error message regardless of the actual error
+      setError('Invalid email or password');
       return false;
     } finally {
       setLoading(false);
