@@ -223,25 +223,11 @@ function Visualizations() {
     try {
       console.log('Analyzing file with ID:', file._id);
       
-      // Get the auth token
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        console.error('No authentication token found');
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
-      // Use environment-aware API endpoint
-      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
-      const url = `${API_BASE_URL}/api/files/${file._id}/analyze`;
-      
-      console.log('Sending analysis request to:', url);
-      
-      // Make an authenticated POST request - important: must be POST not GET
-      const response = await fetch(url, {
-        method: 'POST', // This was the issue - should be POST not GET
+      // Use fetchApi service for consistent error handling - POST method is important
+      const response = await fetchApi(`/api/files/${file._id}/analyze`, {
+        method: 'POST', // This is critical - analyze endpoint expects POST not GET
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({}) // Empty body for POST request
       });
@@ -380,39 +366,31 @@ function Visualizations() {
     console.log('Generating AI recommended charts for file:', file.name);
     console.log('Analysis data:', analysisData);
     
-    // Get auth token
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      console.error('No authentication token found for AI recommendations');
-      // Fall back to basic recommendations without AI
-      fallbackToBasicRecommendations(file, recommendedAxes, analysisData);
-      return;
-    }
+    // Use fetchApi service for consistent error handling
+    const url = `/api/visualizations/recommend/${file._id}`;
     
-    // Use environment-aware API endpoint
-    const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
-    const url = `${API_BASE_URL}/api/visualizations/recommend/${file._id}`;
+    console.log('Fetching AI recommendations from API service');
     
-    console.log('Fetching AI recommendations from:', url);
-    
-    // Fetch the AI recommendations from the backend with authentication
-    fetch(url, {
+    // Fetch the AI recommendations from the backend
+    fetchApi(url, {
+      method: 'POST', // Changed to POST to match backend route
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({}) // Empty body for POST request
     })
       .then(response => {
         if (!response.ok) {
-          throw new Error('Failed to get AI recommendations');
+          throw new Error(`Failed to get AI recommendations: ${response.status}`);
         }
         return response.json();
       })
-      .then(recommendationData => {
-        console.log('AI recommendations received:', recommendationData);
+      .then(data => {
+        console.log('AI recommendations received:', data);
         
-        if (recommendationData.success && recommendationData.chartRecommendations) {
+        if (data.success && data.chartRecommendations) {
           // Use the AI recommended chart types with confidence scores
-          const recommendations = recommendationData.chartRecommendations.map(rec => ({
+          const recommendations = data.chartRecommendations.map(rec => ({
             chartType: rec.chartType,
             confidence: rec.confidence,
             reason: rec.reason,
@@ -2151,26 +2129,17 @@ function Visualizations() {
 
   const renderChart = (visualization) => {
     try {
-      console.log('Rendering visualization:', visualization);
+      // Get chart container
+      console.log('Rendering chart for visualization:', visualization);
+      const chartContainer = document.getElementById('chartContainer');
       
-      if (!visualization) {
-        console.error('Invalid visualization object');
+      if (!chartContainer) {
+        console.error('Chart container not found');
         return;
       }
       
-      // Get the canvas element
-      const canvas = document.getElementById(`visualization-chart-${visualization._id}`);
-      if (!canvas) {
-        console.error('Canvas element not found for visualization', visualization._id);
-        return;
-      }
+      const ctx = chartContainer.getContext('2d');
       
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        console.error('Could not get 2D context for visualization canvas', visualization._id);
-        return;
-      }
-
       // Check if there's an existing chart instance and destroy it
       if (chartInstance) {
         chartInstance.destroy();
