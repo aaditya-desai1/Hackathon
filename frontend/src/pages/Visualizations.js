@@ -59,7 +59,8 @@ import {
   FindInPage as FileSearchIcon,
   CompareArrows as CompareArrowsIcon,
   CheckCircle as CheckCircleIcon,
-  BarChart as ChartIcon
+  BarChart as ChartIcon,
+  InsertDriveFile as InsertDriveFileIcon
 } from '@mui/icons-material';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
@@ -2119,30 +2120,57 @@ function Visualizations() {
   };
 
   const renderPlaceholder = () => {
-    if (loading) {
-      return (
-        <Grid item xs={12}>
-          <Box sx={{ width: '100%', mt: 2 }}>
-            <LinearProgress />
-            <Typography sx={{ mt: 1 }} align="center" color="text.secondary">
-              Loading...
-            </Typography>
-          </Box>
-        </Grid>
-      );
-    }
+    const hasAnalysis = analysis && analysis.columns && analysis.columns.length > 0;
     
-    if (visualizations.length === 0) {
+    // If there's no file selected or no analysis yet, show the empty state
+    if (!selectedFile || !hasAnalysis) {
       return (
-        <Grid item xs={12}>
-          <Typography variant="body1" align="center" color="text.secondary" sx={{ mt: 4 }}>
-            No visualizations yet. Click the "Create Visualization" button to create one.
+        <Box sx={{ 
+          textAlign: 'center', 
+          py: 8,
+          border: '1px dashed',
+          borderColor: 'divider',
+          borderRadius: 2,
+          bgcolor: 'background.default'
+        }}>
+          <BarChartIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h5" gutterBottom>
+            No Data Selected
           </Typography>
-        </Grid>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            Select a file to get started with visualization options.
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setOpenDialog(true)}
+            startIcon={<InsertDriveFileIcon />}
+          >
+            Select Data File
+          </Button>
+        </Box>
       );
     }
     
-    return null;
+    // If a file is selected but no charts are being previewed yet, show options
+    return (
+      <Box sx={{ mt: 4 }}>
+        {/* Show analysis summary */}
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Data Summary: {selectedFile?.name}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {analysis.rowCount} rows, {analysis.columns.length} columns
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Select visualization type and columns to generate a chart.
+          </Typography>
+        </Paper>
+        
+        {renderRecommendedVisualizations()}
+      </Box>
+    );
   };
 
   const renderChart = (visualization) => {
@@ -2976,6 +3004,49 @@ function Visualizations() {
     }
   };
 
+  // Add listener for login/logout events to clear visualizations
+  useEffect(() => {
+    // Register function to clear visualizations on demand (used by auth context)
+    window._clearVisualizationCache = () => {
+      console.log('External call to clear visualizations cache');
+      setPreviewCharts([]);
+      setChartPreviewInstances({});
+      setPreviewFile(null);
+      setAnalysis(null);
+      cleanLocalStorage();
+    };
+    
+    // Handle logout events
+    const handleLogout = () => {
+      console.log('Logout event detected in Visualizations component, clearing all visualizations');
+      setPreviewCharts([]);
+      setChartPreviewInstances({});
+      setPreviewFile(null);
+      setAnalysis(null);
+      cleanLocalStorage();
+    };
+    
+    // Handle login events
+    const handleLogin = () => {
+      console.log('Login event detected in Visualizations component, clearing all visualizations');
+      setPreviewCharts([]);
+      setChartPreviewInstances({});
+      setPreviewFile(null);
+      setAnalysis(null);
+      cleanLocalStorage();
+    };
+    
+    window.addEventListener('user-logout', handleLogout);
+    window.addEventListener('user-login', handleLogin);
+    
+    // Cleanup on component unmount
+    return () => {
+      delete window._clearVisualizationCache;
+      window.removeEventListener('user-logout', handleLogout);
+      window.removeEventListener('user-login', handleLogin);
+    };
+  }, []);
+
   const renderSavedChart = (visualization) => {
     // ... existing function
   };
@@ -3045,6 +3116,18 @@ function Visualizations() {
       return null;
     }
   };
+  
+  // Clear visualizations on component mount if user is not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      console.log('User not authenticated, clearing visualizations');
+      setPreviewCharts([]);
+      setChartPreviewInstances({});
+      setPreviewFile(null);
+      setAnalysis(null);
+      cleanLocalStorage();
+    }
+  }, [isAuthenticated]);
   
   return (
     <Box 

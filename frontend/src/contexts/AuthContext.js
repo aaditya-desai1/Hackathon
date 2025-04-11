@@ -54,6 +54,9 @@ export const AuthProvider = ({ children }) => {
       const data = await authApi.login(email, password);
       
       if (data.token) {
+        // Clear visualization data from localStorage before setting new user
+        clearVisualizationData();
+        
         localStorage.setItem('authToken', data.token);
         setCurrentUser(data.user);
         
@@ -89,6 +92,9 @@ export const AuthProvider = ({ children }) => {
       const data = await authApi.googleLogin(credential);
       
       if (data.token) {
+        // Clear visualization data from localStorage before setting new user
+        clearVisualizationData();
+        
         localStorage.setItem('authToken', data.token);
         setCurrentUser(data.user);
         
@@ -198,9 +204,34 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // This function directly clears all visualization-related data from localStorage
+  const clearVisualizationData = () => {
+    console.log('Directly clearing all visualization data from localStorage');
+    localStorage.removeItem('previewCharts');
+    localStorage.removeItem('previewFile');
+    localStorage.removeItem('analysisCache');
+    
+    // Clear any other visualization-related items
+    const itemsToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.includes('chart') || key?.includes('visualization') || key?.includes('preview')) {
+        itemsToRemove.push(key);
+      }
+    }
+    
+    // Remove items in a separate loop to avoid index issues
+    itemsToRemove.forEach(key => {
+      localStorage.removeItem(key);
+    });
+  };
+
   // Logout user and clear data
   const logout = () => {
     console.log('User logging out, clearing auth token and data');
+    
+    // Clear visualization data directly
+    clearVisualizationData();
     
     // Remove auth token
     localStorage.removeItem('authToken');
