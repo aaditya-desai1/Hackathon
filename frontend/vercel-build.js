@@ -228,6 +228,37 @@ code {
     }
   }
   
+  // Create a favicon.ico if it doesn't exist
+  const faviconPath = path.join(buildDir, 'favicon.ico');
+  if (!fs.existsSync(faviconPath)) {
+    // Create a minimal 16x16 favicon (transparent pixel)
+    const faviconData = Buffer.from('AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADtGY0c7RmOHO0ZjhztGY0gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPEdjJDtGY887RmP/O0Zj/ztGY/87RmP/O0ZjzztGYyUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADtGY8I7RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmP/O0ZjwwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA7RmOPO0Zj/ztGY/87RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmOQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAO0ZjTDtGY/87RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY00AAAAAAAAAAAAAAAAAAAAAAAAAAD1CY0M7RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmP/O0ZjRQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADtGY8g7RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY8kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADtGY9E7RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmPRAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAO0ZjfztGY/87RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY4EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD1GYzI7RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmP/O0ZjMgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA7RmNpO0Zj/ztGY/87RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmNqAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADtGY987RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmP/O0Zj4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA7RmOEO0Zj/ztGY/87RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmOFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADtGYyg7RmP3O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmP/O0Zj9ztGYygAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOkdjAjtGY647RmP/O0Zj/ztGY/87RmP/O0Zj/ztGY/87RmPBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADtGY4g7RmPpO0Zj9ztGY/c7RmPqO0ZjiQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', 'base64');
+    fs.writeFileSync(faviconPath, faviconData);
+    console.log('Created basic favicon.ico');
+  }
+  
+  // Create a basic manifest.json if it doesn't exist
+  const manifestPath = path.join(buildDir, 'manifest.json');
+  if (!fs.existsSync(manifestPath)) {
+    const manifestData = {
+      "short_name": "DataVizPro",
+      "name": "DataVizPro - Data Visualization Tool",
+      "icons": [
+        {
+          "src": "favicon.ico",
+          "sizes": "64x64 32x32 24x24 16x16",
+          "type": "image/x-icon"
+        }
+      ],
+      "start_url": ".",
+      "display": "standalone",
+      "theme_color": "#000000",
+      "background_color": "#ffffff"
+    };
+    fs.writeFileSync(manifestPath, JSON.stringify(manifestData, null, 2));
+    console.log('Created basic manifest.json');
+  }
+  
   console.log('Manual React build created successfully.');
 }
 
@@ -261,6 +292,14 @@ try {
       throw new Error('Failed to create even fallback files. Deployment will fail.');
     }
   }
+  
+  // Copy the build directory to the root level as well for Vercel
+  console.log('Copying build directory to root level for Vercel...');
+  const rootBuildDir = path.join(__dirname, '..', 'build');
+  fs.ensureDirSync(rootBuildDir);
+  fs.emptyDirSync(rootBuildDir);
+  fs.copySync(buildDir, rootBuildDir);
+  console.log('Successfully copied build to root level.');
   
   console.log('Build process completed. Ready for deployment.');
 } catch (error) {
