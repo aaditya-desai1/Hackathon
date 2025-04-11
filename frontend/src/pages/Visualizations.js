@@ -999,27 +999,20 @@ function Visualizations() {
     
     const newInstances = {};
     
-    // Create chart instances for each chart type
-    charts.forEach((chart, index) => {
-      // Generate a consistent key for each chart
-      const chartKey = chart.isAIRecommended ? 
-        `ai-${chart.chartType}` : 
-        `custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`;
-      
-      console.log(`Setting up chart: ${chartKey}`);
-      
-      // For debugging, log all canvas elements currently in the refs
-      console.log('Current canvas refs:', Object.keys(chartPreviewRefs.current));
-      
-      // For debugging, log all DOM canvas elements immediately
-      setTimeout(() => {
-        const allCanvases = document.querySelectorAll('canvas');
-        console.log(`Found ${allCanvases.length} canvas elements on the page:`, 
-          Array.from(allCanvases).map(c => c.id || 'unnamed'));
-      }, 500);
-      
-      // Schedule creation of chart instance after DOM update with increased delay for reliability
-      setTimeout(() => {
+    // Wait a bit longer to ensure DOM is fully ready before attempting to render charts
+    setTimeout(() => {
+      // Create chart instances for each chart type
+      charts.forEach((chart, index) => {
+        // Generate a consistent key for each chart
+        const chartKey = chart.isAIRecommended ? 
+          `ai-${chart.chartType}` : 
+          `custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`;
+        
+        console.log(`Setting up chart: ${chartKey}`);
+        
+        // For debugging, log all canvas elements currently in the refs
+        console.log('Current canvas refs:', Object.keys(chartPreviewRefs.current));
+        
         // Double-check canvas existence before creating instance
         const canvasElement = getCanvasElement(chartKey);
         
@@ -1047,13 +1040,11 @@ function Visualizations() {
             console.error(`Could not find any matching canvas for ${chartKey}`);
           }
         }
-      }, 1200); // Increased timeout to ensure DOM is ready
-    });
-    
-    // Update state after all chart instances are created
-    setTimeout(() => {
+      });
+      
+      // Update state after all chart instances are created
       setChartPreviewInstances(newInstances);
-    }, 2000);
+    }, 1500); // Increased timeout to ensure DOM is fully ready
   };
   
   // Modified createChartInstance function to include fileId validation
@@ -2266,27 +2257,33 @@ function Visualizations() {
               chartCount: parsedCharts.length
             });
             
+            // Set the file and charts first
+            setPreviewFile(parsedFile);
+            setPreviewCharts(parsedCharts);
+            
             // Check if the file still exists
-            const response = await fetch(`/api/files/${parsedFile._id}`);
-            if (!response.ok) {
-              // File doesn't exist anymore, but still show visualizations with warning
-              console.log('Saved file no longer exists, showing warning');
-              setPreviewFile(parsedFile);
-              setPreviewCharts(parsedCharts);
+            try {
+              const response = await fetch(`/api/files/${parsedFile._id}`);
+              if (!response.ok) {
+                // File doesn't exist anymore, but still show visualizations with warning
+                console.log('Saved file no longer exists, showing warning');
+                setFileNotFound(true);
+              } else {
+                // File exists, restore visualizations
+                console.log('File exists, restoring visualizations');
+                setFileNotFound(false);
+              }
+            } catch (fetchError) {
+              console.error('Error checking file existence:', fetchError);
+              // Still show charts even if we can't verify file existence
               setFileNotFound(true);
-            } else {
-              // File exists, restore visualizations
-              console.log('File exists, restoring visualizations');
-              setPreviewFile(parsedFile);
-              setPreviewCharts(parsedCharts);
-              setFileNotFound(false);
             }
             
-            // Schedule rendering after component mounts
+            // Wait for the DOM to be ready before rendering charts
             setTimeout(() => {
               console.log('Rendering restored charts...');
               renderPreviewCharts(parsedCharts);
-            }, 300);
+            }, 2000); // Longer timeout for page refresh scenarios
           } catch (error) {
             console.error('Error restoring saved charts:', error);
             // Clear invalid data
@@ -2294,15 +2291,11 @@ function Visualizations() {
             localStorage.removeItem('previewFile');
           }
         }
-      } else {
-        console.log('Already have charts loaded, not restoring from localStorage', {
-          currentChartCount: previewCharts.length
-        });
       }
     };
     
     restoreAndValidateCharts();
-  }, [previewCharts.length]);
+  }, []);
 
   // Update UI to show file not found warning
   useEffect(() => {
@@ -2794,57 +2787,69 @@ function Visualizations() {
               {previewCharts
                 .filter(chart => chart.isAIRecommended)
                 .sort((a, b) => b.confidence - a.confidence)
-                .map((chart, index) => (
-                <Grid item xs={12} sm={6} key={`ai-${chart.chartType}-${index}`}>
-                  <Card sx={{ 
-                    height: '100%',
-                    bgcolor: 'background.paper',
-                    backgroundImage: 'none',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: '0 6px 12px rgba(25, 118, 210, 0.3)',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    border: '2px solid #1976d2',
-                    transform: 'scale(1.02)',
-                    transition: 'transform 0.2s ease-in-out',
-                    zIndex: 1
-                  }}>
-                    <CardHeader
-                      title={
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
-                            {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
-                          </Typography>
-                        </Box>
-                      }
-                      subheader={chart.description}
-                      sx={{ pb: 0 }}
-                    />
-                    <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
-                      <canvas 
-                        ref={el => chartPreviewRefs.current[`ai-${chart.chartType}`] = el}
-                        style={{ width: '100%', height: '100%' }}
-                        id={`chart-ai-${chart.chartType}-${index}`}
-                      />
-                    </Box>
-                    <Box sx={{ p: 2, mt: 'auto' }}>
-                      <Button 
-                        variant="contained"
-                        color="primary"
-                        fullWidth
-                        onClick={() => handleSaveChart(chart)}
-                        disabled={fileNotFound}
-                        sx={{
-                          boxShadow: 2
-                        }}
-                      >
-                        Save Visualization
-                      </Button>
-                    </Box>
-                  </Card>
-                </Grid>
-              ))}
+                .map((chart, index) => {
+                  // Generate a consistent key for each chart
+                  const chartKey = `ai-${chart.chartType}`;
+                  
+                  return (
+                  <Grid item xs={12} sm={6} key={`ai-${chart.chartType}-${index}`}>
+                    <Card sx={{ 
+                      height: '100%',
+                      bgcolor: 'background.paper',
+                      backgroundImage: 'none',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      boxShadow: '0 6px 12px rgba(25, 118, 210, 0.3)',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      border: '2px solid #1976d2',
+                      transform: 'scale(1.02)',
+                      transition: 'transform 0.2s ease-in-out',
+                      zIndex: 1
+                    }}>
+                      <Box sx={{ 
+                        bgcolor: '#1976d2', 
+                        color: 'white',
+                        p: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}>
+                        <Typography variant="h6" component="div">
+                          {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                        </Typography>
+                      </Box>
+                      <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
+                        {chart.description}
+                      </Typography>
+                      <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
+                        <canvas 
+                          ref={el => {
+                            if (el) chartPreviewRefs.current[chartKey] = el;
+                          }}
+                          style={{ width: '100%', height: '100%' }}
+                          id={`chart-${chartKey}-${index}`}
+                          data-chart-type={chart.chartType}
+                          data-is-ai="true"
+                        />
+                      </Box>
+                      <Box sx={{ p: 2, mt: 'auto' }}>
+                        <Button 
+                          variant="contained"
+                          color="primary"
+                          fullWidth
+                          onClick={() => handleSaveChart(chart)}
+                          disabled={fileNotFound}
+                          sx={{
+                            boxShadow: 2
+                          }}
+                        >
+                          Save Visualization
+                        </Button>
+                      </Box>
+                    </Card>
+                  </Grid>
+                )})}
             </Grid>
           </Paper>
         )}
@@ -2867,61 +2872,72 @@ function Visualizations() {
             </Box>
             
             <Grid container spacing={3}>
-              {previewCharts.filter(chart => !chart.isAIRecommended).map((chart, index) => (
-                <Grid item xs={12} sm={6} key={`custom-${chart.chartType}-${index}`}>
-                  <Card sx={{ 
-                    height: '100%',
-                    bgcolor: 'background.paper',
-                    backgroundImage: 'none',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: '0 6px 12px rgba(25, 118, 210, 0.3)',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    border: '2px solid #1976d2',
-                    transform: 'scale(1.02)',
-                    transition: 'transform 0.2s ease-in-out',
-                    zIndex: 1
-                  }}>
-                    <Box sx={{ 
-                      bgcolor: 'primary.main', 
-                      color: 'white',
-                      p: 2,
+              {previewCharts.filter(chart => !chart.isAIRecommended).map((chart, index) => {
+                // Generate a consistent key for each chart
+                const chartKey = `custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`;
+                
+                return (
+                  <Grid item xs={12} sm={6} key={`custom-${chart.chartType}-${index}`}>
+                    <Card sx={{ 
+                      height: '100%',
+                      bgcolor: 'background.paper',
+                      backgroundImage: 'none',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between'
+                      flexDirection: 'column',
+                      boxShadow: '0 6px 12px rgba(25, 118, 210, 0.3)',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      border: '2px solid #1976d2',
+                      transform: 'scale(1.02)',
+                      transition: 'transform 0.2s ease-in-out',
+                      zIndex: 1
                     }}>
-                      <Typography variant="h6" component="div">
-                        {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                      <Box sx={{ 
+                        bgcolor: 'primary.main', 
+                        color: 'white',
+                        p: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}>
+                        <Typography variant="h6" component="div">
+                          {chart.chartType.charAt(0).toUpperCase() + chart.chartType.slice(1)} Chart
+                        </Typography>
+                      </Box>
+                      <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
+                        {chart.yAxis} by {chart.xAxis}
                       </Typography>
-                    </Box>
-                    <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
-                      {chart.yAxis} by {chart.xAxis}
-                    </Typography>
-                    <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
-                      <canvas 
-                        ref={el => chartPreviewRefs.current[`custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`] = el}
-                        style={{ width: '100%', height: '100%' }}
-                        id={`chart-custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`}
-                      />
-                    </Box>
-                    <Box sx={{ p: 2, mt: 'auto' }}>
-                      <Button 
-                        variant="contained" 
-                        color="primary"
-                        fullWidth
-                        onClick={() => handleSaveChart(chart)}
-                        disabled={fileNotFound}
-                        sx={{
-                          boxShadow: 2
-                        }}
-                      >
-                        Save Visualization
-                      </Button>
-                    </Box>
-                  </Card>
-                </Grid>
-              ))}
+                      <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
+                        <canvas 
+                          ref={el => {
+                            if (el) chartPreviewRefs.current[chartKey] = el;
+                          }}
+                          style={{ width: '100%', height: '100%' }}
+                          id={`chart-${chartKey}-${index}`}
+                          data-chart-type={chart.chartType}
+                          data-is-ai="false"
+                          data-x-axis={chart.xAxis}
+                          data-y-axis={chart.yAxis}
+                        />
+                      </Box>
+                      <Box sx={{ p: 2, mt: 'auto' }}>
+                        <Button 
+                          variant="contained" 
+                          color="primary"
+                          fullWidth
+                          onClick={() => handleSaveChart(chart)}
+                          disabled={fileNotFound}
+                          sx={{
+                            boxShadow: 2
+                          }}
+                        >
+                          Save Visualization
+                        </Button>
+                      </Box>
+                    </Card>
+                  </Grid>
+                );
+              })}
             </Grid>
           </Paper>
         )}
