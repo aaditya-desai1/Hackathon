@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDataContext } from '../App';
+import { useAuth } from '../contexts/AuthContext';
+import { useDataContext } from '../contexts/DataContext';
 import {
   Box,
   Grid,
@@ -30,7 +31,6 @@ import {
   Save as SaveIcon,
 } from '@mui/icons-material';
 import PageHeader from '../components/common/PageHeader';
-import { useAuth } from '../contexts/AuthContext';
 import { fetchApi } from '../services/api';
 
 function Dashboard() {
