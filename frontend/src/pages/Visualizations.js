@@ -1249,6 +1249,8 @@ function Visualizations() {
     // If context isn't available or chart data is missing, exit early
     if (!ctx || !chart || !chart.fileId || !chart.yAxis) {
       console.warn('Invalid chart data or context:', { chart, hasContext: !!ctx });
+      // Remove loading overlay even if chart data is invalid
+      removeLoadingOverlay(chartKey);
       return;
     }
     
@@ -1378,8 +1380,13 @@ function Visualizations() {
       
       console.log(`Chart created: ${chartKey}`);
       
+      // Remove the loading overlay after chart creation is successful
+      removeLoadingOverlay(chartKey);
+      
     } catch (chartError) {
       console.error('Error creating chart instance:', chartError);
+      // Remove loading overlay even if there's an error
+      removeLoadingOverlay(chartKey);
     }
   };
   
@@ -1702,7 +1709,15 @@ function Visualizations() {
       },
       animation: {
         duration: 1000,
-        easing: 'easeOutQuart'
+        easing: 'easeOutQuart',
+        onComplete: function() {
+          console.log('Chart animation completed - removing loading overlay');
+          // Remove loading overlay after animation completes
+          const loadingElement = document.getElementById('visualization-loading-overlay');
+          if (loadingElement) {
+            loadingElement.remove();
+          }
+        }
       },
       scales: chartType !== 'pie' ? {
         x: {
@@ -2145,6 +2160,43 @@ function Visualizations() {
         chartInstance.destroy();
       }
       
+      // Create loading overlay for the chart container
+      const loadingOverlayId = 'visualization-loading-overlay';
+      // Remove any existing loading overlay first
+      const existingOverlay = document.getElementById(loadingOverlayId);
+      if (existingOverlay) {
+        existingOverlay.remove();
+      }
+      
+      // Create new loading overlay
+      const loadingOverlay = document.createElement('div');
+      loadingOverlay.id = loadingOverlayId;
+      loadingOverlay.style.position = 'absolute';
+      loadingOverlay.style.top = '0';
+      loadingOverlay.style.left = '0';
+      loadingOverlay.style.width = '100%';
+      loadingOverlay.style.height = '100%';
+      loadingOverlay.style.display = 'flex';
+      loadingOverlay.style.justifyContent = 'center';
+      loadingOverlay.style.alignItems = 'center';
+      loadingOverlay.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+      loadingOverlay.style.zIndex = '10';
+      loadingOverlay.innerHTML = `
+        <div style="text-align: center;">
+          <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <div style="margin-top: 1rem; font-weight: bold;">Loading chart data...</div>
+        </div>
+      `;
+      
+      // Make chart container position relative if not already
+      if (chartContainer.style.position !== 'relative') {
+        chartContainer.style.position = 'relative';
+      }
+      
+      chartContainer.appendChild(loadingOverlay);
+      
       // Modern color palette
       const modernColors = [
         'rgba(53, 162, 235, 0.8)',
@@ -2195,6 +2247,12 @@ function Visualizations() {
           
           const xAxisLabels = dataResult.chartData.labels;
           const yAxisData = dataResult.chartData.values;
+          
+          // Remove loading overlay after data is loaded
+          const loadingElement = document.getElementById(loadingOverlayId);
+          if (loadingElement) {
+            loadingElement.remove();
+          }
           
           // Create chart data based on the chart type
           if (chartType === 'scatter') {
@@ -2275,30 +2333,30 @@ function Visualizations() {
           }
         
           // Chart options
-      const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
+          const options = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
                 display: chartType === 'pie',
                 position: 'top',
-            labels: {
-              usePointStyle: true,
+                labels: {
+                  usePointStyle: true,
                   padding: 20,
-              font: {
+                  font: {
                     size: 12
                   }
                 }
               },
-          tooltip: {
+              tooltip: {
                 backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            padding: 12,
+                padding: 12,
                 titleColor: '#ffffff',
-            titleFont: {
+                titleFont: {
                   size: 14,
                   weight: 'bold'
-            },
-            bodyFont: {
+                },
+                bodyFont: {
                   size: 13
                 },
                 cornerRadius: 6,
@@ -2325,30 +2383,56 @@ function Visualizations() {
             },
             animation: {
               duration: 1000,
-              easing: 'easeOutQuart'
+              easing: 'easeOutQuart',
+              onComplete: function() {
+                console.log('Chart animation completed - removing loading overlay');
+                // Remove loading overlay after animation completes
+                const loadingElement = document.getElementById('visualization-loading-overlay');
+                if (loadingElement) {
+                  loadingElement.remove();
+                }
+              }
             },
             scales: chartType !== 'pie' ? {
               x: {
                 grid: {
                   display: false
-            },
-            ticks: {
-              font: {
+                },
+                ticks: {
+                  font: {
                     size: 12
                   },
                   maxRotation: 45,
                   minRotation: 0
-            }
-          },
-          y: {
+                },
+                title: {
+                  display: true,
+                  text: xAxisLabel || 'X-Axis',
+                  font: {
+                    size: 14,
+                    weight: 'bold'
+                  },
+                  padding: { top: 10, bottom: 0 }
+                }
+              },
+              y: {
                 beginAtZero: true,
                 grid: {
                   borderDash: [4, 4]
-            },
-            ticks: {
-              font: {
+                },
+                ticks: {
+                  font: {
                     size: 12
                   }
+                },
+                title: {
+                  display: true,
+                  text: yAxisLabel || 'Y-Axis',
+                  font: {
+                    size: 14, 
+                    weight: 'bold'
+                  },
+                  padding: { top: 0, bottom: 10 }
                 }
               }
             } : {}
@@ -2368,12 +2452,25 @@ function Visualizations() {
         } catch (dataError) {
           console.error('Error fetching or rendering chart data:', dataError);
           
+          // Remove loading overlay in case of error
+          const loadingElement = document.getElementById('visualization-loading-overlay');
+          if (loadingElement) {
+            loadingElement.remove();
+          }
+          
           // Show error message on canvas
           showErrorMessage(ctx, 'Could not load chart data. Please try again.');
         }
       })();
     } catch (error) {
       console.error('Error rendering visualization:', error);
+      
+      // Remove loading overlay in case of error
+      const loadingElement = document.getElementById('visualization-loading-overlay');
+      if (loadingElement) {
+        loadingElement.remove();
+      }
+      
       showErrorMessage(ctx, 'Error rendering visualization. Please try again.');
     }
   };
