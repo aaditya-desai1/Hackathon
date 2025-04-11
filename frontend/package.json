@@ -27,10 +27,10 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "DISABLE_ESLINT_PLUGIN=true CI=false react-scripts build",
+    "build": "CI=false DISABLE_ESLINT_PLUGIN=true react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "vercel-build": "DISABLE_ESLINT_PLUGIN=true CI=false node ./vercel-build.js"
+    "vercel-build": "CI=false DISABLE_ESLINT_PLUGIN=true react-scripts build && node ./vercel-build.js"
   },
   "eslintConfig": {
     "extends": [

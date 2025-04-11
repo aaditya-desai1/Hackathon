@@ -3,10 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "vercel-build": "cd frontend && npm install && npm install -g react-scripts && node vercel-build.js"
+    "vercel-build": "node build-script.js",
+    "start": "cd frontend && npm start",
+    "build": "node build-script.js",
+    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install"
   },
   "engines": {
-    "node": "22.x"
+    "node": ">=16.x"
   },
   "dependencies": {
     "cross-env": "^7.0.3",
