@@ -1,6 +1,6 @@
 const Visualization = require('../models/Visualization');
 const File = require('../models/File');
-const { parseCSV, parseJSON } = require('../utils/fileParser');
+const { parseCSV, parseJSON } = require('../utils/dataParser');
 const { recommendChartType } = require('../services/aiService');
 
 // Create new visualization
