@@ -33,16 +33,20 @@ import {
 import {
   BarChart as ChartIcon,
   Add as AddIcon,
-  Timeline as TimelineIcon,
-  BubbleChart as ScatterIcon,
-  ShowChart as LineIcon,
-  PieChart as PieIcon,
-  Delete as DeleteIcon,
+  FilterList as FilterListIcon,
+  FindInPage as FileSearchIcon,
   Edit as EditIcon,
+  Delete as DeleteIcon,
+  CompareArrows as CompareArrowsIcon,
+  Close as CloseIcon,
   CheckCircle as CheckCircleIcon,
-  ArrowBack as ArrowBackIcon,
   Star as StarIcon,
+  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import PieChartIcon from '@mui/icons-material/PieChart';
+import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import PageHeader from '../components/common/PageHeader';
 import { Chart, registerables } from 'chart.js/auto';
 import { fetchApi } from '../services/api';
@@ -71,6 +75,7 @@ function Visualizations() {
   const [chartInstance, setChartInstance] = useState(null);
   const [selectedXAxis, setSelectedXAxis] = useState('');
   const [selectedYAxis, setSelectedYAxis] = useState('');
+  const [selectedChartType, setSelectedChartType] = useState('bar');
   const [showChartOptions, setShowChartOptions] = useState(false);
   const [previewCharts, setPreviewCharts] = useState([]);
   const [previewFile, setPreviewFile] = useState(null);
@@ -928,6 +933,70 @@ function Visualizations() {
     }
   };
 
+  // Function to handle creating a custom chart directly from AI recommendations section
+  const handleCreateCustomChart = () => {
+    if (previewFile) {
+      // Open the custom chart dialog (re-using axisSelectionOpen state)
+      setSelectedFile(previewFile);
+      
+      // Reset axis and chart type selections
+      setSelectedXAxis('');
+      setSelectedYAxis('');
+      setSelectedChartType('bar');
+      
+      // Open the chart creation dialog
+      setAxisSelectionOpen(true);
+      
+      // Make sure analysis data is available
+      if (!analysis || !analysis.columns || analysis.columns.length === 0) {
+        console.log('Analysis data not available, fetching it for custom chart');
+        setLoading(true);
+        
+        // Fetch analysis data for the file
+        fetch(`/api/files/${previewFile._id}/analyze`)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('Failed to analyze file');
+            }
+            return response.json();
+          })
+          .then(analysisData => {
+            console.log('Analysis fetched for custom chart:', analysisData);
+            
+            if (analysisData.success && analysisData.analysis) {
+              // Extract column types from analysis
+              const columnTypes = {};
+              Object.keys(analysisData.analysis.basicAnalysis || {}).forEach(column => {
+                columnTypes[column] = analysisData.analysis.basicAnalysis[column].type;
+              });
+              
+              // Set the analysis data
+              setAnalysis({
+                rowCount: analysisData.analysis.summary?.totalRows || 0,
+                columns: Object.keys(analysisData.analysis.basicAnalysis || {}),
+                columnTypes: columnTypes,
+                visualizationSuggestions: []
+              });
+              
+              setError(null);
+            } else {
+              throw new Error('Invalid analysis data');
+            }
+          })
+          .catch(err => {
+            console.error('Error fetching analysis for custom chart:', err);
+            setError('Failed to analyze file. Please try again.');
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
+    } else {
+      // If no file is selected yet, show a message
+      setError('Please select a file first');
+    }
+  };
+
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setAxisSelectionOpen(false);
@@ -945,32 +1014,31 @@ function Visualizations() {
     setAxisSelectionOpen(false);
     setOpenDialog(false);
     
-    // Create preview charts for all chart types
+    // Create a single custom chart of the selected type
     const previewData = [];
-    ['bar', 'line', 'pie', 'scatter'].forEach(chartType => {
-      const suggestion = analysis.visualizationSuggestions.find(s => s.type === chartType) || {
-        type: chartType,
-        confidence: chartType === 'bar' ? 85 : chartType === 'line' ? 75 : chartType === 'pie' ? 65 : 60
-      };
-      
-      previewData.push({
-        chartType,
-        name: `${selectedFile.name} - ${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`,
-        description: `Custom Chart: ${selectedYAxis} by ${selectedXAxis}`,
-        fileId: selectedFile._id,
-        confidence: suggestion.confidence,
-        xAxis: selectedXAxis,
-        yAxis: selectedYAxis,
-        file: selectedFile,
-        isAIRecommended: false
-      });
+    
+    // Get confidence based on chart type
+    const confidence = 
+      selectedChartType === 'bar' ? 85 : 
+      selectedChartType === 'line' ? 75 : 
+      selectedChartType === 'pie' ? 65 : 60;
+    
+    previewData.push({
+      chartType: selectedChartType,
+      name: `${selectedFile.name} - ${selectedChartType.charAt(0).toUpperCase() + selectedChartType.slice(1)} Chart`,
+      description: `Custom Chart: ${selectedYAxis} by ${selectedXAxis}`,
+      fileId: selectedFile._id,
+      confidence: confidence,
+      xAxis: selectedXAxis,
+      yAxis: selectedYAxis,
+      file: selectedFile,
+      isAIRecommended: false
     });
     
     setPreviewFile(selectedFile);
     setPreviewCharts(prevCharts => {
-      // Maintain existing AI-recommended charts if any
-      const aiCharts = prevCharts.filter(chart => chart.isAIRecommended);
-      return [...aiCharts, ...previewData];
+      // Maintain existing charts
+      return [...prevCharts, ...previewData];
     });
     
     // Schedule rendering after the DOM updates
@@ -1554,7 +1622,7 @@ function Visualizations() {
         duration: 1000,
         easing: 'easeOutQuart'
       },
-      scales: chartType !== 'pie' && chartType !== 'scatter' ? {
+      scales: chartType !== 'pie' ? {
         x: {
           grid: {
             display: false
@@ -1902,15 +1970,15 @@ function Visualizations() {
     
     switch (type) {
       case 'bar':
-        return <ChartIcon sx={{ ...iconSize, ...iconColor }} />;
+        return <BarChartIcon sx={{ ...iconSize, ...iconColor }} />;
       case 'scatter':
-        return <ScatterIcon sx={{ ...iconSize, ...iconColor }} />;
+        return <ScatterPlotIcon sx={{ ...iconSize, ...iconColor }} />;
       case 'line':
-        return <LineIcon sx={{ ...iconSize, ...iconColor }} />;
+        return <ShowChartIcon sx={{ ...iconSize, ...iconColor }} />;
       case 'pie':
-        return <PieIcon sx={{ ...iconSize, ...iconColor }} />;
+        return <PieChartIcon sx={{ ...iconSize, ...iconColor }} />;
       default:
-        return <TimelineIcon sx={{ ...iconSize, ...iconColor }} />;
+        return <BarChartIcon sx={{ ...iconSize, ...iconColor }} />;
     }
   };
 
@@ -2150,7 +2218,7 @@ function Visualizations() {
               duration: 1000,
               easing: 'easeOutQuart'
             },
-            scales: chartType !== 'pie' && chartType !== 'scatter' ? {
+            scales: chartType !== 'pie' ? {
               x: {
                 grid: {
                   display: false
@@ -2795,6 +2863,8 @@ function Visualizations() {
                   <Grid item xs={12} sm={6} key={`ai-${chart.chartType}-${index}`}>
                     <Card sx={{ 
                       height: '100%',
+                      minHeight: 500,
+                      maxHeight: 600,
                       bgcolor: 'background.paper',
                       backgroundImage: 'none',
                       display: 'flex',
@@ -2822,7 +2892,15 @@ function Visualizations() {
                       <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
                         {chart.description}
                       </Typography>
-                      <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
+                      <Box sx={{ 
+                        p: 2, 
+                        height: 300, 
+                        position: 'relative', 
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
                         <canvas 
                           ref={el => {
                             if (el) chartPreviewRefs.current[chartKey] = el;
@@ -2831,6 +2909,8 @@ function Visualizations() {
                           id={`chart-${chartKey}-${index}`}
                           data-chart-type={chart.chartType}
                           data-is-ai="true"
+                          data-x-axis={chart.xAxis}
+                          data-y-axis={chart.yAxis}
                         />
                       </Box>
                       <Box sx={{ p: 2, mt: 'auto' }}>
@@ -2851,6 +2931,26 @@ function Visualizations() {
                   </Grid>
                 )})}
             </Grid>
+            
+            {/* Add Create Custom Chart button below AI recommendations */}
+            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                startIcon={<AddIcon />}
+                onClick={handleCreateCustomChart}
+                sx={{
+                  px: 4,
+                  py: 1.5,
+                  borderRadius: 2,
+                  boxShadow: 3,
+                  fontSize: '1rem'
+                }}
+              >
+                Create Custom Chart
+              </Button>
+            </Box>
           </Paper>
         )}
         
@@ -2880,6 +2980,8 @@ function Visualizations() {
                   <Grid item xs={12} sm={6} key={`custom-${chart.chartType}-${index}`}>
                     <Card sx={{ 
                       height: '100%',
+                      minHeight: 500,
+                      maxHeight: 600,
                       bgcolor: 'background.paper',
                       backgroundImage: 'none',
                       display: 'flex',
@@ -2907,7 +3009,15 @@ function Visualizations() {
                       <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
                         {chart.yAxis} by {chart.xAxis}
                       </Typography>
-                      <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
+                      <Box sx={{ 
+                        p: 2, 
+                        height: 300, 
+                        position: 'relative', 
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
                         <canvas 
                           ref={el => {
                             if (el) chartPreviewRefs.current[chartKey] = el;
@@ -3239,6 +3349,62 @@ function Visualizations() {
               </Typography>
               
               <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom color="text.secondary">
+                    Chart Type
+                  </Typography>
+                  <Box sx={{ 
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 2,
+                    mt: 1
+                  }}>
+                    {['bar', 'line', 'pie', 'scatter'].map((chartType) => (
+                      <Paper
+                        key={chartType}
+                        elevation={selectedChartType === chartType ? 3 : 1}
+                        sx={{ 
+                          p: 2,
+                          borderRadius: 2,
+                          cursor: 'pointer',
+                          bgcolor: selectedChartType === chartType 
+                            ? theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.light' 
+                            : theme.palette.mode === 'dark' ? 'background.paper' : 'white',
+                          border: '1px solid',
+                          borderColor: selectedChartType === chartType 
+                            ? 'primary.main' 
+                            : theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                          color: selectedChartType === chartType 
+                            ? theme.palette.mode === 'dark' ? 'white' : 'primary.main'
+                            : 'text.primary',
+                          minWidth: 100,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flex: '1 0 auto',
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            bgcolor: selectedChartType === chartType 
+                              ? theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.light' 
+                              : theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                            transform: 'translateY(-2px)',
+                          }
+                        }}
+                        onClick={() => setSelectedChartType(chartType)}
+                      >
+                        {chartType === 'bar' ? <BarChartIcon sx={{ fontSize: 36, mb: 1 }} /> : 
+                         chartType === 'line' ? <ShowChartIcon sx={{ fontSize: 36, mb: 1 }} /> : 
+                         chartType === 'pie' ? <PieChartIcon sx={{ fontSize: 36, mb: 1 }} /> : 
+                         <ScatterPlotIcon sx={{ fontSize: 36, mb: 1 }} />}
+                        <Typography variant="body1" fontWeight={selectedChartType === chartType ? 'bold' : 'normal'}>
+                          {chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart
+                        </Typography>
+                      </Paper>
+                    ))}
+                  </Box>
+                </Grid>
+                
                 <Grid item xs={12} sm={6}>
                   <Typography variant="subtitle1" gutterBottom color="text.secondary">
                     X-Axis (Categories)
