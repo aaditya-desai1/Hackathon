@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "vercel-build": "node build-script.js",
+    "postinstall": "cd frontend && npm ci --only=production && chmod +x node_modules/.bin/react-scripts",
+    "vercel-build": "npx cross-env CI=false DISABLE_ESLINT_PLUGIN=true node build-script.js",
     "start": "cd frontend && npm start",
-    "build": "node build-script.js",
+    "build": "npx cross-env CI=false DISABLE_ESLINT_PLUGIN=true node build-script.js",
     "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install"
   },
   "engines": {

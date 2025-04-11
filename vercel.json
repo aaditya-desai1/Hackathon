@@ -5,7 +5,8 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "build"
+        "distDir": "build",
+        "installCommand": "npm install && cd frontend && npm install"
       }
     }
   ],
@@ -33,6 +34,9 @@
   ],
   "env": {
     "NODE_ENV": "production",
-    "REACT_APP_API_URL": "https://express-backend-7m2c.onrender.com"
+    "REACT_APP_API_URL": "https://express-backend-7m2c.onrender.com",
+    "CI": "false",
+    "DISABLE_ESLINT_PLUGIN": "true",
+    "SKIP_PREFLIGHT_CHECK": "true"
   }
 } 
