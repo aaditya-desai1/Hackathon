@@ -50,6 +50,7 @@ import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
 import PageHeader from '../components/common/PageHeader';
 import { Chart, registerables } from 'chart.js/auto';
 import { fetchApi } from '../services/api';
+import { extractDataFromChartInstance, fetchChartDataFromAPI } from '../utils/chartUtils';
 
 // Register all chart components
 Chart.register(...registerables);
@@ -86,7 +87,7 @@ function Visualizations() {
 
   useEffect(() => {
     fetchFiles();
-    fetchVisualizations();
+    // fetchVisualizations(); // Removed - saved visualizations now have their own page
     
     if (location.state?.openCreateDialog) {
       setOpenDialog(true);
@@ -1739,6 +1740,86 @@ function Visualizations() {
     return null;
   };
 
+  // Function to get chart data from the API
+  const getChartDataFromAPI = async (chart) => {
+    try {
+      console.log('Getting chart data for saving:', chart);
+      
+      // First try to get data from existing chart instance
+      const chartKey = chart.isAIRecommended ? 
+        `ai-${chart.chartType}` : 
+        `custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`;
+      
+      const chartInstance = chartPreviewInstances[chartKey];
+      
+      // If we have an active chart instance, get its data directly
+      if (chartInstance && chartInstance.data) {
+        console.log('Found chart instance, extracting data directly:', chartInstance);
+        
+        const extractedLabels = chartInstance.data.labels || [];
+        let extractedValues = [];
+        
+        // Extract values based on chart type
+        if (chart.chartType === 'pie' || chart.chartType === 'doughnut') {
+          // For pie charts, values are in the first dataset's data
+          extractedValues = chartInstance.data.datasets[0]?.data || [];
+        } else {
+          // For other charts, extract values from first dataset
+          extractedValues = chartInstance.data.datasets[0]?.data || [];
+        }
+        
+        console.log('Extracted data from chart instance:', {
+          labels: extractedLabels,
+          values: extractedValues
+        });
+        
+        // Return the extracted data if valid
+        if (extractedLabels.length > 0 && extractedValues.length > 0) {
+          return {
+            labels: extractedLabels,
+            values: extractedValues,
+            datasets: chartInstance.data.datasets || []
+          };
+        }
+        
+        console.warn('Chart instance did not contain valid data, falling back to API');
+      } else {
+        console.warn('No chart instance found for', chartKey, 'falling back to API fetch');
+      }
+      
+      // Fallback to API fetch if chart instance data isn't available
+      // Prepare API URL
+      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+      let dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${chart.fileId}&yAxis=${chart.yAxis}`;
+      
+      if (chart.xAxis) {
+        dataUrl += `&xAxis=${chart.xAxis}`;
+      }
+      
+      console.log(`Fetching chart data from API: ${dataUrl}`);
+      
+      const response = await fetch(dataUrl);
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.success && result.chartData) {
+          console.log('Retrieved chart data from API:', result.chartData);
+          return {
+            labels: result.chartData.labels || [],
+            values: result.chartData.values || [],
+            datasets: chart.datasets || []
+          };
+        }
+      }
+      
+      throw new Error(`Failed to fetch chart data: ${response.status}`);
+    } catch (err) {
+      console.error('Error getting chart data:', err);
+      return null;
+    }
+  };
+
   const handleSaveChart = async (chart) => {
     try {
       setLoading(true);
@@ -1747,6 +1828,50 @@ function Visualizations() {
       // Validate required fields are present
       if (!chart.name || !chart.fileId || !chart.chartType || !chart.xAxis || !chart.yAxis) {
         throw new Error('Missing required fields for visualization');
+      }
+      
+      // Try to get the chart instance to extract data directly from it
+      const chartKey = chart.isAIRecommended ? 
+        `ai-${chart.chartType}` : 
+        `custom-${chart.chartType}-${chart.xAxis}-${chart.yAxis}`;
+      
+      console.log('Getting chart data from instance:', chartKey);
+      const chartInstance = chartPreviewInstances[chartKey];
+      
+      // Data to be saved
+      let chartData = { labels: [], values: [], datasets: [] };
+      
+      // Extract data from chart instance if available
+      if (chartInstance && chartInstance.data) {
+        console.log('Found chart instance, extracting data directly');
+        chartData = extractDataFromChartInstance(chartInstance, chart.chartType);
+        
+        console.log('Extracted data from chart instance:', {
+          labels: chartData.labels.slice(0, 5),
+          labelCount: chartData.labels.length,
+          values: chartData.values.slice(0, 5),
+          valueCount: chartData.values.length
+        });
+      } else {
+        console.warn('No chart instance found, will try API fetch');
+      }
+      
+      // If we couldn't get data from the chart instance, fetch it from the API
+      if (chartData.labels.length === 0 || chartData.values.length === 0) {
+        console.log('Getting data from API instead');
+        chartData = await fetchChartDataFromAPI(chart);
+        
+        console.log('API chart data:', {
+          labels: chartData.labels.slice(0, 5),
+          labelCount: chartData.labels.length,
+          values: chartData.values.slice(0, 5),
+          valueCount: chartData.values.length
+        });
+      }
+      
+      // Final validation check
+      if (chartData.labels.length === 0 || chartData.values.length === 0) {
+        throw new Error('Could not get valid chart data. Please try again.');
       }
       
       // Prepare the config object with proper structure
@@ -1774,8 +1899,11 @@ function Visualizations() {
           description: chart.description || `${chart.chartType} chart showing ${chart.yAxis} by ${chart.xAxis}`,
           fileId: chart.fileId,
           chartType: chart.chartType,
+          xAxis: chart.xAxis,
+          yAxis: chart.yAxis,
           confidence: chart.confidence || 90,
-          config: config
+          config: config,
+          data: chartData
         })
       });
       
@@ -1788,17 +1916,14 @@ function Visualizations() {
       const result = await response.json();
       console.log('Visualization created successfully:', result);
       
-      // Show success message
-      alert('Visualization saved successfully!');
-      
       // Update the DataContext to trigger a refresh across components
       if (refreshData) {
         console.log('Triggering global data refresh');
         refreshData();
       }
       
-      // Refresh visualizations list
-      await fetchVisualizations();
+      // Navigate to saved visualizations page
+      navigate('/saved-visualizations');
     } catch (error) {
       console.error('Error creating visualization:', error);
       setError('Failed to create visualization: ' + error.message);
@@ -3117,61 +3242,7 @@ function Visualizations() {
             </Box>
           )}
 
-          {/* Saved Visualizations Section */}
-          {visualizations.length > 0 && (
-            <Box sx={{ mt: 6 }}>
-              <Typography variant="h5" sx={{ mb: 3 }}>
-                Saved Visualizations
-              </Typography>
-              <Grid container spacing={3}>
-                {visualizations.map((viz) => (
-                  <Grid item xs={12} sm={6} key={viz._id}>
-                    <Card sx={{ 
-                      height: '100%',
-                      bgcolor: 'background.paper',
-                      backgroundImage: 'none',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                      borderRadius: 2,
-                      overflow: 'hidden',
-                    }}>
-                      <Box sx={{ 
-                        bgcolor: 'primary.main', 
-                        color: 'white',
-                        p: 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                      }}>
-                        <Typography variant="h6" component="div">
-                          {viz.name}
-                        </Typography>
-                      </Box>
-                      <Typography variant="subtitle2" sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' }}>
-                        {viz.description}
-                      </Typography>
-                      <Box sx={{ p: 2, height: 250, position: 'relative', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'white' }}>
-                        <canvas 
-                          ref={el => chartPreviewRefs.current[`viz-${viz._id}`] = el}
-                          style={{ width: '100%', height: '100%' }}
-                        />
-                      </Box>
-                      <Box sx={{ p: 2, mt: 'auto' }}>
-                        <Button 
-                          variant="contained" 
-                          fullWidth
-                          onClick={() => handleViewVisualization(viz)}
-                        >
-                          View
-                        </Button>
-                      </Box>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          )}
+          {/* Saved Visualizations Section - Moved to /saved-visualizations page */}
         </Box>
 
         {/* File Selection Dialog */}

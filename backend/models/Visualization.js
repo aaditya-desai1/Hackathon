@@ -24,6 +24,19 @@ const VisualizationSchema = new mongoose.Schema({
     min: 0,
     max: 100
   },
+  // For backward compatibility, store x and y axis separately
+  xAxis: {
+    type: String
+  },
+  yAxis: {
+    type: String
+  },
+  // Store actual chart data
+  data: {
+    labels: [mongoose.Schema.Types.Mixed],
+    values: [mongoose.Schema.Types.Mixed],
+    datasets: [mongoose.Schema.Types.Mixed]
+  },
   config: {
     xAxis: {
       field: String,

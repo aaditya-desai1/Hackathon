@@ -6,7 +6,17 @@ const { recommendChartType } = require('../services/aiService');
 // Create new visualization
 exports.createVisualization = async (req, res) => {
   try {
-    const { name, description, fileId, chartType, config, confidence = 90 } = req.body;
+    const { 
+      name, 
+      description, 
+      fileId, 
+      chartType, 
+      xAxis, 
+      yAxis, 
+      config, 
+      confidence = 90,
+      data = null 
+    } = req.body;
 
     // Validate inputs
     if (!name || !fileId || !chartType) {
@@ -28,8 +38,11 @@ exports.createVisualization = async (req, res) => {
       description,
       fileId,
       chartType,
+      xAxis,
+      yAxis,
       config,
       confidence,
+      data,
       user: req.user ? req.user._id : null
     });
 
@@ -43,7 +56,10 @@ exports.createVisualization = async (req, res) => {
         description: visualization.description,
         fileId: visualization.fileId,
         chartType: visualization.chartType,
+        xAxis: visualization.xAxis,
+        yAxis: visualization.yAxis,
         config: visualization.config,
+        data: visualization.data,
         confidence: visualization.confidence || 90,
         isAIGenerated: visualization.isAIGenerated,
         createdAt: visualization.createdAt
@@ -109,6 +125,7 @@ exports.getVisualizationById = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to access this visualization' });
     }
 
+    // Return complete visualization data including chart data if available
     res.status(200).json({
       success: true,
       visualization: {
@@ -118,6 +135,9 @@ exports.getVisualizationById = async (req, res) => {
         fileId: visualization.fileId,
         chartType: visualization.chartType,
         config: visualization.config,
+        xAxis: visualization.config?.xAxis?.field,
+        yAxis: visualization.config?.yAxis?.field,
+        data: visualization.data || {},
         isAIGenerated: visualization.isAIGenerated,
         createdAt: visualization.createdAt,
         updatedAt: visualization.updatedAt
