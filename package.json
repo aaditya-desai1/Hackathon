@@ -4,16 +4,15 @@
   "private": true,
   "scripts": {
     "postinstall": "cd frontend && npm install react-scripts@5.0.1 --no-save",
-    "vercel-build": "npx cross-env CI=false DISABLE_ESLINT_PLUGIN=true node build-script.js",
+    "vercel-build": "node build-script.js",
     "start": "cd frontend && npm start",
-    "build": "npx cross-env CI=false DISABLE_ESLINT_PLUGIN=true node build-script.js",
+    "build": "node build-script.js",
     "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install"
   },
   "engines": {
     "node": ">=16.x"
   },
   "dependencies": {
-    "cross-env": "^7.0.3",
     "fs-extra": "^11.1.1"
   }
 } 
