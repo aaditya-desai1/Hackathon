@@ -414,6 +414,7 @@ export const authApi = {
         // We'll continue but might use fallback or error gracefully
       }
       
+      console.log('[AUTH] Making Google login request to endpoint:', `${API_BASE_URL}/api/users/google`);
       const response = await fetchApi('/api/users/google', {
         method: 'POST',
         body: JSON.stringify({ token })
@@ -424,6 +425,12 @@ export const authApi = {
       return data;
     } catch (error) {
       console.error('[AUTH] Google login error:', error);
+      console.error('[AUTH] Google login error detail:', error.message);
+      // Log more details about the error if available
+      if (error.response) {
+        console.error('[AUTH] Response status:', error.response.status);
+        console.error('[AUTH] Response data:', error.response.data);
+      }
       // Simplified error message that matches our desired UX
       throw new Error('Registration failed. Please try again.');
     }
