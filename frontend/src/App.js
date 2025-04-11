@@ -8,6 +8,11 @@ import Visualizations from './pages/Visualizations';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
 import AboutUs from './pages/AboutUs';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import LandingPage from './pages/LandingPage';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Create Theme Context
 export const ColorModeContext = createContext({
@@ -37,14 +42,45 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/files" element={<FileManager />} />
-      <Route path="/visualizations" element={<Visualizations />} />
-      <Route path="/settings" element={<Settings />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/landing" element={<LandingPage />} />
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/files" 
+        element={
+          <ProtectedRoute>
+            <FileManager />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/visualizations" 
+        element={
+          <ProtectedRoute>
+            <Visualizations />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/settings" 
+        element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        } 
+      />
       <Route path="/help" element={<Help />} />
       <Route path="/about" element={<AboutUs />} />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/landing" replace />} />
+      <Route path="*" element={<Navigate to="/landing" replace />} />
     </Routes>
   );
 }
@@ -159,18 +195,20 @@ function App() {
   );
 
   return (
-    <ColorModeContext.Provider value={colorMode}>
-      <DataContext.Provider value={dataContextValue}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <HashRouter>
-            <Layout>
-              <AppRoutes />
-            </Layout>
-          </HashRouter>
-        </ThemeProvider>
-      </DataContext.Provider>
-    </ColorModeContext.Provider>
+    <AuthProvider>
+      <ColorModeContext.Provider value={colorMode}>
+        <DataContext.Provider value={dataContextValue}>
+          <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <HashRouter>
+              <Layout>
+                <AppRoutes />
+              </Layout>
+            </HashRouter>
+          </ThemeProvider>
+        </DataContext.Provider>
+      </ColorModeContext.Provider>
+    </AuthProvider>
   );
 }
 

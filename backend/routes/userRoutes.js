@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { OAuth2Client } = require('google-auth-library');
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Register a new user
 router.post('/register', async (req, res) => {
@@ -76,6 +79,61 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Google sign-in
+router.post('/google', async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    // Verify the Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+    
+    // Check if user already exists
+    let user = await User.findOne({ email });
+    
+    if (!user) {
+      // Create a new user with Google credentials
+      const username = name.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000);
+      
+      user = new User({
+        username,
+        email,
+        googleId,
+        picture
+      });
+      
+      await user.save();
+    } else if (!user.googleId) {
+      // Existing user, link Google account
+      user.googleId = googleId;
+      user.picture = picture || user.picture;
+      await user.save();
+    }
+    
+    // Generate auth token
+    const jwtToken = user.generateAuthToken();
+    
+    res.json({
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        picture: user.picture
+      },
+      token: jwtToken
+    });
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res.status(400).json({ error: 'Google authentication failed' });
   }
 });
 
