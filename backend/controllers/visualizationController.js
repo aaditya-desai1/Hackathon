@@ -310,7 +310,7 @@ exports.generateAIVisualization = async (req, res) => {
     // Extract the ordered recommendations with confidence scores
     const chartRecommendations = aiRecommendation.recommendations || [];
     
-    // Get the primary (best) recommendation
+    // Get the primary (best) recommendation for reference
     const primaryRecommendation = chartRecommendations[0] || {
       chartType: 'bar',
       confidence: 70,
@@ -318,47 +318,21 @@ exports.generateAIVisualization = async (req, res) => {
       yAxis: file.dataColumns[1]
     };
     
-    // Create a new visualization based on the AI recommendation
-    const visualization = new Visualization({
-      name: `${file.originalname || 'Data'} - ${primaryRecommendation.chartType} Chart`,
-      description: aiRecommendation.explanation || `AI recommended ${primaryRecommendation.chartType} chart visualization`,
-      fileId: fileId,
-      chartType: primaryRecommendation.chartType,
-      xAxis: primaryRecommendation.xAxis || primaryRecommendation.columns?.[0] || file.dataColumns[0],
-      yAxis: primaryRecommendation.yAxis || primaryRecommendation.columns?.[1] || file.dataColumns[1],
-      config: {
-        xAxis: {
-          field: primaryRecommendation.xAxis || primaryRecommendation.columns?.[0] || file.dataColumns[0],
-          label: primaryRecommendation.xAxis || primaryRecommendation.columns?.[0] || file.dataColumns[0]
-        },
-        yAxis: {
-          field: primaryRecommendation.yAxis || primaryRecommendation.columns?.[1] || file.dataColumns[1],
-          label: primaryRecommendation.yAxis || primaryRecommendation.columns?.[1] || file.dataColumns[1]
-        }
-      },
-      confidence: primaryRecommendation.confidence || 80,
-      isAIGenerated: true,
-      user: req.user._id
-    });
-    
-    await visualization.save();
-    console.log(`AI Visualization ${visualization._id} created for user ${req.user._id}`);
-    
-    res.status(201).json({
+    // Just return the recommendations without saving anything to the database
+    res.status(200).json({
       success: true,
-      message: 'AI visualization created successfully',
-      visualization: {
-        _id: visualization._id,
-        name: visualization.name,
-        description: visualization.description,
-        fileId: visualization.fileId,
-        chartType: visualization.chartType,
-        xAxis: visualization.xAxis,
-        yAxis: visualization.yAxis,
-        config: visualization.config,
-        confidence: visualization.confidence,
-        isAIGenerated: true,
-        user: visualization.user
+      message: 'AI visualization recommendations generated successfully',
+      fileInfo: {
+        _id: file._id,
+        name: file.originalname || 'Data',
+        columns: file.dataColumns
+      },
+      primaryRecommendation: {
+        chartType: primaryRecommendation.chartType,
+        confidence: primaryRecommendation.confidence,
+        xAxis: primaryRecommendation.xAxis || primaryRecommendation.columns?.[0] || file.dataColumns[0],
+        yAxis: primaryRecommendation.yAxis || primaryRecommendation.columns?.[1] || file.dataColumns[1],
+        reason: primaryRecommendation.reason || aiRecommendation.explanation || `AI recommended ${primaryRecommendation.chartType} chart visualization`
       },
       chartRecommendations: chartRecommendations,
       allRecommendations: chartRecommendations
