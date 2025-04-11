@@ -118,6 +118,14 @@ export const fetchApi = async (endpoint, options = {}) => {
           console.error('[API] Authentication error - clearing token');
           localStorage.removeItem('authToken'); // Clear invalid token
           
+          // Dispatch auth error event
+          const authErrorEvent = new CustomEvent('auth-error', {
+            detail: { 
+              message: 'Invalid credentials. Please check your email and password.' 
+            }
+          });
+          window.dispatchEvent(authErrorEvent);
+          
           // For 401 errors on protected endpoints, return a special mock response
           if (useMockDataWhenApiDown && endpoint.match(/\/api\/(files|visualizations)/)) {
             console.log('[API] Authentication failed but returning mock data for UI continuity');
