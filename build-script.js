@@ -14,6 +14,9 @@ const rootDir = __dirname;
 const frontendDir = path.join(rootDir, 'frontend');
 const buildDir = path.join(rootDir, 'build');
 const frontendBuildDir = path.join(frontendDir, 'build');
+const frontendPublicDir = path.join(frontendDir, 'public');
+const frontendPublicImagesDir = path.join(frontendPublicDir, 'images');
+const buildImagesDir = path.join(buildDir, 'images');
 
 try {
   // Clean build directory
@@ -128,6 +131,23 @@ try {
   if (fs.existsSync(frontendBuildDir) && fs.readdirSync(frontendBuildDir).length > 0) {
     fs.copySync(frontendBuildDir, buildDir);
     console.log('Successfully copied frontend build to root directory.');
+    
+    // Explicitly handle copying the images directory
+    if (fs.existsSync(frontendPublicImagesDir)) {
+      console.log('Copying images directory from public...');
+      fs.ensureDirSync(buildImagesDir);
+      fs.copySync(frontendPublicImagesDir, buildImagesDir);
+      
+      // Verify images were copied
+      if (fs.existsSync(buildImagesDir)) {
+        const imageFiles = fs.readdirSync(buildImagesDir);
+        console.log(`Images directory contains ${imageFiles.length} files/directories:`, imageFiles);
+      } else {
+        console.warn('WARNING: Failed to create images directory in build!');
+      }
+    } else {
+      console.warn('WARNING: No images directory found in frontend/public!');
+    }
   } else {
     console.warn('Warning: Frontend build directory is empty or does not exist.');
     createFallbackBuild();
@@ -239,6 +259,13 @@ function createFallbackBuild() {
   
   // Add a simple JS file
   fs.writeFileSync(path.join(buildDir, 'static', 'js', 'main.js'), `console.log('DataVizPro fallback');`);
+  
+  // Copy images directory for fallback as well
+  if (fs.existsSync(frontendPublicImagesDir)) {
+    console.log('Adding images directory to fallback build...');
+    fs.ensureDirSync(path.join(buildDir, 'images'));
+    fs.copySync(frontendPublicImagesDir, path.join(buildDir, 'images'));
+  }
   
   console.log('Fallback build created successfully.');
 } 

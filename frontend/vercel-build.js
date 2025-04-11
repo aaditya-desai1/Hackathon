@@ -7,6 +7,9 @@ console.log('Starting Vercel deployment post-build process...');
 // Paths
 const frontendBuildDir = path.join(__dirname, 'build');
 const rootBuildDir = path.join(__dirname, '..', 'build');
+const frontendPublicDir = path.join(__dirname, 'public');
+const frontendPublicImagesDir = path.join(frontendPublicDir, 'images');
+const rootBuildImagesDir = path.join(rootBuildDir, 'images');
 
 try {
   // Verify that we have a build
@@ -31,6 +34,20 @@ try {
   // Copy files from frontend build to root build
   console.log('Copying build files to root directory...');
   fs.copySync(frontendBuildDir, rootBuildDir);
+  
+  // Explicitly verify and copy the images directory from public to build
+  if (fs.existsSync(frontendPublicImagesDir)) {
+    console.log('Copying images directory from public to build...');
+    fs.ensureDirSync(rootBuildImagesDir);
+    fs.copySync(frontendPublicImagesDir, rootBuildImagesDir);
+    console.log('Images directory copied successfully.');
+    
+    // List image files to verify
+    const imageFiles = fs.readdirSync(rootBuildImagesDir);
+    console.log(`Images directory contains ${imageFiles.length} files/directories:`, imageFiles);
+  } else {
+    console.warn('WARNING: No images directory found in public folder!');
+  }
   
   // Verify copy was successful
   const rootBuildFiles = fs.readdirSync(rootBuildDir);
