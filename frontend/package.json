@@ -15,6 +15,7 @@
     "axios": "^1.4.0",
     "chart.js": "^4.4.8",
     "d3": "^7.8.5",
+    "fs-extra": "^11.1.1",
     "jwt-decode": "^4.0.0",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.2.0",
@@ -26,10 +27,10 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "DISABLE_ESLINT_PLUGIN=true CI=false node ./node_modules/react-scripts/scripts/build.js",
+    "build": "DISABLE_ESLINT_PLUGIN=true CI=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "vercel-build": "DISABLE_ESLINT_PLUGIN=true CI=false node ./node_modules/react-scripts/scripts/build.js"
+    "vercel-build": "DISABLE_ESLINT_PLUGIN=true CI=false node ./vercel-build.js"
   },
   "eslintConfig": {
     "extends": [
