@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const auth = require('../middleware/auth');
 
 // Import controllers
 const { 
@@ -11,15 +12,15 @@ const {
   generateAIVisualization
 } = require('../controllers/visualizationController');
 
-// Routes for visualization management (all public for testing)
-router.post('/', createVisualization);
-router.get('/', getVisualizations);
-router.get('/:id', getVisualizationById);
-router.put('/:id', updateVisualization);
-router.delete('/:id', deleteVisualization);
+// Routes for visualization management (all require authentication)
+router.post('/', auth, createVisualization);
+router.get('/', auth, getVisualizations);
+router.get('/:id', auth, getVisualizationById);
+router.put('/:id', auth, updateVisualization);
+router.delete('/:id', auth, deleteVisualization);
 
 // Route for AI-driven chart recommendation
-router.post('/recommend/:fileId', generateAIVisualization);
+router.post('/recommend/:fileId', auth, generateAIVisualization);
 
 // Debug endpoint to check visualizations in database
 router.get('/debug', async (req, res) => {

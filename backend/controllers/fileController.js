@@ -21,6 +21,11 @@ exports.uploadFile = async (req, res) => {
     console.log('[FileController] Environment:', process.env.NODE_ENV);
     console.log('[FileController] MongoDB connection state:', mongoose.connection.readyState);
     
+    // Check if user is authenticated
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required to upload files' });
+    }
+    
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -29,7 +34,8 @@ exports.uploadFile = async (req, res) => {
       name: req.file.originalname, 
       type: req.file.mimetype, 
       size: req.file.size,
-      path: req.file.path
+      path: req.file.path,
+      userId: req.user._id
     });
     
     tempFilePath = req.file.path;
@@ -65,15 +71,17 @@ exports.uploadFile = async (req, res) => {
       fileType = 'application/json';
     }
     
-    // Create file record
+    // Create file record with the user ID from the authenticated user
     const fileData = {
       name: req.file.originalname,
       path: req.file.path,
       size: req.file.size,
       type: fileType,
-      user: req.user ? req.user._id : null,
+      user: req.user._id, // Always associate with authenticated user
       createdAt: new Date()
     };
+
+    console.log(`[FileController] Creating file record for user: ${req.user._id}`);
 
     // Parse file to get initial data (skip detailed validation, already done client-side)
     try {
@@ -148,9 +156,17 @@ exports.getFiles = async (req, res) => {
   try {
     console.log('[FileController] getFiles called');
     
-    // Build query - if user is authenticated, filter by user ID, otherwise show all
-    const query = req.user ? { user: req.user._id } : {};
-    console.log('[FileController] Using query:', JSON.stringify(query));
+    // Require authentication
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Authentication required to access files' 
+      });
+    }
+    
+    // Always filter by user ID
+    const query = { user: req.user._id };
+    console.log(`[FileController] Getting files for user: ${req.user._id}`);
     
     // Check MongoDB connection
     console.log('[FileController] MongoDB connection state:', mongoose.connection.readyState);
@@ -159,7 +175,7 @@ exports.getFiles = async (req, res) => {
       .sort({ createdAt: -1 })
       .select('-path'); // Don't send file paths to client
 
-    console.log('[FileController] Found files:', files.length);
+    console.log(`[FileController] Found ${files.length} files for user ${req.user._id}`);
     
     res.json({
       success: true,
@@ -183,12 +199,19 @@ exports.getFiles = async (req, res) => {
 // Get file by ID
 exports.getFileById = async (req, res) => {
   try {
-    // Build query - if user is authenticated, filter by user ID, otherwise just use the file ID
-    const query = req.user 
-      ? { _id: req.params.id, user: req.user._id }
-      : { _id: req.params.id };
-      
-    const file = await File.findOne(query).select('-path');
+    // Require authentication
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Authentication required to access files' 
+      });
+    }
+
+    // Only allow access to files owned by the user
+    const file = await File.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    }).select('-path');
 
     if (!file) {
       return res.status(404).json({ error: 'File not found' });
@@ -216,31 +239,56 @@ exports.getFileById = async (req, res) => {
 // Delete file
 exports.deleteFile = async (req, res) => {
   try {
-    // Build query - if user is authenticated, filter by user ID, otherwise just use the file ID
-    const query = req.user 
-      ? { _id: req.params.id, user: req.user._id }
-      : { _id: req.params.id };
-      
-    const file = await File.findOne(query);
+    // Require authentication
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Authentication required to delete files' 
+      });
+    }
+
+    // Only allow deletion of files owned by the user
+    const file = await File.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    });
 
     if (!file) {
-      return res.status(404).json({ error: 'File not found' });
+      return res.status(404).json({ error: 'File not found or you do not have permission to delete it' });
     }
 
     try {
       // Delete file from filesystem
       await fs.unlink(file.path);
+      console.log(`[FileController] Deleted file from filesystem: ${file.path}`);
     } catch (unlinkError) {
-      console.error('Error deleting file from filesystem:', unlinkError);
+      console.error('[FileController] Error deleting file from filesystem:', unlinkError);
       // Continue with database deletion even if file deletion fails
+    }
+    
+    // Delete associated visualizations
+    try {
+      const Visualization = require('../models/Visualization');
+      const visualizationDeleteResult = await Visualization.deleteMany({ 
+        fileId: file._id,
+        user: req.user._id  // Only delete visualizations owned by the user
+      });
+      console.log(`[FileController] Deleted ${visualizationDeleteResult.deletedCount} visualizations associated with file ID: ${file._id}`);
+    } catch (vizError) {
+      console.error('[FileController] Error deleting associated visualizations:', vizError);
+      // Continue with file deletion
     }
     
     // Delete from database
     await File.deleteOne({ _id: file._id });
+    console.log(`[FileController] Deleted file from database: ${file._id}`);
     
-    res.json({ success: true, message: 'File deleted successfully' });
+    res.json({ 
+      success: true, 
+      message: 'File deleted successfully'
+    });
   } catch (error) {
-    console.error('Error in deleteFile controller:', error);
+    console.error('[FileController] Error in deleteFile controller:', error);
     res.status(500).json({ error: error.message || 'Failed to delete file' });
   }
 };
@@ -248,31 +296,92 @@ exports.deleteFile = async (req, res) => {
 // Analyze file data
 exports.analyzeFile = async (req, res) => {
   try {
-    // Build query - if user is authenticated, filter by user ID, otherwise just use the file ID
-    const query = req.user 
-      ? { _id: req.params.id, user: req.user._id }
-      : { _id: req.params.id };
-      
-    const file = await File.findOne(query);
-
-    if (!file) {
-      return res.status(404).json({ error: 'File not found' });
+    // Require authentication
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Authentication required to analyze files' 
+      });
     }
 
-    const analysis = await dataAnalysisService.analyzeFile(file.path, file.type);
+    const fileId = req.params.id;
     
-    // Update file with analysis results
-    file.dataStats = analysis;
-    file.isAnalyzed = true;
-    await file.save();
-
-    res.json({
-      success: true,
-      analysis
+    // Only allow analysis of files owned by the user
+    const file = await File.findOne({
+      _id: fileId,
+      user: req.user._id
     });
+    
+    if (!file) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'File not found or you do not have permission to access it'
+      });
+    }
+    
+    console.log(`[FileController] Analyzing file: ${file.name} (${file._id})`);
+    
+    let data, columnAnalysis;
+    
+    try {
+      // Parse the file based on its type
+      if (file.type === 'text/csv') {
+        const parseResult = await parseCSV(file.path);
+        data = parseResult.data;
+      } else if (file.type === 'application/json') {
+        const parseResult = await parseJSON(file.path);
+        data = parseResult.data;
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'Unsupported file type for analysis'
+        });
+      }
+      
+      if (!data || data.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'No data found in file'
+        });
+      }
+      
+      console.log(`[FileController] Parsed ${data.length} records for analysis`);
+      
+      // Analyze columns
+      columnAnalysis = await analyzeDataColumns(data, file.dataColumns);
+      
+      // Run the analysis service
+      const analysisResult = await dataAnalysisService.analyze(data, file.dataColumns);
+      
+      // Update file with analysis results
+      file.dataStats = {
+        ...columnAnalysis,
+        ...analysisResult,
+        recordCount: data.length,
+      };
+      file.isAnalyzed = true;
+      
+      await file.save();
+      
+      res.json({
+        success: true,
+        message: 'File analysis completed',
+        analysis: file.dataStats,
+        columns: file.dataColumns,
+      });
+    } catch (analysisError) {
+      console.error('[FileController] Analysis error:', analysisError);
+      return res.status(500).json({
+        success: false,
+        error: `Analysis failed: ${analysisError.message}`
+      });
+    }
   } catch (error) {
-    console.error('Error analyzing file:', error);
-    res.status(500).json({ error: 'Error analyzing file' });
+    console.error('[FileController] Error in analyzeFile:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to analyze file'
+    });
   }
 };
 

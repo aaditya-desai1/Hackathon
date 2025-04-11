@@ -84,11 +84,18 @@ const upload = multer({
 const handleFileUpload = (req, res, next) => {
   const uploadSingle = upload.single('file');
   
+  console.log('[FileRoutes] Received upload request with headers:', {
+    contentType: req.headers['content-type'],
+    authorization: req.headers['authorization'] ? 'Present (token)' : 'Missing',
+    contentLength: req.headers['content-length']
+  });
+  
   // First check if the request contains a valid content-type for multipart form
   if (!req.headers['content-type'] || !req.headers['content-type'].includes('multipart/form-data')) {
     console.error('[FileRoutes] Invalid Content-Type header:', req.headers['content-type']);
     return res.status(400).json({ 
-      error: 'Invalid request. Content-Type must be multipart/form-data' 
+      error: 'Invalid request. Content-Type must be multipart/form-data',
+      receivedContentType: req.headers['content-type']
     });
   }
   
@@ -106,8 +113,8 @@ const handleFileUpload = (req, res, next) => {
     }
     
     if (!req.file) {
-      console.error('[FileRoutes] No file was uploaded');
-      return res.status(400).json({ error: 'No file uploaded' });
+      console.error('[FileRoutes] No file was uploaded in the request');
+      return res.status(400).json({ error: 'No file uploaded. Make sure the file field is named "file".' });
     }
     
     console.log(`[FileRoutes] File upload successful:`, {
@@ -122,8 +129,8 @@ const handleFileUpload = (req, res, next) => {
   });
 };
 
-// File upload route - no auth required for testing
-router.post('/upload', handleFileUpload, async (req, res, next) => {
+// File upload route - require authentication for all uploads
+router.post('/upload', auth, handleFileUpload, async (req, res, next) => {
   try {
     // Validate uploaded JSON files before passing to controller
     if (req.file.mimetype === 'application/json' || path.extname(req.file.originalname).toLowerCase() === '.json') {
@@ -163,10 +170,20 @@ router.post('/upload', handleFileUpload, async (req, res, next) => {
   }
 });
 
-// API route to get all files - making this public for testing
-router.get('/', fileController.getFiles);
+// API route to get all files - require authentication
+router.get('/', auth, fileController.getFiles);
+
+// API route to get a specific file - require authentication
+router.get('/:id', auth, fileController.getFileById);
+
+// API route to delete a file - require authentication
+router.delete('/:id', auth, fileController.deleteFile);
+
+// API route to analyze a file - require authentication
+router.post('/:id/analyze', auth, fileController.analyzeFile);
 
 // Special route for complete reset - this will wipe everything
+// Only available in development or with admin privileges
 router.delete('/reset-everything', async (req, res) => {
   try {
     console.log('Executing complete database and files reset');
@@ -332,81 +349,8 @@ router.delete('/cleanup-database', async (req, res) => {
 });
 
 // File operation routes - making these public for testing
-router.get('/:id', fileController.getFileById);
 router.get('/:id/preview', fileController.getFilePreview);
-router.get('/:id/analyze', fileController.analyzeFile);
 router.get('/:id/download', fileController.downloadFile);
-router.delete('/:id', async (req, res) => {
-  try {
-    const fileId = req.params.id;
-    console.log(`Attempting to delete file with ID: ${fileId}`);
-    
-    // Check if file exists
-    const file = await File.findById(fileId);
-    if (!file) {
-      console.log(`File not found in database: ${fileId}`);
-      return res.status(404).json({ 
-        success: false, 
-        message: 'File not found in database' 
-      });
-    }
-    
-    console.log(`Found file in database: ${file.name}, path: ${file.path || 'unknown'}`);
-    
-    // Delete the file from MongoDB
-    const deleteResult = await File.deleteOne({ _id: fileId });
-    console.log(`MongoDB delete result: ${JSON.stringify(deleteResult)}`);
-    
-    // Delete associated visualizations
-    try {
-      const Visualization = require('../models/Visualization');
-      const vizDeleteResult = await Visualization.deleteMany({ fileId });
-      console.log(`Deleted ${vizDeleteResult.deletedCount} visualizations associated with file ID: ${fileId}`);
-    } catch (vizError) {
-      console.error('Error deleting associated visualizations:', vizError);
-      // Continue with file deletion
-    }
-    
-    // Delete file from disk (if file path exists)
-    let fileDeleted = false;
-    
-    if (file.path) {
-      try {
-        console.log(`Attempting to delete file from disk: ${file.path}`);
-        
-        if (fs.existsSync(file.path)) {
-          fs.unlinkSync(file.path);
-          console.log(`Successfully deleted file from disk: ${file.path}`);
-          fileDeleted = true;
-        } else {
-          console.log(`File not found on disk: ${file.path}`);
-        }
-      } catch (diskError) {
-        console.error('Error deleting file from disk:', diskError);
-        // Continue - we still deleted from DB
-      }
-    } else {
-      console.log('No file path available to delete from disk');
-    }
-    
-    res.json({ 
-      success: true, 
-      message: 'File deleted successfully',
-      databaseDeleted: true,
-      diskDeleted: fileDeleted
-    });
-  } catch (error) {
-    console.error('Delete file error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to delete file',
-      error: error.message
-    });
-  }
-});
-
-// Protected routes - require authentication (none left currently, placeholder for future protected routes)
-router.use(auth);
 
 // Error handling middleware
 router.use((error, req, res, next) => {

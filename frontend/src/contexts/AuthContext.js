@@ -42,6 +42,16 @@ export const AuthProvider = ({ children }) => {
       if (data.token) {
         localStorage.setItem('authToken', data.token);
         setCurrentUser(data.user);
+        
+        // Trigger visualization clearing on login
+        console.log('Triggering visualization clear on login');
+        const loginEvent = new CustomEvent('user-login');
+        window.dispatchEvent(loginEvent);
+        
+        if (window._clearVisualizationCache) {
+          window._clearVisualizationCache();
+        }
+        
         return true;
       } else {
         console.error('Login failed: No token received', data);
@@ -67,6 +77,16 @@ export const AuthProvider = ({ children }) => {
       if (data.token) {
         localStorage.setItem('authToken', data.token);
         setCurrentUser(data.user);
+        
+        // Trigger visualization clearing on Google login
+        console.log('Triggering visualization clear on Google login');
+        const loginEvent = new CustomEvent('user-login');
+        window.dispatchEvent(loginEvent);
+        
+        if (window._clearVisualizationCache) {
+          window._clearVisualizationCache();
+        }
+        
         return true;
       } else {
         console.error('Google login failed: No token received', data);
@@ -91,6 +111,16 @@ export const AuthProvider = ({ children }) => {
       if (data.token) {
         localStorage.setItem('authToken', data.token);
         setCurrentUser(data.user);
+        
+        // Trigger visualization clearing on registration
+        console.log('Triggering visualization clear on registration');
+        const loginEvent = new CustomEvent('user-login');
+        window.dispatchEvent(loginEvent);
+        
+        if (window._clearVisualizationCache) {
+          window._clearVisualizationCache();
+        }
+        
         return true;
       } else {
         console.error('Registration failed: No token received', data);
@@ -105,10 +135,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout user
+  // Logout user and clear data
   const logout = () => {
+    console.log('User logging out, clearing auth token and data');
+    
+    // Remove auth token
     localStorage.removeItem('authToken');
+    
+    // Clear user data
     setCurrentUser(null);
+    
+    // Clear any cached visualizations or files
+    // This will force all protected components to fetch fresh data on next login
+    if (window._clearFileCache) {
+      window._clearFileCache();
+    }
+    
+    if (window._clearVisualizationCache) {
+      window._clearVisualizationCache();
+    }
+    
+    // Broadcast a logout event to clear all data
+    const logoutEvent = new CustomEvent('user-logout');
+    window.dispatchEvent(logoutEvent);
+    
+    // Optional: You could also implement an API call to logout on the server side
+    // But for client-side auth with JWT, removing the token is sufficient
   };
 
   const value = {

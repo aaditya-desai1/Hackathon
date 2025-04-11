@@ -27,35 +27,48 @@ import {
   ShowChart as LineChartIcon,
   PieChart as PieChartIcon,
   ScatterPlot as ScatterPlotIcon,
+  Save as SaveIcon,
 } from '@mui/icons-material';
 import PageHeader from '../components/common/PageHeader';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchApi } from '../services/api';
 
 function Dashboard() {
   const navigate = useNavigate();
-  const { lastUpdate } = useDataContext();
+  const { lastUpdate, refreshData } = useDataContext();
   const [stats, setStats] = useState({
     totalFiles: 0,
     totalVisualizations: 0,
     recentFiles: [],
-    recentVisualizations: []
+    recentVisualizations: [],
+    savedVisualizations: 0,
   });
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(0);
+  const [error, setError] = useState(null);
+  const { isAuthenticated } = useAuth();
 
   const fetchData = async () => {
     setLoading(true);
     try {
       console.log('Fetching dashboard data...');
       
+      if (!isAuthenticated) {
+        setStats({
+          totalFiles: 0,
+          totalVisualizations: 0,
+          recentFiles: [],
+          recentVisualizations: [],
+          savedVisualizations: 0
+        });
+        return;
+      }
+      
       // Fetch files from the API with proper error handling
       let filesData = { files: [] };
       try {
-        const filesResponse = await fetch('/api/files');
-        if (!filesResponse.ok) {
-          console.error('Files API error:', filesResponse.status, filesResponse.statusText);
-        } else {
-          filesData = await filesResponse.json();
-        }
+        const filesResponse = await fetchApi('/api/files');
+        filesData = await filesResponse.json();
       } catch (fileError) {
         console.error('Files fetch error:', fileError);
       }
@@ -64,22 +77,31 @@ function Dashboard() {
       let vizData = { visualizations: [] };
       try {
         console.log('Fetching visualizations data...');
-        const vizResponse = await fetch('/api/visualizations');
-        if (!vizResponse.ok) {
-          console.error('Visualizations API error:', vizResponse.status, vizResponse.statusText);
-        } else {
-          vizData = await vizResponse.json();
-          console.log('Visualizations API response data:', vizData);
-          console.log('Number of visualizations retrieved:', vizData.visualizations ? vizData.visualizations.length : 0);
-        }
+        const vizResponse = await fetchApi('/api/visualizations');
+        vizData = await vizResponse.json();
+        console.log('Visualizations API response data:', vizData);
+        console.log('Number of visualizations retrieved:', vizData.visualizations ? vizData.visualizations.length : 0);
       } catch (vizError) {
         console.error('Visualizations fetch error:', vizError);
+      }
+      
+      // Fetch saved visualizations count specifically
+      let savedVizCount = 0;
+      try {
+        console.log('Fetching saved visualizations count...');
+        const savedVizResponse = await fetchApi('/api/visualizations?saved=true');
+        const savedVizData = await savedVizResponse.json();
+        savedVizCount = savedVizData.count || 0;
+        console.log('Number of saved visualizations:', savedVizCount);
+      } catch (savedVizError) {
+        console.error('Saved visualizations fetch error:', savedVizError);
       }
       
       // Build dashboard data even if one API fails
       const dashboardData = {
         totalFiles: filesData.files ? filesData.files.length : 0,
         totalVisualizations: vizData.visualizations ? vizData.visualizations.length : 0,
+        savedVisualizations: savedVizCount,
         recentFiles: filesData.files ? 
           filesData.files
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -105,13 +127,15 @@ function Dashboard() {
       console.log('Dashboard data updated:', dashboardData);
       setStats(dashboardData);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('Dashboard data fetch error:', error);
+      setError('Failed to load dashboard data');
       // Set empty data on error
       setStats({
         totalFiles: 0,
         totalVisualizations: 0,
         recentFiles: [],
-        recentVisualizations: []
+        recentVisualizations: [],
+        savedVisualizations: 0
       });
     } finally {
       setLoading(false);
@@ -155,6 +179,42 @@ function Dashboard() {
       console.log('Dashboard component unmounting, cleaning up listeners');
       clearInterval(refreshInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Listen for logout events to clear dashboard data
+  useEffect(() => {
+    const handleLogout = () => {
+      console.log('Logout event detected, clearing dashboard data');
+      setStats({
+        totalFiles: 0,
+        totalVisualizations: 0,
+        recentFiles: [],
+        recentVisualizations: [],
+        savedVisualizations: 0
+      });
+    };
+    
+    // Listen for login events to clear dashboard data
+    const handleLogin = () => {
+      console.log('Login event detected, clearing dashboard data');
+      setStats({
+        totalFiles: 0,
+        totalVisualizations: 0,
+        recentFiles: [],
+        recentVisualizations: [],
+        savedVisualizations: 0
+      });
+      // Re-fetch data immediately after login
+      fetchData();
+    };
+    
+    window.addEventListener('user-logout', handleLogout);
+    window.addEventListener('user-login', handleLogin);
+    
+    return () => {
+      window.removeEventListener('user-logout', handleLogout);
+      window.removeEventListener('user-login', handleLogin);
     };
   }, []);
 
@@ -247,7 +307,7 @@ function Dashboard() {
 
       <Grid container spacing={3} sx={{ mt: 1 }}>
         {/* Quick Stats */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={3}>
           <Card>
             <CardHeader
               title="Total Files"
@@ -258,13 +318,13 @@ function Dashboard() {
                 {loading ? '...' : stats.totalFiles}
               </Typography>
               <Typography color="text.secondary">
-                {stats.totalFiles === 0 ? 'No files uploaded yet' : `${stats.totalFiles} files available`}
+                {stats.totalFiles === 0 ? 'No files uploaded yet' : 'Files available'}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={3}>
           <Card>
             <CardHeader
               title="Visualizations"
@@ -275,13 +335,32 @@ function Dashboard() {
                 {loading ? '...' : stats.totalVisualizations}
               </Typography>
               <Typography color="text.secondary">
-                {stats.totalVisualizations === 0 ? 'No visualizations created yet' : `${stats.totalVisualizations} visualizations created`}
+                {stats.totalVisualizations === 0 ? 'No visualizations created yet' : 'Visualizations created'}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} md={3}>
+          <Card>
+            <CardHeader
+              title="Saved Visualizations"
+              avatar={<SaveIcon />}
+            />
+            <CardContent>
+              <Typography variant="h4" component="div">
+                {loading ? '...' : stats.savedVisualizations || 0}
+              </Typography>
+              <Typography color="text.secondary">
+                {!stats.savedVisualizations || stats.savedVisualizations === 0 
+                  ? 'No saved visualizations yet' 
+                  : 'Visualizations saved'}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={3}>
           <Card>
             <CardHeader
               title="Recent Activity"
@@ -294,7 +373,7 @@ function Dashboard() {
               <Typography color="text.secondary">
                 {loading ? 'Loading activity...' : 
                   (stats.recentFiles.length + stats.recentVisualizations.length === 0 ? 
-                    'No recent activity' : 'Recent file and visualization activity')}
+                    'No recent activity' : 'Recent activity')}
               </Typography>
             </CardContent>
           </Card>

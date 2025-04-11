@@ -106,7 +106,21 @@ function FileManager() {
       
       console.log('Fetching files from:', url);
       
-      const response = await fetch(url);
+      // Get auth token
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No authentication token found');
+        setFiles([]);
+        return;
+      }
+      
+      // Include the authorization header
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
       if (!response.ok) {
         console.error(`Failed to fetch files: ${response.status} ${response.statusText}`);
         throw new Error(`Failed to fetch files: ${response.status} ${response.statusText}`);
@@ -160,11 +174,19 @@ function FileManager() {
       
       console.log('Deleting file from:', url);
       
+      // Get auth token
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No authentication token found');
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
       // Make the real API call to delete a file
       const response = await fetch(url, { 
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -216,8 +238,19 @@ function FileManager() {
       
       console.log('Fetching file preview from:', url);
       
+      // Get auth token
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No authentication token found');
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
       // Get the file and preview data from the API
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       if (!response.ok) {
         console.error(`Failed to get file preview: ${response.status} ${response.statusText}`);
@@ -300,59 +333,92 @@ function FileManager() {
     try {
       setIsDeletingAll(true);
       
-      // Clear any previous errors
-      console.log('Starting complete reset operation...');
+      // Use environment-aware API endpoint
+      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+      const url = `${API_BASE_URL}/api/files/delete-all-files`;
       
-      // Use the reset-everything endpoint for most reliable delete
-      const url = `/api/files/reset-everything`;
+      console.log('Deleting all files via API call:', url);
       
-      console.log('Sending reset request to:', url);
+      // Get auth token
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No authentication token found');
+        throw new Error('Authentication required. Please log in again.');
+      }
       
-      // Call the reset endpoint
-      const response = await fetch(url, { 
+      const response = await fetch(url, {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
       
-      // Check response
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Server error (${response.status}):`, errorText);
-        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        console.error(`Failed to delete all files: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to delete all files: ${response.status} ${response.statusText}`);
       }
       
-      // Get the response data
       const result = await response.json();
-      console.log('Reset operation result:', result);
+      console.log('Delete all files result:', result);
       
-      // Refresh the file list
+      // Refresh files
       await fetchFiles();
       
-      // Notify other components that data has changed
+      // Refresh visualizations and other data
       refreshData();
       
-      // Show success message
-      alert(`Database and files successfully reset. Reload the page to ensure everything is fresh.`);
-      
-      // Automatically reload the page to ensure everything is fresh
-      window.location.reload();
+      if (result.success) {
+        alert(`All files and visualizations have been deleted.`);
+      } else {
+        // Show error message
+        alert(`Error: ${result.error || 'Unknown error occurred'}`);
+        
+        // Force a full page reload in case of partial deletions
+        window.location.reload();
+      }
     } catch (error) {
-      console.error('Error resetting database and files:', error);
+      console.error('Error deleting all files:', error);
+      alert(`Error deleting all files: ${error.message}`);
       
-      // Allow the user to retry or reload
-      const shouldReload = window.confirm(
-        `Error: ${error.message}. The application may be in an inconsistent state. Would you like to reload the page?`
-      );
-      
-      if (shouldReload) {
+      // Force a reload in case of errors to get a fresh state
+      if (confirm('An error occurred. Reload the page?')) {
         window.location.reload();
       }
     } finally {
       setIsDeletingAll(false);
     }
   };
+
+  // Register function to clear file cache when needed (on logout)
+  useEffect(() => {
+    window._clearFileCache = () => {
+      console.log('Clearing files cache');
+      setFiles([]);
+    };
+    
+    // Listen for logout events to clear files
+    const handleLogout = () => {
+      console.log('Logout event detected, clearing files');
+      setFiles([]);
+    };
+    
+    // Listen for login events to clear files
+    const handleLogin = () => {
+      console.log('Login event detected, clearing files');
+      setFiles([]);
+    };
+    
+    window.addEventListener('user-logout', handleLogout);
+    window.addEventListener('user-login', handleLogin);
+    
+    // Cleanup on component unmount
+    return () => {
+      delete window._clearFileCache;
+      window.removeEventListener('user-logout', handleLogout);
+      window.removeEventListener('user-login', handleLogin);
+    };
+  }, []);
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>

@@ -51,6 +51,7 @@ import PageHeader from '../components/common/PageHeader';
 import { Chart, registerables } from 'chart.js/auto';
 import { fetchApi } from '../services/api';
 import { extractDataFromChartInstance, fetchChartDataFromAPI } from '../utils/chartUtils';
+import { useAuth } from '../contexts/AuthContext';
 
 // Register all chart components
 Chart.register(...registerables);
@@ -84,6 +85,7 @@ function Visualizations() {
   const chartPreviewRefs = useRef({});
   const [chartPreviewInstances, setChartPreviewInstances] = useState({});
   const [fileNotFound, setFileNotFound] = useState(false);
+  const { isAuthenticated, currentUser } = useAuth();
 
   useEffect(() => {
     fetchFiles();
@@ -202,18 +204,48 @@ function Visualizations() {
     
     try {
       console.log('Analyzing file with ID:', file._id);
-      const response = await fetchApi(`/api/files/${file._id}/analyze`);
+      
+      // Get the auth token
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No authentication token found');
+        throw new Error('Authentication required. Please log in again.');
+      }
+      
+      // Use environment-aware API endpoint
+      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+      const url = `${API_BASE_URL}/api/files/${file._id}/analyze`;
+      
+      console.log('Sending analysis request to:', url);
+      
+      // Make an authenticated POST request - important: must be POST not GET
+      const response = await fetch(url, {
+        method: 'POST', // This was the issue - should be POST not GET
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({}) // Empty body for POST request
+      });
+      
       console.log('Analysis response status:', response.status);
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Analysis error details:', errorData);
-        throw new Error(errorData.error || 'Analysis failed');
+        let errorMessage = `Analysis failed with status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          console.error('Analysis error details:', errorData);
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError);
+        }
+        throw new Error(errorMessage);
       }
       
       const analysisData = await response.json();
       console.log('Analysis result:', analysisData);
       
+      // Rest of the function remains unchanged
       // Check the structure of analysis data and adapt as needed
       if (analysisData.success && analysisData.analysis) {
         // Extract column types from analysis
@@ -316,7 +348,7 @@ function Visualizations() {
       }
     } catch (error) {
       console.error('Error analyzing file:', error);
-      setError('Failed to analyze file');
+      setError(error.message || 'Failed to analyze file');
     } finally {
       setLoading(false);
     }
@@ -330,8 +362,27 @@ function Visualizations() {
     console.log('Generating AI recommended charts for file:', file.name);
     console.log('Analysis data:', analysisData);
     
-    // Fetch the AI recommendations from the backend
-    fetch(`/api/visualizations/recommend/${file._id}`)
+    // Get auth token
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      console.error('No authentication token found for AI recommendations');
+      // Fall back to basic recommendations without AI
+      fallbackToBasicRecommendations(file, recommendedAxes, analysisData);
+      return;
+    }
+    
+    // Use environment-aware API endpoint
+    const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+    const url = `${API_BASE_URL}/api/visualizations/recommend/${file._id}`;
+    
+    console.log('Fetching AI recommendations from:', url);
+    
+    // Fetch the AI recommendations from the backend with authentication
+    fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
       .then(response => {
         if (!response.ok) {
           throw new Error('Failed to get AI recommendations');
@@ -1210,6 +1261,14 @@ function Visualizations() {
       // Determine if we're using index as x-axis (special case for scatter plots)
       const useIndexAsXAxis = chart.chartType === 'scatter' && chart.xAxis === 'index';
       
+      // Get auth token
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No authentication token found for chart data');
+        removeLoadingOverlay(chartKey);
+        return;
+      }
+      
       // Prepare API URL
       const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
       let dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${chart.fileId}&yAxis=${chart.yAxis}`;
@@ -1230,7 +1289,11 @@ function Visualizations() {
       let chartData = null;
       
       try {
-        const response = await fetch(dataUrl);
+        const response = await fetch(dataUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         
         if (response.ok) {
           const result = await response.json();
@@ -1788,6 +1851,14 @@ function Visualizations() {
       }
       
       // Fallback to API fetch if chart instance data isn't available
+      
+      // Get auth token
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error('No authentication token found');
+        throw new Error('Authentication required to fetch chart data');
+      }
+      
       // Prepare API URL
       const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
       let dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${chart.fileId}&yAxis=${chart.yAxis}`;
@@ -1798,7 +1869,11 @@ function Visualizations() {
       
       console.log(`Fetching chart data from API: ${dataUrl}`);
       
-      const response = await fetch(dataUrl);
+      const response = await fetch(dataUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       if (response.ok) {
         const result = await response.json();
@@ -1811,9 +1886,12 @@ function Visualizations() {
             datasets: chart.datasets || []
           };
         }
+      } else {
+        console.error(`API Error ${response.status}: ${response.statusText}`);
+        throw new Error(`Failed to fetch chart data: ${response.status}`);
       }
       
-      throw new Error(`Failed to fetch chart data: ${response.status}`);
+      throw new Error('No valid chart data returned from API');
     } catch (err) {
       console.error('Error getting chart data:', err);
       return null;
@@ -1823,11 +1901,15 @@ function Visualizations() {
   const handleSaveChart = async (chart) => {
     try {
       setLoading(true);
-      console.log('Saving chart to database:', chart);
       
-      // Validate required fields are present
-      if (!chart.name || !chart.fileId || !chart.chartType || !chart.xAxis || !chart.yAxis) {
-        throw new Error('Missing required fields for visualization');
+      // Validate that user is authenticated
+      if (!isAuthenticated) {
+        throw new Error('You must be logged in to save visualizations');
+      }
+
+      // Validate input
+      if (!chart.name || !chart.chartType || !chart.fileId) {
+        throw new Error('Missing required fields for chart');
       }
       
       // Try to get the chart instance to extract data directly from it
@@ -1889,7 +1971,7 @@ function Visualizations() {
       };
       
       // Send request to create visualization
-      const response = await fetch('/api/visualizations', {
+      const response = await fetchApi('/api/visualizations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1903,15 +1985,10 @@ function Visualizations() {
           yAxis: chart.yAxis,
           confidence: chart.confidence || 90,
           config: config,
-          data: chartData
+          data: chartData,
+          user: currentUser ? currentUser._id : null
         })
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Failed to create visualization:', errorData);
-        throw new Error(errorData.message || `Failed to create visualization: ${response.status} ${response.statusText}`);
-      }
       
       const result = await response.json();
       console.log('Visualization created successfully:', result);
@@ -1936,10 +2013,7 @@ function Visualizations() {
   const handleViewVisualization = async (viz) => {
     try {
       // Get the visualization details
-      const response = await fetch(`/api/visualizations/${viz._id}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch visualization details');
-      }
+      const response = await fetchApi(`/api/visualizations/${viz._id}`);
       
       const data = await response.json();
       console.log('Visualization details:', data.visualization);
@@ -1965,10 +2039,7 @@ function Visualizations() {
   const handleEditVisualization = async (viz) => {
     try {
       // Get the visualization details
-      const response = await fetch(`/api/visualizations/${viz._id}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch visualization details');
-      }
+      const response = await fetchApi(`/api/visualizations/${viz._id}`);
       
       const data = await response.json();
       setCurrentVisualization(data.visualization);
@@ -2496,10 +2567,30 @@ function Visualizations() {
       // Check if the preview file still exists
       if (previewFile && previewFile._id) {
         try {
+          // First attempt to find the file by ID
           const response = await fetch(`/api/files/${previewFile._id}`);
+          
           if (!response.ok) {
-            // File doesn't exist anymore, show warning but keep visualizations
-            console.log('Preview file no longer exists, showing warning');
+            // If the original file ID is not found, try to find a file with the same name
+            console.log('Original file ID not found, searching for file with the same name');
+            const filesResponse = await fetchApi('/api/files');
+            const filesData = await filesResponse.json();
+            
+            if (filesData.files && Array.isArray(filesData.files)) {
+              // Look for a file with the matching name
+              const matchingFile = filesData.files.find(f => f.name === previewFile.name);
+              
+              if (matchingFile) {
+                console.log('Found file with matching name:', matchingFile.name);
+                // Use the new file instead
+                setPreviewFile(matchingFile);
+                setFileNotFound(false);
+                return;
+              }
+            }
+            
+            // If we got here, no matching file was found
+            console.log('Preview file no longer exists and no matching file found, showing warning');
             setFileNotFound(true);
           } else {
             setFileNotFound(false);
@@ -2584,9 +2675,8 @@ function Visualizations() {
     setChartPreviewInstances({});
     setPreviewFile(null);
     
-    // Also clear from localStorage
-    localStorage.removeItem('previewCharts');
-    localStorage.removeItem('previewFile');
+    // Use our more comprehensive clean function
+    cleanLocalStorage();
     
     // Show a brief confirmation
     setError(null);
@@ -2854,6 +2944,22 @@ function Visualizations() {
       return placeholderChart;
     } catch (error) {
       console.error(`Error creating placeholder chart: ${error}`);
+    }
+  };
+
+  // New function to completely clean localStorage of visualization data
+  const cleanLocalStorage = () => {
+    console.log('Completely cleaning visualization data from localStorage');
+    localStorage.removeItem('previewCharts');
+    localStorage.removeItem('previewFile');
+    localStorage.removeItem('analysisCache');
+    
+    // Clear any other visualization-related items
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.includes('chart') || key?.includes('visualization') || key?.includes('preview')) {
+        localStorage.removeItem(key);
+      }
     }
   };
 

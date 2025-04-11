@@ -40,6 +40,37 @@ class DataAnalysisService {
     }
   }
 
+  // Add method to analyze data directly
+  async analyze(data, columns) {
+    try {
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        throw new Error('Invalid data: data must be a non-empty array');
+      }
+      
+      if (!columns || !Array.isArray(columns) || columns.length === 0) {
+        throw new Error('Invalid columns: columns must be a non-empty array');
+      }
+
+      // Perform basic column analysis
+      const columnAnalysis = analyzeDataColumns(data, columns);
+
+      // Perform advanced analysis
+      const advancedAnalysis = await this.performAdvancedAnalysis(data, columns);
+
+      return {
+        basicAnalysis: columnAnalysis,
+        advancedAnalysis,
+        summary: {
+          totalRows: data.length,
+          totalColumns: columns.length,
+          timestamp: new Date().toISOString()
+        }
+      };
+    } catch (error) {
+      throw new Error(`Analysis failed: ${error.message}`);
+    }
+  }
+
   async performAdvancedAnalysis(data, columns) {
     const analysis = {};
 
