@@ -111,11 +111,12 @@ export const AuthProvider = ({ children }) => {
         return true;
       } else {
         console.error('Google login failed: No token received', data);
-        throw new Error(data.error || 'Google login failed. No token received from server.');
+        throw new Error('Registration failed. Please try again.');
       }
     } catch (err) {
       console.error('Google login error:', err);
-      setError(err.message || 'Google login failed. Please try again.');
+      // Simplified error message regardless of the actual error
+      setError('Registration failed. Please try again.');
       return false;
     } finally {
       setLoading(false);
@@ -152,7 +153,7 @@ export const AuthProvider = ({ children }) => {
           return true;
         } else {
           console.error('Registration returned no token:', data);
-          throw new Error('Registration failed. No token received from server.');
+          throw new Error('Registration failed. Please try again.');
         }
       } catch (mainErr) {
         console.error('Main registration failed, trying debug mode:', mainErr);
@@ -187,18 +188,9 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       console.error('All registration attempts failed:', err);
-      let errorMessage = 'Registration failed. Please try again.';
       
-      // Try to extract a more specific error message
-      if (err.message && err.message.includes('already exists')) {
-        errorMessage = 'This email or username already exists. Please try a different one.';
-      } else if (err.message && err.message.includes('HTTP error 400')) {
-        errorMessage = 'Invalid registration data. Please check your information.';
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      
-      setError(errorMessage);
+      // Always use simple error message regardless of the actual error
+      setError('Registration failed. Please try again.');
       return false;
     } finally {
       setLoading(false);

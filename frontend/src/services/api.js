@@ -14,7 +14,7 @@ export const getApiBaseUrl = () => {
     return 'https://express-backend-7m2c.onrender.com';
   }
   // In development, use the local backend
-  return 'http://localhost:5000';
+  return 'http://localhost:5001';
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -396,6 +396,24 @@ export const authApi = {
   googleLogin: async (token) => {
     console.log(`[AUTH] Attempting Google login with token`);
     try {
+      // First check if the server is reachable
+      try {
+        const healthCheck = await fetch(`${API_BASE_URL}/health`, { 
+          method: 'HEAD',
+          mode: 'cors',
+          cache: 'no-cache',
+          credentials: 'include'
+        });
+        
+        if (!healthCheck.ok) {
+          console.warn('[AUTH] Server health check failed before Google login');
+          // Continue with the request but be prepared for failure
+        }
+      } catch (healthCheckError) {
+        console.error('[AUTH] Server health check failed:', healthCheckError);
+        // We'll continue but might use fallback or error gracefully
+      }
+      
       const response = await fetchApi('/api/users/google', {
         method: 'POST',
         body: JSON.stringify({ token })
@@ -406,11 +424,8 @@ export const authApi = {
       return data;
     } catch (error) {
       console.error('[AUTH] Google login error:', error);
-      // Extract the error message from the error object
-      const errorMessage = error.message.includes('HTTP error') 
-        ? 'Google authentication failed. Please try again later.'
-        : error.message;
-      throw new Error(errorMessage);
+      // Simplified error message that matches our desired UX
+      throw new Error('Registration failed. Please try again.');
     }
   },
   

@@ -85,7 +85,7 @@ const Signup = () => {
           
           {error && (
             <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
+              Registration failed. Please try again.
             </Alert>
           )}
           
