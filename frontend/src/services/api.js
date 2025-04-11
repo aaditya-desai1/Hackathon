@@ -56,13 +56,22 @@ export const fetchApi = async (endpoint, options = {}) => {
     }
     
     console.log(`[API] About to fetch from: ${apiEndpoint}`);
+    console.log(`[API] Request details:`, { 
+      method: options.method || 'GET',
+      headers,
+      body: options.body ? JSON.parse(options.body) : undefined
+    });
+    
+    // IMPORTANT: Removed credentials and cors mode which can cause issues
     const response = await fetch(apiEndpoint, {
       ...options,
       headers,
-      credentials: 'include', // Include credentials for CORS requests
-      mode: 'cors' // Explicitly set CORS mode
+      // Remove credentials and cors mode to simplify the request
+      mode: 'cors' // Keep cors mode but remove credentials
     });
+    
     console.log(`[API] Fetch response received, status: ${response.status}`);
+    console.log(`[API] Response headers:`, [...response.headers.entries()]);
     
     if (!response.ok) {
       // Try to parse error response
@@ -103,6 +112,46 @@ export const fetchApi = async (endpoint, options = {}) => {
 
 // Auth API methods
 export const authApi = {
+  // Debug version of register that uses the special debug endpoint
+  debugRegister: async (username, email, password) => {
+    console.log(`[AUTH] Attempting debug registration for user: ${username} (${email})`);
+    try {
+      // Try direct fetch without the fetchApi wrapper
+      console.log('[AUTH] Making direct fetch to debug endpoint');
+      const directResponse = await fetch(`${API_BASE_URL}/api/debug/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, email, password })
+      });
+      
+      console.log('[AUTH] Debug registration direct fetch response:', directResponse);
+      
+      if (!directResponse.ok) {
+        console.error('[AUTH] Direct fetch failed with status:', directResponse.status);
+        const errorText = await directResponse.text();
+        console.error('[AUTH] Error text:', errorText);
+        throw new Error(`HTTP error ${directResponse.status}`);
+      }
+      
+      const data = await directResponse.json();
+      console.log('[AUTH] Debug registration response:', data);
+      return {
+        user: {
+          id: 'debug-id',
+          username,
+          email,
+          role: 'user'
+        },
+        token: data.mockToken || 'debug-token'
+      };
+    } catch (error) {
+      console.error('[AUTH] Debug registration error:', error);
+      throw new Error('Server error. Please try again later.');
+    }
+  },
+
   login: async (email, password) => {
     console.log(`[AUTH] Attempting login for user: ${email}`);
     try {

@@ -14,28 +14,40 @@ const dataRoutes = require('./routes/dataRoutes');
 
 const app = express();
 
-// CORS configuration - allow specific origins including our Vercel frontend
+// CORS configuration - allow all origins in production for testing
+// Add more specific patterns for Vercel domains
 const allowedOrigins = [
   'https://datavizpro-kn4junf9m-aaditya-desais-projects.vercel.app',
+  'https://datavizpro-mbgolxqmu7-aaditya-desais-projects.vercel.app', // Current domain
   'https://datavizpro.vercel.app',
   'http://localhost:3000'
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl requests)
-    if (!origin) return callback(null, true);
+    console.log('CORS request from origin:', origin);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin) {
+      console.log('CORS: No origin in request, allowing');
+      return callback(null, true);
+    }
+    
+    // Allow all Vercel app subdomains
+    if (allowedOrigins.indexOf(origin) !== -1 || 
+        origin.endsWith('.vercel.app') ||
+        origin.includes('-aaditya-desais-projects.vercel.app')) {
+      console.log('CORS: Allowed origin: ' + origin);
       callback(null, true);
     } else {
-      console.log('CORS blocked request from:', origin);
-      callback(null, true); // Still allow for now, but log it
+      console.log('CORS: Origin not explicitly allowed, but accepting anyway: ' + origin);
+      callback(null, true); // Allow all origins for now for troubleshooting
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-Content-Type-Options'],
+  credentials: false, // Disable credentials for simplicity
   optionsSuccessStatus: 200,
   maxAge: 86400 // 24 hours
 };
@@ -128,6 +140,45 @@ app.get('/api/test', (req, res) => {
     platform: isRender ? 'Render' : 'Other',
     mongo_connection: mongoose.connection.readyState,
     timestamp: new Date().toISOString()
+  });
+});
+
+// Debug route for testing CORS and API connectivity
+app.get('/api/debug', (req, res) => {
+  // Log all request headers for debugging
+  console.log('Debug request headers:', req.headers);
+  
+  res.json({
+    success: true,
+    message: 'Debug endpoint working',
+    headers: req.headers,
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin || 'No origin header',
+    host: req.headers.host,
+    referer: req.headers.referer || 'No referer',
+    cors: {
+      enabled: true,
+      allowAllOrigins: true
+    }
+  });
+});
+
+// Special non-authenticated debug registration endpoint
+app.post('/api/debug/register', (req, res) => {
+  console.log('Debug registration request:', req.body);
+  console.log('Debug registration headers:', req.headers);
+  
+  // Return success response without actually creating a user
+  res.status(200).json({
+    success: true,
+    message: 'Debug registration endpoint working',
+    receivedData: req.body,
+    headers: {
+      contentType: req.headers['content-type'],
+      origin: req.headers.origin,
+      host: req.headers.host
+    },
+    mockToken: 'debug-jwt-token-' + Date.now()
   });
 });
 
