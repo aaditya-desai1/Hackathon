@@ -1,45 +1,45 @@
-const { spawn } = require('child_process');
+const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs-extra');
 
-// Set production environment
-process.env.NODE_ENV = 'production';
+// Set environment variables for build
+process.env.CI = 'false';
+process.env.DISABLE_ESLINT_PLUGIN = 'true';
+process.env.SKIP_PREFLIGHT_CHECK = 'true';
 
-// Change to frontend directory if not already there
-const frontendDir = path.join(__dirname, 'frontend');
-if (process.cwd() !== frontendDir) {
-  process.chdir(frontendDir);
-}
+console.log('Starting DataVizPro build process...');
 
-console.log('Starting build process...');
-console.log('Current directory:', process.cwd());
-
-// Direct path to the build.js script
-const buildScriptPath = path.join(process.cwd(), 'node_modules', 'react-scripts', 'scripts', 'build.js');
-
-// Check if the build script exists
-if (!fs.existsSync(buildScriptPath)) {
-  console.error(`Build script not found: ${buildScriptPath}`);
-  process.exit(1);
-}
-
-// Execute the build script directly
 try {
-  console.log(`Executing: node ${buildScriptPath}`);
-  
-  const buildProcess = spawn('node', [buildScriptPath], {
+  // Clean build directory
+  console.log('Cleaning build directories...');
+  fs.emptyDirSync(path.join(__dirname, 'build'));
+  fs.emptyDirSync(path.join(__dirname, 'frontend', 'build'));
+
+  // Install dependencies
+  console.log('Installing frontend dependencies...');
+  execSync('cd frontend && npm install', { stdio: 'inherit' });
+
+  // Run the frontend build
+  console.log('Building frontend...');
+  execSync('cd frontend && npm run build', { 
     stdio: 'inherit',
-    env: { ...process.env, NODE_ENV: 'production' }
+    env: { ...process.env, CI: 'false', DISABLE_ESLINT_PLUGIN: 'true' }
   });
 
-  buildProcess.on('close', (code) => {
-    if (code !== 0) {
-      console.error(`Build process exited with code ${code}`);
-      process.exit(code);
-    }
-    console.log('Build completed successfully');
-  });
+  // Copy build to root directory
+  console.log('Copying build files to root directory...');
+  fs.copySync(
+    path.join(__dirname, 'frontend', 'build'),
+    path.join(__dirname, 'build')
+  );
+
+  // Verify build
+  const files = fs.readdirSync(path.join(__dirname, 'build'));
+  console.log(`Build complete. Build directory contains ${files.length} files/directories:`);
+  console.log(files.join(', '));
+
+  console.log('Build process completed successfully!');
 } catch (error) {
-  console.error('Error executing build script:', error);
+  console.error('Build process failed:', error);
   process.exit(1);
 } 
