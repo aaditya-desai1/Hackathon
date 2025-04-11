@@ -19,10 +19,7 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HelpIcon from '@mui/icons-material/Help';
 import InfoIcon from '@mui/icons-material/Info';
-<<<<<<< HEAD
 import SaveIcon from '@mui/icons-material/Save';
-=======
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import IconButton from '@mui/material/IconButton';
 
@@ -36,10 +33,7 @@ function Sidebar({ drawerOpen, toggleDrawer }) {
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'File Manager', icon: <DescriptionIcon />, path: '/files' },
     { text: 'Visualizations', icon: <BarChartIcon />, path: '/visualizations' },
-<<<<<<< HEAD
     { text: 'Saved Visualizations', icon: <SaveIcon />, path: '/saved-visualizations' },
-=======
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   ];
 
   const secondaryMenuItems = [
@@ -61,11 +55,8 @@ function Sidebar({ drawerOpen, toggleDrawer }) {
         flexShrink: 0,
         whiteSpace: 'nowrap',
         boxSizing: 'border-box',
-<<<<<<< HEAD
         zIndex: theme => theme.zIndex.drawer,
         position: 'fixed',
-=======
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
         ...(drawerOpen && {
           '& .MuiDrawer-paper': {
             width: drawerWidth,
@@ -75,11 +66,8 @@ function Sidebar({ drawerOpen, toggleDrawer }) {
             }),
             boxSizing: 'border-box',
             overflowX: 'hidden',
-<<<<<<< HEAD
             position: 'fixed',
             borderRight: `1px solid ${theme.palette.divider}`,
-=======
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
           },
         }),
         ...(!drawerOpen && {
@@ -91,11 +79,8 @@ function Sidebar({ drawerOpen, toggleDrawer }) {
             overflowX: 'hidden',
             width: theme.spacing(7),
             boxSizing: 'border-box',
-<<<<<<< HEAD
             position: 'fixed',
             borderRight: `1px solid ${theme.palette.divider}`,
-=======
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
           },
         }),
       }}
@@ -118,12 +103,6 @@ function Sidebar({ drawerOpen, toggleDrawer }) {
             >
               DataViz Pro
             </Typography>
-<<<<<<< HEAD
-=======
-            <IconButton onClick={toggleDrawer}>
-              <ChevronLeftIcon />
-            </IconButton>
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
           </Box>
         )}
       </Toolbar>

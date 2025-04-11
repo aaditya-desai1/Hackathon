@@ -21,7 +21,7 @@
   ],
   "env": {
     "NODE_ENV": "production",
-    "REACT_APP_API_URL": "@datavizpro-api-url"
+    "REACT_APP_API_URL": "https://express-backend-7m2c.onrender.com"
   },
   "public": false
 } 

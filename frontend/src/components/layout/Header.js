@@ -6,7 +6,6 @@ import {
   IconButton,
   Box,
   useTheme,
-<<<<<<< HEAD
   Button,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -19,21 +18,12 @@ import { alpha } from '@mui/material/styles';
 import { useColorMode } from '../../App';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-=======
-} from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
-import { alpha } from '@mui/material/styles';
-import { useColorMode } from '../../App';
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 
 const drawerWidth = 240;
 
 function Header({ drawerOpen, toggleDrawer }) {
   const theme = useTheme();
   const colorMode = useColorMode();
-<<<<<<< HEAD
   const { isAuthenticated, logout, currentUser } = useAuth();
   const navigate = useNavigate();
 
@@ -45,8 +35,6 @@ function Header({ drawerOpen, toggleDrawer }) {
     logout();
     navigate('/login');
   };
-=======
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 
   return (
     <AppBar
@@ -58,12 +46,7 @@ function Header({ drawerOpen, toggleDrawer }) {
         backgroundColor: 'background.paper',
         borderBottom: '1px solid',
         borderColor: 'divider',
-<<<<<<< HEAD
         width: '100%',
-=======
-        width: { sm: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
-        ml: { sm: `${drawerOpen ? drawerWidth : 0}px` },
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
         transition: theme.transitions.create(['margin', 'width'], {
           easing: theme.transitions.easing.sharp,
           duration: theme.transitions.duration.leavingScreen,
@@ -78,17 +61,10 @@ function Header({ drawerOpen, toggleDrawer }) {
           onClick={toggleDrawer}
           sx={{
             marginRight: 2,
-<<<<<<< HEAD
             display: isAuthenticated ? 'flex' : 'none',
           }}
         >
           {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
-=======
-            ...(drawerOpen && { display: 'none' }),
-          }}
-        >
-          <MenuIcon />
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
         </IconButton>
         <Typography
           component="h1"
@@ -102,7 +78,6 @@ function Header({ drawerOpen, toggleDrawer }) {
 
         <Box sx={{ flexGrow: 1 }} />
 
-<<<<<<< HEAD
         {/* User name display when authenticated */}
         {isAuthenticated && currentUser && (
           <Typography
@@ -139,8 +114,6 @@ function Header({ drawerOpen, toggleDrawer }) {
           </Button>
         )}
 
-=======
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
         {/* Light/Dark Mode Toggle */}
         <IconButton
           size="large"

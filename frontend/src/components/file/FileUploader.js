@@ -6,30 +6,21 @@ import {
   LinearProgress,
   Alert,
   Paper,
-<<<<<<< HEAD
   Button,
   CircularProgress,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { fetchApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-=======
-} from '@mui/material';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 
 function FileUploader({ onUploadSuccess, allowedTypes }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
-<<<<<<< HEAD
   const [errorDetails, setErrorDetails] = useState(null);
-=======
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   const [success, setSuccess] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [uploading, setUploading] = useState(false);
-<<<<<<< HEAD
   const [validating, setValidating] = useState(false);
   const { isAuthenticated } = useAuth();
 
@@ -111,13 +102,10 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       throw new Error('CSV file does not contain any data');
     }
   };
-=======
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
 
   const uploadFile = async (file) => {
     if (!file) return;
     
-<<<<<<< HEAD
     // Check if user is authenticated
     if (!isAuthenticated) {
       setError('You must be logged in to upload files');
@@ -137,13 +125,6 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       return;
     }
     
-=======
-    setUploading(true);
-    setError(null);
-    setSuccess(false);
-    setUploadProgress(0);
-    
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
     // Simulate upload progress for better UX
     const progressInterval = setInterval(() => {
       setUploadProgress((prevProgress) => {
@@ -153,7 +134,6 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     }, 100);
     
     try {
-<<<<<<< HEAD
       let fileToUpload = file;
       
       // For JSON files, ensure we have valid JSON by pre-processing it
@@ -299,27 +279,11 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
           'Authorization': `Bearer ${token}`
           // NOTE: Do NOT set Content-Type header for FormData/multipart
         }
-=======
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      // Use the absolute URL path for consistent behavior in all environments
-      const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
-      const url = `${API_BASE_URL}/api/files/upload`;
-      
-      console.log('Uploading file to:', url);
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
-        // Do not set Content-Type header for FormData
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       });
       
       clearInterval(progressInterval);
       
       if (!response.ok) {
-<<<<<<< HEAD
         // Try to extract error message from the response
         let errorMessage = `HTTP error: ${response.status}`;
         try {
@@ -330,10 +294,6 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
           errorMessage = `HTTP error: ${response.status} ${response.statusText}`;
         }
         throw new Error(errorMessage);
-=======
-        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
-        throw new Error(errorData.error || `Upload failed with status ${response.status}`);
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       }
       
       const data = await response.json();
@@ -357,13 +317,8 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
       console.error('Upload error:', error);
       setError(error.message || 'Failed to upload file');
       setUploadProgress(0);
-<<<<<<< HEAD
       clearInterval(progressInterval);
     } finally {
-=======
-    } finally {
-      clearInterval(progressInterval);
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       setUploading(false);
     }
   };
@@ -373,7 +328,6 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     
     if (!file) return;
     
-<<<<<<< HEAD
     // Check file type
     const fileExtension = file.name.toLowerCase().split('.').pop();
     console.log(`File extension: ${fileExtension}, MIME type: ${file.type}`);
@@ -384,10 +338,6 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     
     if (!isAllowedMimeType && !isAllowedExtension) {
       setError(`File type not supported. Please upload CSV, JSON, or TXT files.`);
-=======
-    if (!allowedTypes.includes(file.type)) {
-      setError(`File type not supported. Please upload ${allowedTypes.join(', ')} files.`);
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
       return;
     }
 
@@ -396,7 +346,6 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     
     // Upload the file immediately when dropped
     uploadFile(file);
-<<<<<<< HEAD
   }, [allowedTypes]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -416,25 +365,11 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
     }
   };
 
-=======
-  }, [allowedTypes, uploadFile]);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: allowedTypes.reduce((acc, type) => {
-      acc[type] = [];
-      return acc;
-    }, {}),
-    multiple: false,
-  });
-
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
   return (
     <Box sx={{ width: '100%' }}>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
-<<<<<<< HEAD
           {errorDetails && (
             <Box component="pre" sx={{ mt: 1, fontSize: '0.8rem', maxHeight: '100px', overflow: 'auto' }}>
               {JSON.stringify(errorDetails, null, 2)}
@@ -445,8 +380,6 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
               Try Again
             </Button>
           )}
-=======
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
         </Alert>
       )}
       
@@ -463,7 +396,6 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
           border: '2px dashed',
           borderColor: isDragActive ? 'primary.main' : 'grey.300',
           backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
-<<<<<<< HEAD
           cursor: (uploading || validating) ? 'default' : 'pointer',
           transition: 'all 0.2s ease',
           '&:hover': {
@@ -473,17 +405,6 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
         }}
       >
         <input {...getInputProps()} disabled={uploading || validating} />
-=======
-          cursor: uploading ? 'default' : 'pointer',
-          transition: 'all 0.2s ease',
-          '&:hover': {
-            borderColor: uploading ? 'grey.300' : 'primary.main',
-            backgroundColor: uploading ? 'background.paper' : 'action.hover',
-          },
-        }}
-      >
-        <input {...getInputProps()} disabled={uploading} />
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
         <Box
           sx={{
             display: 'flex',
@@ -492,7 +413,6 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
             textAlign: 'center',
           }}
         >
-<<<<<<< HEAD
           {validating ? (
             <>
               <CircularProgress sx={{ mb: 2 }} />
@@ -517,21 +437,6 @@ function FileUploader({ onUploadSuccess, allowedTypes }) {
               </Typography>
             </>
           )}
-=======
-          <CloudUploadIcon
-            sx={{ fontSize: 48, color: 'primary.main', mb: 2 }}
-          />
-          <Typography variant="h6" gutterBottom>
-            {isDragActive
-              ? 'Drop the file here'
-              : uploading
-              ? 'Uploading...'
-              : 'Drag and drop a file here, or click to select'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Supported formats: CSV, JSON, and text files
-          </Typography>
->>>>>>> 07e877bee730f85c53037e3868e108afba08b8ca
         </Box>
       </Paper>
 

@@ -32,7 +32,7 @@ function processMergeConflicts(filePath) {
     // Check if file has merge conflicts
     if (!content.includes('<<<<<<< HEAD')) {
       console.log(`  No merge conflicts found in ${filePath}`);
-      return;
+      return false;
     }
 
     // Remove merge conflict markers and their sections
@@ -80,13 +80,35 @@ function processMergeConflicts(filePath) {
 function cleanAllMergeConflicts() {
   console.log('🔎 Searching for files with potential merge conflicts...');
   
+  // Known files with merge conflicts
+  const knownConflictFiles = [
+    './frontend/src/index.js',
+    './frontend/src/App.js',
+    './frontend/src/pages/Home.js',
+    './frontend/src/pages/FileManager.js',
+    './frontend/src/pages/Dashboard.js',
+    './frontend/src/pages/Visualizations.js',
+    './frontend/src/utils/chartUtils.js',
+    './frontend/package.json',
+    './package.json',
+    './vercel.json'
+  ];
+  
   // Get all JS and JSON files in the frontend directory
   const frontendPath = path.join(__dirname, 'frontend');
-  const allFiles = getAllFiles(frontendPath, ['.js', '.json']);
+  let allFiles = getAllFiles(frontendPath, ['.js', '.json']);
   
   // Also check root package.json and vercel.json
   allFiles.push(path.join(__dirname, 'package.json'));
   allFiles.push(path.join(__dirname, 'vercel.json'));
+  
+  // Add known conflict files that might not be found by the getAllFiles function
+  knownConflictFiles.forEach(file => {
+    const absolutePath = path.join(__dirname, file.replace('./', ''));
+    if (!allFiles.includes(absolutePath) && fs.existsSync(absolutePath)) {
+      allFiles.push(absolutePath);
+    }
+  });
   
   console.log(`Found ${allFiles.length} files to check for merge conflicts`);
   
