@@ -59,8 +59,9 @@ export const fetchChartDataFromAPI = async (chart) => {
       throw new Error('Authentication required to fetch chart data');
     }
     
-    // Prepare API URL
-    const API_BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000';
+    // Prepare API URL - use the same logic as the API service
+    const API_BASE_URL = process.env.REACT_APP_API_URL || 
+                        (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000');
     let dataUrl = `${API_BASE_URL}/api/data/chart?fileId=${chart.fileId}&yAxis=${chart.yAxis}`;
     
     if (chart.xAxis) {

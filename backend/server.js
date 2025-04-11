@@ -28,9 +28,12 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Ensure uploads directory exists - use /tmp in production (Vercel)
+// Determine if we're running on Render
+const isRender = process.env.RENDER === 'true';
+
+// Ensure uploads directory exists - Use appropriate path for different environments
 const uploadsDir = process.env.NODE_ENV === 'production' 
-  ? '/tmp' 
+  ? (isRender ? path.join('/tmp/uploads') : '/tmp') 
   : path.join(__dirname, 'uploads');
 
 if (!fs.existsSync(uploadsDir)) {
@@ -52,6 +55,7 @@ app.get('/health', (req, res) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
+    platform: isRender ? 'Render' : 'Other',
     mongodb: mongoose.connection.readyState
   });
 });
@@ -67,6 +71,7 @@ app.get('/api/diagnostics/mongo', async (req, res) => {
       host: mongoose.connection.host || 'not connected',
       name: mongoose.connection.name || 'not connected',
       environment: process.env.NODE_ENV || 'development',
+      platform: isRender ? 'Render' : 'Other'
     };
     
     // Try to perform a simple operation to verify connection
@@ -103,6 +108,7 @@ app.get('/api/test', (req, res) => {
     success: true,
     message: 'API is working',
     environment: process.env.NODE_ENV || 'development',
+    platform: isRender ? 'Render' : 'Other',
     mongo_connection: mongoose.connection.readyState,
     timestamp: new Date().toISOString()
   });
@@ -147,8 +153,9 @@ const mongooseOptions = {
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/datavizpro';
 console.log(`Attempting to connect to MongoDB with ${MONGODB_URI ? 'provided connection string' : 'default localhost connection'}`);
 console.log(`NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+console.log(`Platform: ${isRender ? 'Render' : 'Other'}`);
 
-// For Vercel serverless environment, we need to handle connections differently
+// For serverless environments, we need to handle connections differently
 let cachedConnection = null;
 
 const connectToDatabase = async () => {
@@ -169,8 +176,9 @@ const connectToDatabase = async () => {
   }
 };
 
-// Connect to MongoDB on startup if not in serverless environment
-if (process.env.NODE_ENV !== 'production') {
+// Different connection handling based on environment
+if (process.env.NODE_ENV !== 'production' || isRender) {
+  // For development or Render (which is not serverless), connect on startup
   connectToDatabase()
     .then(() => {
       const PORT = process.env.PORT || 5000;

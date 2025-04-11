@@ -2,10 +2,6 @@
   "version": 2,
   "builds": [
     {
-      "src": "backend/server.js",
-      "use": "@vercel/node"
-    },
-    {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
@@ -15,24 +11,17 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "backend/server.js"
-    },
-    {
       "src": "/(.*\\.(js|json|css|ico|png|jpg|jpeg|svg|gif|woff|woff2|ttf|eot)$)",
-      "dest": "frontend/$1"
+      "dest": "/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/index.html"
+      "dest": "/index.html"
     }
   ],
   "env": {
     "NODE_ENV": "production",
-    "MONGODB_URI": "@datavizpro-mongodb-uri",
-    "JWT_SECRET": "@datavizpro-jwt-secret",
-    "GOOGLE_CLIENT_ID": "@datavizpro-google-client-id",
-    "GOOGLE_CLIENT_SECRET": "@datavizpro-google-client-secret"
+    "REACT_APP_API_URL": "@datavizpro-api-url"
   },
   "public": false
 } 
