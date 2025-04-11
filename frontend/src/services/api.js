@@ -43,142 +43,100 @@ export const fetchApi = async (endpoint, options = {}) => {
   const token = localStorage.getItem('authToken');
   const headers = {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
     ...(options.headers || {})
   };
   
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
-    console.log(`[API] Using token: ${token.substring(0, 10)}...`);
-  } else {
-    console.warn('[API] No authentication token found in localStorage');
-    // Don't fail immediately, let the server decide if the endpoint requires auth
   }
   
   try {
-    // Check network connectivity
-    if (!navigator.onLine) {
-      console.error('[API] Browser reports offline status');
-      throw new Error('You are currently offline. Please check your internet connection and try again.');
-    }
-    
-    console.log(`[API] About to fetch from: ${apiEndpoint}`);
-    
-    // IMPORTANT: Check if we can reach the server with a simple preflight check
-    let serverAvailable = true;
-    try {
-      // Skip preflight for multipart/form-data requests which need direct fetch
-      const skipPreflight = options.body instanceof FormData;
-      
-      if (!skipPreflight) {
-        const preflightResponse = await fetch(`${API_BASE_URL}/health`, { 
-          method: 'HEAD',
-          mode: 'cors',
-          cache: 'no-cache',
-          credentials: 'include' // Include credentials in preflight too
-        });
-        
-        if (!preflightResponse.ok) {
-          console.warn('[API] Server health check failed');
-          serverAvailable = false;
-        } else {
-          console.log('[API] Server health check passed');
-        }
-      }
-    } catch (preflightError) {
-      console.warn('[API] Server preflight check failed:', preflightError.message);
-      serverAvailable = false;
-      // We'll continue with the main request, but might use fallback later
-    }
-    
-    // If server is not available and we're configured to use mock data, return it now
-    if (!serverAvailable && useMockDataWhenApiDown) {
-      console.log('[API] Server appears to be down based on health check, using mock data');
-      return createMockResponse(endpoint, options);
-    }
-    
-    // Main request
-    const response = await fetch(apiEndpoint, {
+    // Create options with headers
+    const fetchOptions = {
       ...options,
       headers,
-      // Keep cors mode but ensure credentials are properly handled
-      mode: 'cors',
-      credentials: 'include' // Use 'include' to support cross-domain cookies
-    });
+      credentials: 'include',
+      mode: 'cors'
+    };
     
-    console.log(`[API] Fetch response received, status: ${response.status}`);
+    // Make the request with a timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
     
+    fetchOptions.signal = controller.signal;
+    
+    // Make the network request
+    const response = await fetch(apiEndpoint, fetchOptions);
+    clearTimeout(timeoutId);
+    
+    // Handle HTTP errors with proper error message extraction
     if (!response.ok) {
-      // Try to parse error response
+      // Try to get a proper error message from the response
+      let errorMessage;
       try {
-        const errorText = await response.text();
-        console.error(`[API] Response text:`, errorText);
+        // Try to parse the response as JSON to get a detailed error message
+        const errorData = await response.json();
         
-        // Check for authentication errors first
-        if (response.status === 401) {
-          console.error('[API] Authentication error - clearing token');
-          localStorage.removeItem('authToken'); // Clear invalid token
-          
-          // Dispatch auth error event
-          const authErrorEvent = new CustomEvent('auth-error', {
-            detail: { 
-              message: 'Invalid credentials. Please check your email and password.' 
-            }
-          });
-          window.dispatchEvent(authErrorEvent);
-          
-          // For 401 errors on protected endpoints, return a special mock response
-          if (useMockDataWhenApiDown && endpoint.match(/\/api\/(files|visualizations)/)) {
-            console.log('[API] Authentication failed but returning mock data for UI continuity');
-            return createMockResponse(endpoint, options);
-          }
-        }
-        
-        // If API is down and we're set to use mock data, generate mock response
-        if (useMockDataWhenApiDown && (response.status === 404 || response.status === 503 || response.status === 0)) {
-          console.log('[API] Server appears to be down, using mock data');
-          return createMockResponse(endpoint, options);
-        }
-        
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-          console.error(`[API] Request failed with status ${response.status}:`, errorData);
-          throw new Error(errorData.error || `HTTP error ${response.status}`);
-        } catch (jsonError) {
-          console.error(`[API] Could not parse error response as JSON:`, jsonError);
-          throw new Error(`HTTP error ${response.status}: ${errorText.substring(0, 100)}`);
-        }
-      } catch (e) {
-        console.error(`[API] Request failed with status ${response.status}, could not read response:`, e);
-        
-        // If API is down and we're set to use mock data, generate mock response
-        if (useMockDataWhenApiDown && (response.status === 404 || response.status === 503 || response.status === 0)) {
-          console.log('[API] Server appears to be down, using mock data');
-          return createMockResponse(endpoint, options);
-        }
-        
-        throw new Error(`HTTP error ${response.status}`);
+        // Use the error message from the response if available
+        errorMessage = errorData.error || 
+                      errorData.message || 
+                      `HTTP error ${response.status}: ${response.statusText}`;
+                      
+        console.error('[API] Response error data:', errorData);
+      } catch (parseError) {
+        // If parsing fails, use a generic error message
+        errorMessage = `HTTP error ${response.status}: ${response.statusText}`;
+        console.error('[API] Could not parse error response:', parseError);
       }
+      
+      // Create an error object with detailed information
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.statusText = response.statusText;
+      error.response = response;
+      
+      throw error;
     }
     
-    // Log success
-    console.log(`[API] Request succeeded: ${apiEndpoint}`);
     return response;
   } catch (error) {
-    console.error(`[API] Request failed: ${apiEndpoint}`, error);
-    
-    // If we should use mock data when API is down
-    if (useMockDataWhenApiDown) {
-      console.log('[API] Attempting to use mock data due to error:', error.message);
-      return createMockResponse(endpoint, options);
+    // Special handling for network errors
+    if (error.name === 'AbortError') {
+      console.error('[API] Request timeout:', apiEndpoint);
+      throw new Error('Request timed out. Please check your internet connection and try again.');
     }
     
-    // Enhanced error handling for CORS issues
-    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      console.error('[API] This may be a CORS or network connectivity issue');
-      throw new Error('Network error. This could be due to connectivity issues or CORS restrictions.');
+    if (error.message && error.message.includes('Network request failed')) {
+      console.error('[API] Network request failed:', apiEndpoint);
+      
+      // Check if server is down and mock mode is available
+      if (useMockDataWhenApiDown) {
+        console.log('[API] Server appears to be down, checking for mock data');
+        // Return a mock response if appropriate
+        const mockResponse = createMockResponse(normalizedEndpoint, options);
+        if (mockResponse) {
+          console.log('[API] Using mock data for:', endpoint);
+          return mockResponse;
+        }
+      }
+      
+      throw new Error('Network connection failed. Please check your internet connection and try again.');
     }
     
+    // For authentication errors, dispatch an event to notify the app
+    if (error.status === 401) {
+      console.error('[API] Authentication error:', error.message);
+      const authErrorEvent = new CustomEvent('auth-error', { 
+        detail: { 
+          message: error.message,
+          status: error.status
+        } 
+      });
+      window.dispatchEvent(authErrorEvent);
+    }
+    
+    console.error(`[API] Fetch error for ${apiEndpoint}:`, error);
     throw error;
   }
 };
