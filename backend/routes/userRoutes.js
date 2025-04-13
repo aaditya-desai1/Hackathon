@@ -4,7 +4,15 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 const { OAuth2Client } = require('google-auth-library');
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+// Initialize Google client only if we have a client ID
+const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
+let googleClient = null;
+
+if (googleClientId) {
+  googleClient = new OAuth2Client(googleClientId);
+} else {
+  console.warn('GOOGLE_CLIENT_ID not set in environment variables. Google authentication will not work properly.');
+}
 
 // Register a new user
 router.post('/register', async (req, res) => {
@@ -92,16 +100,33 @@ router.post('/google', async (req, res) => {
       return res.status(400).json({ error: 'Token is required' });
     }
     
+    // Check if Google Client ID is configured
+    if (!googleClientId || !googleClient) {
+      console.error('Google auth error: GOOGLE_CLIENT_ID not configured');
+      return res.status(500).json({ 
+        error: 'Server not configured for Google authentication. Please use email/password login.'
+      });
+    }
+    
     console.log('Google auth: Verifying token with Google');
-    console.log('Using Google Client ID:', process.env.GOOGLE_CLIENT_ID);
+    console.log('Using Google Client ID:', googleClientId);
     
-    const ticket = await googleClient.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID
-    });
-    
-    const payload = ticket.getPayload();
-    console.log('Google auth: Token verified successfully, payload received');
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: token,
+        audience: googleClientId
+      });
+      
+      payload = ticket.getPayload();
+      console.log('Google auth: Token verified successfully, payload received');
+    } catch (verifyError) {
+      console.error('Google auth: Token verification failed', verifyError);
+      return res.status(401).json({ 
+        error: 'Failed to verify Google token',
+        details: verifyError.message 
+      });
+    }
     
     const { email, name, picture, sub: googleId } = payload;
     
@@ -125,20 +150,46 @@ router.post('/google', async (req, res) => {
         picture
       });
       
-      await user.save();
-      console.log('Google auth: New user created successfully');
+      try {
+        await user.save();
+        console.log('Google auth: New user created successfully');
+      } catch (saveError) {
+        console.error('Google auth: Failed to save new user', saveError);
+        return res.status(500).json({ 
+          error: 'Failed to create new user',
+          details: saveError.message 
+        });
+      }
     } else if (!user.googleId) {
       // Existing user, link Google account
       console.log('Google auth: Linking existing user to Google account');
       user.googleId = googleId;
       user.picture = picture || user.picture;
-      await user.save();
+      
+      try {
+        await user.save();
+      } catch (updateError) {
+        console.error('Google auth: Failed to update user with Google ID', updateError);
+        return res.status(500).json({ 
+          error: 'Failed to link Google account',
+          details: updateError.message 
+        });
+      }
     } else {
       console.log('Google auth: Existing user found with Google ID');
     }
     
     // Generate auth token
-    const jwtToken = user.generateAuthToken();
+    let jwtToken;
+    try {
+      jwtToken = user.generateAuthToken();
+    } catch (tokenError) {
+      console.error('Google auth: Failed to generate JWT token', tokenError);
+      return res.status(500).json({ 
+        error: 'Authentication service error',
+        details: tokenError.message 
+      });
+    }
     
     res.json({
       user: {

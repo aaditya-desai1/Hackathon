@@ -466,25 +466,74 @@ export const authApi = {
     
     try {
       console.log('[AUTH] Fetching current user profile');
+      
+      // Check for network connectivity before making the request
+      if (!navigator.onLine) {
+        console.log('[AUTH] Browser is offline, returning cached user if available');
+        // Try to get cached user from sessionStorage
+        const cachedUser = sessionStorage.getItem('cachedUser');
+        if (cachedUser) {
+          try {
+            return JSON.parse(cachedUser);
+          } catch (parseError) {
+            console.error('[AUTH] Error parsing cached user:', parseError);
+            // Continue with API request attempt
+          }
+        }
+      }
+      
       const response = await fetchApi('/api/users/profile');
       
       // If this is a mock response, return a default user profile
       if (response.isMock) {
         console.log('[AUTH] Returning mock user profile');
-        return {
+        const mockUser = {
           _id: 'mock-user-id',
           username: 'demo_user',
           email: 'demo@example.com',
           role: 'user'
         };
+        
+        // Cache the mock user
+        sessionStorage.setItem('cachedUser', JSON.stringify(mockUser));
+        return mockUser;
       }
       
       const data = await response.json();
       console.log('[AUTH] Current user data:', data);
+      
+      // Cache the user data for offline use
+      sessionStorage.setItem('cachedUser', JSON.stringify(data));
       return data;
     } catch (error) {
       console.error('[AUTH] Failed to get current user:', error);
-      localStorage.removeItem('authToken');
+      
+      // If it's a 401 unauthorized error, clear the token
+      if (error.status === 401) {
+        localStorage.removeItem('authToken');
+        sessionStorage.removeItem('cachedUser');
+        return null;
+      }
+      
+      // If it's a network error, try to return the cached user
+      if (error.message.includes('Network') || !navigator.onLine) {
+        console.log('[AUTH] Network error, checking for cached user');
+        const cachedUser = sessionStorage.getItem('cachedUser');
+        if (cachedUser) {
+          try {
+            return JSON.parse(cachedUser);
+          } catch (parseError) {
+            console.error('[AUTH] Error parsing cached user:', parseError);
+          }
+        }
+      }
+      
+      // Only clear the token for serious authentication failures
+      if (error.message.includes('invalid') || error.message.includes('expired')) {
+        localStorage.removeItem('authToken');
+        sessionStorage.removeItem('cachedUser');
+      }
+      
       return null;
     }
   }

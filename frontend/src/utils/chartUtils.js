@@ -3,7 +3,7 @@
  */
 
 import { Chart as ChartJS } from 'chart.js/auto';
-import { getRandomColor } from './colorUtils';
+import { getRandomColor, generateChartColors, getChartStyleConfig } from './colorUtils';
 import { fetchApi } from '../services/api';
 
 /**
@@ -17,30 +17,76 @@ export const generateChartConfig = (chartData, chartType = 'bar') => {
   const labels = chartData.labels || [];
   const values = chartData.values || [];
   
-  // Generate random colors for each data point
-  const colors = chartData.colors || Array(values.length).fill().map(() => {
-    const r = Math.floor(Math.random() * 255);
-    const g = Math.floor(Math.random() * 255);
-    const b = Math.floor(Math.random() * 255);
-    return `rgba(${r}, ${g}, ${b}, 0.6)`;
-  });
+  // Generate modern colors for each data point using our utility
+  const { colors, borderColors } = generateChartColors(values.length);
+  
+  // Get chart style for the specific chart type
+  const chartStyle = getChartStyleConfig(chartType, values, chartData.label || 'Data');
+  
+  // Create datasets based on chart type
+  const datasets = [{
+    ...chartStyle,
+    data: chartType === 'scatter' 
+      ? values.map((value, index) => ({ x: labels[index], y: value }))
+      : values
+  }];
   
   // Create config object based on Chart.js structure
   return {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      animation: {
+        duration: 1000,
+        easing: 'easeOutQuart'
+      },
+      layout: {
+        padding: {
+          top: 10,
+          right: 20,
+          bottom: 10,
+          left: 10
+        }
+      },
       plugins: {
         legend: {
           display: chartType === 'pie' || chartType === 'doughnut',
           position: 'top',
+          labels: {
+            font: {
+              size: 13,
+              family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+            },
+            usePointStyle: true,
+            boxWidth: 6,
+            padding: 15
+          }
         },
         title: {
           display: !!chartData.title,
           text: chartData.title || '',
+          font: {
+            size: 18,
+            weight: 'bold',
+            family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+          },
+          padding: 20,
+          color: '#333333'
         },
         tooltip: {
           enabled: true,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleFont: {
+            size: 14,
+            weight: 'bold',
+            family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+          },
+          bodyFont: {
+            size: 13,
+            family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+          },
+          padding: 12,
+          cornerRadius: 6,
           mode: 'index',
           intersect: false,
         },
@@ -50,30 +96,57 @@ export const generateChartConfig = (chartData, chartType = 'bar') => {
           title: {
             display: true,
             text: chartData.xAxisLabel || '',
+            font: {
+              size: 14,
+              weight: 'bold',
+              family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+            },
+            color: '#555555',
+            padding: { top: 10, bottom: 0 }
           },
           ticks: {
+            font: {
+              size: 12,
+              family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+            },
+            color: '#666666',
             maxRotation: 45,
-            minRotation: 0,
+            minRotation: 0
           },
+          grid: {
+            display: false
+          }
         },
         y: {
           title: {
             display: true,
             text: chartData.yAxisLabel || '',
+            font: {
+              size: 14,
+              weight: 'bold',
+              family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+            },
+            color: '#555555',
+            padding: { top: 0, bottom: 10 }
           },
-          beginAtZero: true,
+          ticks: {
+            font: {
+              size: 12,
+              family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+            },
+            color: '#666666'
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)',
+            drawBorder: false
+          },
+          beginAtZero: true
         },
       },
     },
     data: {
       labels,
-      datasets: [{
-        label: chartData.label || 'Data',
-        data: values,
-        backgroundColor: colors,
-        borderColor: colors.map(color => color.replace('0.6', '1')),
-        borderWidth: 1
-      }]
+      datasets
     },
     type: chartType,
   };

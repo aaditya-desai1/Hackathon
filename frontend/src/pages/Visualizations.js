@@ -71,6 +71,7 @@ import { Chart, registerables } from 'chart.js/auto';
 import { fetchApi } from '../services/api';
 import { generateChartConfig, fetchChartDataFromAPI } from '../utils/chartUtils';
 import { useAuth } from '../contexts/AuthContext';
+import { generateChartColors, getChartStyleConfig } from '../utils/colorUtils';
 
 // Register all chart components
 Chart.register(...registerables);
@@ -1406,93 +1407,30 @@ function Visualizations() {
 
   // Create a chart with real data
   const updateChartWithRealData = (ctx, chartType, labels, values, yAxisLabel, instancesObject, chartKey, xAxisLabel) => {
-    console.log('Updating chart with real data:', { chartType, labels, values, xAxisLabel, yAxisLabel });
+    console.log(`Updating chart ${chartKey} with real data:`, { chartType, labels, values });
     
-    // Generate a wider range of unique colors
-    const generateUniqueColors = (count) => {
-      // Base colors with good contrast
-      const baseColors = [
-        [53, 162, 235],   // Blue
-        [255, 99, 132],   // Red
-        [75, 192, 192],   // Teal
-        [255, 159, 64],   // Orange
-        [153, 102, 255],  // Purple
-        [255, 205, 86],   // Yellow
-        [0, 168, 133],    // Emerald
-        [54, 162, 92],    // Green
-        [255, 99, 71],    // Tomato
-        [106, 90, 205]    // Slate Blue
-      ];
-      
-      // If we need more colors than in the base set, generate them algorithmically
-      const uniqueColors = [];
-      const uniqueBorderColors = [];
-      
-      for (let i = 0; i < count; i++) {
-        if (i < baseColors.length) {
-          // Use predefined base colors first
-          uniqueColors.push(`rgba(${baseColors[i][0]}, ${baseColors[i][1]}, ${baseColors[i][2]}, 0.8)`);
-          uniqueBorderColors.push(`rgba(${baseColors[i][0]}, ${baseColors[i][1]}, ${baseColors[i][2]}, 1)`);
-        } else {
-          // Generate colors using HSL for better distribution
-          // This uses the golden ratio to create evenly distributed hues
-          const hue = (i * 137.508) % 360; // Golden angle approximation
-          const saturation = 75 + (i % 2) * 10; // Alternate between 75% and 85% saturation
-          const lightness = 55 + (i % 3) * 5;  // Vary lightness slightly
-          
-          // Convert HSL to RGB for rgba format
-          const chroma = (1 - Math.abs(2 * lightness / 100 - 1)) * saturation / 100;
-          const huePrime = hue / 60;
-          const x = chroma * (1 - Math.abs(huePrime % 2 - 1));
-          
-          let r1, g1, b1;
-          if (huePrime >= 0 && huePrime < 1) { r1 = chroma; g1 = x; b1 = 0; }
-          else if (huePrime >= 1 && huePrime < 2) { r1 = x; g1 = chroma; b1 = 0; }
-          else if (huePrime >= 2 && huePrime < 3) { r1 = 0; g1 = chroma; b1 = x; }
-          else if (huePrime >= 3 && huePrime < 4) { r1 = 0; g1 = x; b1 = chroma; }
-          else if (huePrime >= 4 && huePrime < 5) { r1 = x; g1 = 0; b1 = chroma; }
-          else { r1 = chroma; g1 = 0; b1 = x; }
-          
-          const m = lightness / 100 - chroma / 2;
-          const r = Math.round((r1 + m) * 255);
-          const g = Math.round((g1 + m) * 255);
-          const b = Math.round((b1 + m) * 255);
-          
-          uniqueColors.push(`rgba(${r}, ${g}, ${b}, 0.8)`);
-          uniqueBorderColors.push(`rgba(${r}, ${g}, ${b}, 1)`);
-        }
-      }
-      
-      return { colors: uniqueColors, borderColors: uniqueBorderColors };
-    };
+    // Check if we actually have data
+    const hasValidData = labels && values && labels.length > 0 && values.length > 0;
+    
+    // Use our color utilities
+    const { colors, borderColors } = generateChartColors(values?.length || 5);
     
     // Create chart data based on the chart type
     let chartData;
     
-    // Check if we have valid data, if not create fallback data
-    const hasValidData = labels && values && labels.length > 0 && values.length > 0;
-    
     if (chartType === 'scatter') {
+      // Scatter chart data
       if (hasValidData) {
-        // Create scatter plot data points from real data
+        // Prepare scatter data points
         const scatterData = [];
-        for (let i = 0; i < Math.min(labels.length, values.length); i++) {
-          // Try to convert to numeric values for scatter plot
-          let xValue = labels[i];
-          if (typeof xValue === 'string') {
-            // Try to extract numeric value from string
-            const numericValue = parseFloat(xValue.replace(/[^0-9.-]+/g, ''));
-            xValue = isNaN(numericValue) ? i + 1 : numericValue;
+        for (let i = 0; i < labels.length; i++) {
+          if (labels[i] !== undefined && values[i] !== undefined) {
+            scatterData.push({
+              x: parseFloat(labels[i]),
+              y: parseFloat(values[i])
+            });
           }
-          
-          scatterData.push({
-            x: xValue,
-            y: values[i]
-          });
         }
-        
-        // Generate unique color for scatter points
-        const { colors, borderColors } = generateUniqueColors(1);
         
         chartData = {
           datasets: [{
@@ -1500,167 +1438,144 @@ function Visualizations() {
             data: scatterData,
             backgroundColor: colors[0],
             borderColor: borderColors[0],
-            pointRadius: 7,
-            pointHoverRadius: 9,
-            pointBackgroundColor: '#ffffff',
-            pointBorderWidth: 2
+            borderWidth: 1,
+            pointRadius: 6,
+            pointHoverRadius: 8
           }]
         };
       } else {
-        // Create fallback scatter data with realistic trading volume example
-        const tradingVolumes = [
-          { x: 120.5, y: 250000 },
-          { x: 145.75, y: 320000 },
-          { x: 160.25, y: 180000 },
-          { x: 130.5, y: 420000 },
-          { x: 155.0, y: 350000 },
-          { x: 140.25, y: 280000 },
-          { x: 165.75, y: 190000 },
-          { x: 175.0, y: 310000 },
-          { x: 125.75, y: 270000 },
-          { x: 150.5, y: 330000 }
-        ];
-        
-        // Generate unique color for scatter points
-        const { colors, borderColors } = generateUniqueColors(1);
+        // Fallback scatter data
+        const scatterData = [];
+        for (let i = 0; i < 8; i++) {
+          scatterData.push({
+            x: 100 + i * 100,
+            y: 200 + Math.random() * 500
+          });
+        }
         
         chartData = {
           datasets: [{
-            label: 'Trading Volume by Price',
-            data: tradingVolumes,
+            label: 'Example correlation',
+            data: scatterData,
             backgroundColor: colors[0],
             borderColor: borderColors[0],
-            pointRadius: 7,
-            pointHoverRadius: 9,
-            pointBackgroundColor: '#ffffff',
-            pointBorderWidth: 2
+            borderWidth: 1,
+            pointRadius: 6,
+            pointHoverRadius: 8
           }]
         };
       }
     } else if (chartType === 'pie') {
-        // Pie chart data
-        if (hasValidData) {
-          // Generate a unique color for each pie segment
-          const { colors, borderColors } = generateUniqueColors(labels.length);
-          
-          chartData = {
-            labels: labels,
-            datasets: [{
-              data: values,
-              backgroundColor: colors,
-              borderColor: borderColors,
-              borderWidth: 1,
-              hoverOffset: 12,
-              borderRadius: 4
-            }]
-          };
-        } else {
-          // Fallback pie data
-          const fallbackLabels = ['Category A', 'Category B', 'Category C', 'Category D'];
-          const { colors, borderColors } = generateUniqueColors(fallbackLabels.length);
-          
-          chartData = {
-            labels: fallbackLabels,
-            datasets: [{
-              data: [40, 25, 20, 15],
-              backgroundColor: colors,
-              borderColor: borderColors,
-              borderWidth: 1,
-              hoverOffset: 12,
-              borderRadius: 4
-            }]
-          };
-        }
-    } else if (chartType === 'line') {
-        // Line chart data
-        if (hasValidData) {
-          // Generate unique color for line
-          const { colors, borderColors } = generateUniqueColors(1);
-          
-          chartData = {
-            labels: labels,
-            datasets: [{
-              label: yAxisLabel || 'Value',
-              data: values,
-              fill: {
-                target: 'origin',
-                above: colors[0].replace('0.8', '0.1')
-              },
-              backgroundColor: colors[0],
-              borderColor: borderColors[0],
-              tension: 0.3,
-              pointBackgroundColor: '#ffffff',
-              pointBorderColor: borderColors[0],
-              pointBorderWidth: 2,
-              pointRadius: 4,
-              pointHoverRadius: 6
-            }]
-          };
-        } else {
-          // Fallback line data
-          const { colors, borderColors } = generateUniqueColors(1);
-          
-          chartData = {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            datasets: [{
-              label: 'Monthly Trend',
-              data: [65, 59, 80, 81, 56, 55],
-              fill: {
-                target: 'origin',
-                above: colors[0].replace('0.8', '0.1')
-              },
-              backgroundColor: colors[0],
-              borderColor: borderColors[0],
-              tension: 0.3,
-              pointBackgroundColor: '#ffffff',
-              pointBorderColor: borderColors[0],
-              pointBorderWidth: 2,
-              pointRadius: 4,
-              pointHoverRadius: 6
-            }]
-          };
-        }
+      // Pie chart data
+      if (hasValidData) {
+        chartData = {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: colors,
+            borderColor: borderColors,
+            borderWidth: 1,
+            hoverOffset: 15,
+            borderRadius: 4
+          }]
+        };
       } else {
-        // Bar chart (default)
-        if (hasValidData) {
-          // Generate a unique color for each bar
-          const { colors, borderColors } = generateUniqueColors(values.length);
-          
-          chartData = {
-            labels: labels,
-            datasets: [{
-              label: yAxisLabel || 'Value',
-              data: values,
-              backgroundColor: colors,
-              borderColor: borderColors,
-              borderWidth: 1,
-              borderRadius: 6,
-              hoverBackgroundColor: colors.map(color => color.replace('0.8', '0.9')),
-              barPercentage: 0.7,
-              categoryPercentage: 0.8
-            }]
-          };
-        } else {
-          // Fallback bar data
-          const fallbackLabels = ['Q1', 'Q2', 'Q3', 'Q4'];
-          const { colors, borderColors } = generateUniqueColors(fallbackLabels.length);
-          
-          chartData = {
-            labels: fallbackLabels,
-            datasets: [{
-              label: 'Quarterly Results',
-              data: [420, 368, 520, 489],
-              backgroundColor: colors,
-              borderColor: borderColors,
-              borderWidth: 1,
-              borderRadius: 6,
-              hoverBackgroundColor: colors.map(color => color.replace('0.8', '0.9')),
-              barPercentage: 0.7,
-              categoryPercentage: 0.8
-            }]
-          };
-        }
+        // Fallback pie data
+        const fallbackLabels = ['Category A', 'Category B', 'Category C', 'Category D'];
+        
+        chartData = {
+          labels: fallbackLabels,
+          datasets: [{
+            data: [40, 25, 20, 15],
+            backgroundColor: colors,
+            borderColor: borderColors,
+            borderWidth: 1,
+            hoverOffset: 15,
+            borderRadius: 4
+          }]
+        };
       }
+    } else if (chartType === 'line') {
+      // Line chart data
+      if (hasValidData) {
+        chartData = {
+          labels: labels,
+          datasets: [{
+            label: yAxisLabel || 'Value',
+            data: values,
+            fill: {
+              target: 'origin',
+              above: colors[0].replace(/0.7/, '0.1')
+            },
+            backgroundColor: colors[0],
+            borderColor: borderColors[0],
+            tension: 0.3,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: borderColors[0],
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
+        };
+      } else {
+        // Fallback line data
+        chartData = {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+          datasets: [{
+            label: 'Monthly Trend',
+            data: [65, 59, 80, 81, 56, 55],
+            fill: {
+              target: 'origin',
+              above: colors[0].replace(/0.7/, '0.1')
+            },
+            backgroundColor: colors[0],
+            borderColor: borderColors[0],
+            tension: 0.3,
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: borderColors[0],
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
+        };
+      }
+    } else {
+      // Bar chart (default)
+      if (hasValidData) {
+        chartData = {
+          labels: labels,
+          datasets: [{
+            label: yAxisLabel || 'Value',
+            data: values,
+            backgroundColor: colors,
+            borderColor: borderColors,
+            borderWidth: 1,
+            borderRadius: 6,
+            hoverBackgroundColor: colors.map(color => color.replace(/0.7/, '0.9')),
+            barPercentage: 0.7,
+            categoryPercentage: 0.8
+          }]
+        };
+      } else {
+        // Fallback bar data
+        const fallbackLabels = ['Q1', 'Q2', 'Q3', 'Q4'];
+        
+        chartData = {
+          labels: fallbackLabels,
+          datasets: [{
+            label: 'Quarterly Results',
+            data: [420, 368, 520, 489],
+            backgroundColor: colors,
+            borderColor: borderColors,
+            borderWidth: 1,
+            borderRadius: 6,
+            hoverBackgroundColor: colors.map(color => color.replace(/0.7/, '0.9')),
+            barPercentage: 0.7,
+            categoryPercentage: 0.8
+          }]
+        };
+      }
+    }
     
     // Modern chart options
     const modernChartOptions = {
@@ -2228,26 +2143,16 @@ function Visualizations() {
       
       chartContainer.appendChild(loadingOverlay);
       
-      // Modern color palette
-      const modernColors = [
-        'rgba(53, 162, 235, 0.8)',
-        'rgba(255, 99, 132, 0.8)',
-        'rgba(75, 192, 192, 0.8)',
-        'rgba(255, 159, 64, 0.8)',
-        'rgba(153, 102, 255, 0.8)'
-      ];
-      
-      const modernBorderColors = [
-        'rgba(53, 162, 235, 1)',
-        'rgba(255, 99, 132, 1)',
-        'rgba(75, 192, 192, 1)',
-        'rgba(255, 159, 64, 1)',
-        'rgba(153, 102, 255, 1)'
-      ];
+      // Modern color palette - use our new utility
+      const { colors: modernColors, borderColors: modernBorderColors } = generateChartColors(5);
       
       const chartType = visualization.chartType || 'bar';
       const xAxis = visualization.xAxis || visualization.config?.xAxis?.field || '';
       const yAxis = visualization.yAxis || visualization.config?.yAxis?.field || '';
+      
+      // Extract axis labels from visualization data
+      const xAxisLabel = visualization.config?.xAxis?.field || visualization.xAxis || 'X-Axis';
+      const yAxisLabel = visualization.config?.yAxis?.field || visualization.yAxis || 'Y-Axis';
       
       // Prepare for data fetching
       let data;
@@ -2333,7 +2238,7 @@ function Visualizations() {
                 data: yAxisData,
                 fill: {
                   target: 'origin',
-                  above: modernColors[0].replace('0.8', '0.1')
+                  above: modernColors[0].replace(/0.7/, '0.1')
                 },
                 backgroundColor: modernColors[0],
                 borderColor: modernBorderColors[0],
@@ -2356,62 +2261,17 @@ function Visualizations() {
                 borderColor: modernBorderColors,
                 borderWidth: 1,
                 borderRadius: 6,
-                hoverBackgroundColor: modernColors.map(color => color.replace('0.8', '0.9')),
+                hoverBackgroundColor: modernColors.map(color => color.replace(/0.7/, '0.9')),
                 barPercentage: 0.7,
                 categoryPercentage: 0.8
               }]
             };
           }
         
-          // Chart options
+          // Set up the chart options
           const options = {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: chartType === 'pie',
-                position: 'top',
-                labels: {
-                  usePointStyle: true,
-                  padding: 20,
-                  font: {
-                    size: 12
-                  }
-                }
-              },
-              tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.75)',
-                padding: 12,
-                titleColor: '#ffffff',
-                titleFont: {
-                  size: 14,
-                  weight: 'bold'
-                },
-                bodyFont: {
-                  size: 13
-                },
-                cornerRadius: 6,
-                boxPadding: 6,
-                callbacks: chartType === 'pie' ? {
-                  label: function(context) {
-                    const label = context.label || '';
-                    const value = context.raw || 0;
-                    const dataset = context.dataset;
-                    const total = dataset.data.reduce((acc, val) => acc + val, 0);
-                    const percentage = ((value / total) * 100).toFixed(1);
-                    
-                    // Check if the value already has a % symbol
-                    if (String(value).includes('%')) {
-                      return `${label}: ${value}`;
-                    }
-                    
-                    // For pie charts, we typically want to show percentages
-                    // since we don't have reference to 'visualization' here
-                    return `${label}: ${percentage}%`;
-                  }
-                } : undefined
-              }
-            },
             animation: {
               duration: 1000,
               easing: 'easeOutQuart',
@@ -2424,46 +2284,104 @@ function Visualizations() {
                 }
               }
             },
-            scales: chartType !== 'pie' ? {
+            layout: {
+              padding: {
+                top: 10,
+                right: 20,
+                bottom: 10,
+                left: 10
+              }
+            },
+            plugins: {
+              title: {
+                display: true,
+                text: visualization.name || `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`,
+                font: {
+                  size: 18,
+                  weight: 'bold',
+                  family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+                },
+                padding: 20,
+                color: '#333333'
+              },
+              legend: {
+                display: chartType === 'pie' || chartType === 'doughnut',
+                position: 'top',
+                labels: {
+                  font: {
+                    size: 13,
+                    family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+                  },
+                  padding: 15,
+                  usePointStyle: true,
+                  boxWidth: 6
+                }
+              },
+              tooltip: {
+                enabled: true,
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleFont: {
+                  size: 14,
+                  weight: 'bold',
+                  family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+                },
+                bodyFont: {
+                  size: 13,
+                  family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+                },
+                padding: 12,
+                cornerRadius: 6
+              }
+            },
+            scales: chartType !== 'pie' && chartType !== 'doughnut' ? {
               x: {
                 grid: {
                   display: false
                 },
                 ticks: {
                   font: {
-                    size: 12
+                    size: 12,
+                    family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
                   },
                   maxRotation: 45,
-                  minRotation: 0
+                  minRotation: 0,
+                  color: '#666666'
                 },
                 title: {
                   display: true,
                   text: xAxisLabel || 'X-Axis',
                   font: {
                     size: 14,
-                    weight: 'bold'
+                    weight: 'bold',
+                    family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
                   },
-                  padding: { top: 10, bottom: 0 }
+                  padding: { top: 10, bottom: 0 },
+                  color: '#555555'
                 }
               },
               y: {
                 beginAtZero: true,
                 grid: {
-                  borderDash: [4, 4]
+                  color: 'rgba(0, 0, 0, 0.05)',
+                  drawBorder: false
                 },
                 ticks: {
                   font: {
-                    size: 12
-                  }
+                    size: 12,
+                    family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
+                  },
+                  color: '#666666'
                 },
                 title: {
                   display: true,
                   text: yAxisLabel || 'Y-Axis',
                   font: {
                     size: 14, 
-                    weight: 'bold'
+                    weight: 'bold',
+                    family: "'Roboto', 'Helvetica', 'Arial', sans-serif"
                   },
-                  padding: { top: 0, bottom: 10 }
+                  padding: { top: 0, bottom: 10 },
+                  color: '#555555'
                 }
               }
             } : {}
@@ -2502,7 +2420,14 @@ function Visualizations() {
         loadingElement.remove();
       }
       
-      showErrorMessage(ctx, 'Error rendering visualization. Please try again.');
+      // Get the chart context again if needed for error display
+      const chartContainer = document.getElementById('chartContainer');
+      if (chartContainer) {
+        const ctx = chartContainer.getContext('2d');
+        if (ctx) {
+          showErrorMessage(ctx, 'Error rendering visualization. Please try again.');
+        }
+      }
     }
   };
   
@@ -2799,98 +2724,73 @@ function Visualizations() {
 
   const createPlaceholderChart = async (ctx, chartType, instancesObject, chartKey, xAxisLabel, yAxisLabel) => {
     try {
-      // Generate unique colors
-      const generateUniqueColors = (count) => {
-        // Base colors with good contrast
-        const baseColors = [
-          [53, 162, 235],   // Blue
-          [255, 99, 132],   // Red
-          [75, 192, 192],   // Teal
-          [255, 159, 64],   // Orange
-          [153, 102, 255],  // Purple
-          [255, 205, 86],   // Yellow
-          [0, 168, 133],    // Emerald
-          [54, 162, 92],    // Green
-          [255, 99, 71],    // Tomato
-          [106, 90, 205]    // Slate Blue
-        ];
-        
-        const colors = [];
-        for (let i = 0; i < count; i++) {
-          // Cycle through the base colors
-          const color = baseColors[i % baseColors.length];
-          // Add a slight variation for repeated colors
-          const variation = Math.floor(i / baseColors.length) * 20;
-          const r = Math.max(0, Math.min(255, color[0] - variation));
-          const g = Math.max(0, Math.min(255, color[1] - variation));
-          const b = Math.max(0, Math.min(255, color[2] - variation));
-          
-          colors.push(`rgba(${r}, ${g}, ${b}, 0.5)`);
-        }
-        
-        return colors;
-      };
+      // Generate unique colors using our new utility
+      const { colors, borderColors } = generateChartColors(10);
       
+      // Prepare chart data based on chart type
       let chartData;
       
-      if (chartType === 'scatter') {
-        // Scatter plot placeholder
-        const colors = generateUniqueColors(1);
+      if (chartType === 'pie') {
+        // Pie chart placeholder
+        chartData = {
+          labels: ['Loading...', '...', '...', '...'],
+          datasets: [{
+            data: [25, 25, 25, 25],
+            backgroundColor: colors.slice(0, 4),
+            borderColor: borderColors.slice(0, 4),
+            borderWidth: 1,
+            borderRadius: 4
+          }]
+        };
+      } else if (chartType === 'scatter') {
+        // Scatter chart placeholder
+        const scatterData = [];
+        for (let i = 0; i < 6; i++) {
+          scatterData.push({
+            x: 700 + i * 100,
+            y: 600 + (i % 2 === 0 ? 200 : -200) + Math.random() * 400
+          });
+        }
         
         chartData = {
           datasets: [{
             label: yAxisLabel || 'Loading data...',
-            data: [
-              { x: 1, y: 0 },
-              { x: 2, y: 0 }
-            ],
+            data: scatterData,
             backgroundColor: colors[0],
-            borderColor: colors[0].replace('0.5', '1'),
-            borderWidth: 1,
-            pointRadius: 6,
-            pointHoverRadius: 8
-          }]
-        };
-      } else if (chartType === 'pie') {
-        // Pie chart placeholder
-        const pieSegments = ['Loading...', '...', '...'];
-        const colors = generateUniqueColors(pieSegments.length);
-        
-        chartData = {
-          labels: pieSegments,
-          datasets: [{
-            data: [70, 20, 10],
-            backgroundColor: colors,
-            borderColor: colors.map(c => c.replace('0.5', '1')),
-            borderWidth: 1
+            borderColor: borderColors[0],
+            pointRadius: 6
           }]
         };
       } else if (chartType === 'line') {
         // Line chart placeholder
-        const colors = generateUniqueColors(1);
-        
         chartData = {
           labels: ['Loading...', '...', '...', '...', '...'],
           datasets: [{
             label: yAxisLabel || 'Loading data...',
             data: [65, 70, 65, 70, 65],
             backgroundColor: colors[0],
-            borderColor: colors[0].replace('0.5', '1'),
-            tension: 0.4
+            borderColor: borderColors[0],
+            tension: 0.4,
+            fill: {
+              target: 'origin',
+              above: colors[0].replace(/0.7/, '0.1')
+            },
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: borderColors[0],
+            pointRadius: 4
           }]
         };
       } else {
         // Bar chart placeholder
         const barCount = 4;
-        const colors = generateUniqueColors(barCount);
         
         chartData = {
           labels: ['Loading data...', '...', '...', '...'],
           datasets: [{
             label: yAxisLabel || 'Loading data...',
             data: [40, 40, 40, 40],
-            backgroundColor: colors,
-            borderColor: colors.map(c => c.replace('0.5', '1')),
+            backgroundColor: colors.slice(0, barCount),
+            borderColor: borderColors.slice(0, barCount),
             borderWidth: 1,
             borderRadius: 4
           }]
@@ -3129,6 +3029,22 @@ function Visualizations() {
     }
   }, [isAuthenticated]);
   
+  const showErrorMessage = (ctx, message) => {
+    if (!ctx) return;
+    
+    // Clear the canvas
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    
+    // Set up text style
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#d32f2f';
+    
+    // Draw the error message
+    ctx.fillText(message, ctx.canvas.width / 2, ctx.canvas.height / 2);
+  };
+  
   return (
     <Box 
       component="div" 
@@ -3146,11 +3062,13 @@ function Visualizations() {
             backgroundColor: 'rgba(255,255,255,0.7)', 
             zIndex: 9999,
             display: 'flex',
+            flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center'
           }}
         >
-          <CircularProgress />
+          <CircularProgress size={50} />
+          <Typography variant="body1" sx={{ mt: 2 }}>Analyzing your data...</Typography>
         </Box>
       )}
       <Container maxWidth="xl">
@@ -3187,8 +3105,6 @@ function Visualizations() {
               </Box>
             }
           />
-
-          {loading && <LinearProgress sx={{ mb: 2 }} />}
           
           {error && (
             <Alert 
@@ -3556,8 +3472,8 @@ function Visualizations() {
             
             {loading ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 4 }}>
-                <CircularProgress sx={{ mb: 2 }} />
-                <Typography variant="body2" color="text.secondary">
+                <CircularProgress size={40} />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                   Analyzing your data and generating recommendations...
                 </Typography>
               </Box>
@@ -3676,8 +3592,8 @@ function Visualizations() {
             
             {loading ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 4 }}>
-                <CircularProgress sx={{ mb: 2 }} />
-                <Typography variant="body2" color="text.secondary">
+                <CircularProgress size={40} />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                   Analyzing file and identifying columns...
                 </Typography>
               </Box>

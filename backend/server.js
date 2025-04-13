@@ -271,8 +271,18 @@ const mongooseOptions = {
 };
 
 // Connect to MongoDB with improved error handling
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/datavizpro';
-console.log(`Attempting to connect to MongoDB with ${MONGODB_URI ? 'provided connection string' : 'default localhost connection'}`);
+// Use local MongoDB in development, Atlas in production
+let MONGODB_URI;
+if (process.env.NODE_ENV === 'production') {
+  // Use Atlas connection string in production
+  MONGODB_URI = process.env.MONGODB_URI;
+  console.log('Using Atlas MongoDB connection for production');
+} else {
+  // Use local MongoDB in development
+  MONGODB_URI = 'mongodb://localhost:27017/datavizpro';
+  console.log('Using local MongoDB connection for development');
+}
+
 console.log(`NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
 console.log(`Platform: ${isRender ? 'Render' : 'Other'}`);
 
@@ -285,7 +295,7 @@ const connectToDatabase = async () => {
     return cachedConnection;
   }
 
-  console.log('Creating new database connection');
+  console.log('Creating new database connection to:', MONGODB_URI.includes('localhost') ? 'localhost' : 'Atlas');
   try {
     const conn = await mongoose.connect(MONGODB_URI, mongooseOptions);
     console.log('Connected to MongoDB successfully');
@@ -293,7 +303,23 @@ const connectToDatabase = async () => {
     return conn;
   } catch (error) {
     console.error('MongoDB connection error details:', error);
-    throw error;
+    
+    // If connection fails and we're not in production, try to connect to local MongoDB
+    if (MONGODB_URI.includes('mongodb+srv') && process.env.NODE_ENV !== 'production') {
+      console.log('Atlas connection failed, falling back to local MongoDB...');
+      try {
+        const localUri = 'mongodb://localhost:27017/datavizpro';
+        const conn = await mongoose.connect(localUri, mongooseOptions);
+        console.log('Connected to local MongoDB successfully');
+        cachedConnection = conn;
+        return conn;
+      } catch (localError) {
+        console.error('Local MongoDB connection also failed:', localError);
+        throw error; // Throw the original error
+      }
+    } else {
+      throw error;
+    }
   }
 };
 

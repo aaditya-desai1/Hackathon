@@ -14,6 +14,7 @@ import Signup from './pages/Signup';
 import LandingPage from './pages/LandingPage';
 import { AuthProvider } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
+import { useDataContext } from './contexts/DataContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Create Theme Context
@@ -24,9 +25,6 @@ export const ColorModeContext = createContext({
 
 // Custom hook to use the color mode context
 export const useColorMode = () => useContext(ColorModeContext);
-
-// Use the DataContext from the external file
-import { useDataContext } from './contexts/DataContext';
 
 function AppRoutes() {
   const location = useLocation();

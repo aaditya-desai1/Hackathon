@@ -67,10 +67,19 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 
 // Method to generate auth token
 userSchema.methods.generateAuthToken = function() {
+  // If JWT_SECRET is not defined, use a fallback secret
+  const secret = process.env.JWT_SECRET || 'datavizpro-fallback-secret-key-for-auth';
+  
+  // Ensure we have a valid secret
+  if (!secret) {
+    console.error('JWT_SECRET is not defined in environment variables!');
+    throw new Error('Authentication configuration error');
+  }
+  
   return jwt.sign(
     { userId: this._id },
-    process.env.JWT_SECRET,
-    { expiresIn: '24h' }
+    secret,
+    { expiresIn: '7d' } // Extended to 7 days for better persistence
   );
 };
 

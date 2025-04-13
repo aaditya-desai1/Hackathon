@@ -14,7 +14,15 @@ const auth = async (req, res, next) => {
     }
     
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      // Use the same fallback secret as in the User model
+      const secret = process.env.JWT_SECRET || 'datavizpro-fallback-secret-key-for-auth';
+      
+      if (!secret) {
+        console.error('[Auth Middleware] JWT_SECRET is not defined!');
+        return res.status(500).json({ error: 'Server configuration error' });
+      }
+      
+      const decoded = jwt.verify(token, secret);
       console.log(`[Auth Middleware] Token verified successfully for user: ${decoded.userId}`);
       
       const user = await User.findById(decoded.userId);

@@ -17,13 +17,43 @@ export const AuthProvider = ({ children }) => {
     const loadUser = async () => {
       try {
         setLoading(true);
+        
+        // Check if auth token exists in localStorage
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          console.log('No auth token found, user not authenticated');
+          setCurrentUser(null);
+          setLoading(false);
+          return;
+        }
+        
+        console.log('Auth token found, attempting to load user profile');
         const user = await authApi.getCurrentUser();
-        setCurrentUser(user);
-        setError(null);
+        
+        if (user) {
+          console.log('User profile loaded successfully', user);
+          setCurrentUser(user);
+          setError(null);
+        } else {
+          console.error('Failed to load user profile: Response was empty');
+          // Don't remove token yet - it might be a temporary API issue
+          setCurrentUser(null);
+          setError('Unable to load your profile. Please try again later.');
+        }
       } catch (err) {
         console.error('Failed to load user:', err);
-        setError('Authentication failed. Please login again.');
-        localStorage.removeItem('authToken');
+        
+        // Only clear token if it's an authentication error (401)
+        if (err.status === 401) {
+          console.log('Authentication error, clearing token');
+          localStorage.removeItem('authToken');
+          setError('Session expired. Please login again.');
+        } else {
+          // For other errors, keep the token but show an error
+          setError('Network error. Your session will be restored when connection is available.');
+        }
+        
+        setCurrentUser(null);
       } finally {
         setLoading(false);
       }

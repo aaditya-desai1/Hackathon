@@ -328,15 +328,17 @@ function FileManager() {
         // Show error message
         alert(`Error: ${result.error || 'Unknown error occurred'}`);
         
-        // Force a full page reload in case of partial deletions
-        window.location.reload();
+        // Force a reload in case of errors to get a fresh state
+        if (window.confirm('An error occurred. Reload the page?')) {
+          window.location.reload();
+        }
       }
     } catch (error) {
       console.error('Error deleting all files:', error);
       alert(`Error deleting all files: ${error.message}`);
       
       // Force a reload in case of errors to get a fresh state
-      if (confirm('An error occurred. Reload the page?')) {
+      if (window.confirm('An error occurred. Reload the page?')) {
         window.location.reload();
       }
     } finally {
