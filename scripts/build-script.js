@@ -10,7 +10,7 @@ process.env.SKIP_PREFLIGHT_CHECK = 'true';
 console.log('Starting DataVizPro build process...');
 
 // Paths
-const rootDir = __dirname;
+const rootDir = path.join(__dirname, '..');
 const frontendDir = path.join(rootDir, 'frontend');
 const buildDir = path.join(rootDir, 'build');
 const frontendBuildDir = path.join(frontendDir, 'build');
@@ -21,7 +21,9 @@ const buildImagesDir = path.join(buildDir, 'images');
 try {
   // Clean build directory
   console.log('Cleaning build directories...');
+  fs.ensureDirSync(buildDir);
   fs.emptyDirSync(buildDir);
+  fs.ensureDirSync(frontendBuildDir);
   fs.emptyDirSync(frontendBuildDir);
 
   // Install dependencies if needed
@@ -157,7 +159,10 @@ try {
   const files = fs.readdirSync(buildDir);
   console.log(`Build complete. Build directory contains ${files.length} files/directories:`);
   console.log(files.join(', '));
-
+  
+  // Create a marker file to indicate this is the correct build directory
+  fs.writeFileSync(path.join(buildDir, '.vercel_build_output'), 'This build directory was created by scripts/build-script.js');
+  
   console.log('Build process completed successfully!');
 } catch (error) {
   console.error('Build process failed:', error);
