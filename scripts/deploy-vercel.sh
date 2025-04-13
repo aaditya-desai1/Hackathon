@@ -15,7 +15,7 @@ cd frontend && npm install && cd ..
 
 # Build the project
 echo "Building the project..."
-node build-script.js
+node scripts/build-script.js
 
 # Check if build was successful
 if [ -d "build" ] && [ "$(ls -A build)" ]; then

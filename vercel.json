@@ -6,6 +6,7 @@
       "use": "@vercel/static-build",
       "config": {
         "distDir": "build",
+        "buildCommand": "npm run vercel-build",
         "installCommand": "npm install --legacy-peer-deps && cd frontend && npm install --legacy-peer-deps react-scripts@5.0.1"
       }
     }
