@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "postinstall": "cd frontend && npm install react-scripts@5.0.1 --no-save",
-    "vercel-build": "node build-script.js",
+    "vercel-build": "node scripts/build-script.js",
     "start": "cd frontend && npm start",
-    "build": "node build-script.js",
-    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+    "build": "node scripts/build-script.js",
+    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "clean": "rm -rf build node_modules frontend/node_modules backend/node_modules",
+    "dev": "cd frontend && npm start"
   },
   "engines": {
     "node": ">=16.x"

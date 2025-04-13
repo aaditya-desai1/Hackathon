@@ -1,2 +1,59 @@
+# Dependencies
+/node_modules
+/frontend/node_modules
+/backend/node_modules
+/.pnp
+.pnp.js
+package-lock.json
+yarn.lock
+
+# Testing
+/coverage
+/testing_data
+/test_data
+
+# Production
+/build
+/dist
+/.next/
+/out/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE specific files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+
+# Cache directories
+.npm
+.eslintcache
+.stylelintcache
+.parcel-cache
+.cache/
+
+# Debug
+.debugger/
+
+# Deployment
 .vercel
 frontend/node_modules/.cache/

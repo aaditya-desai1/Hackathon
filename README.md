@@ -89,20 +89,27 @@ A powerful web-based data visualization tool that automates the process of creat
 
 ```
 dataviz-pro/
-├── backend/
-│   ├── controllers/  # Request handlers
-│   ├── models/       # Database schemas
-│   ├── routes/       # API routes
-│   ├── services/     # Business logic
-│   └── utils/        # Helper functions
-├── frontend/
-│   ├── public/       # Static files
+├── backend/              # Node.js Express backend
+│   ├── controllers/      # Request handlers
+│   ├── models/           # Database schemas
+│   ├── routes/           # API routes
+│   ├── services/         # Business logic
+│   ├── middleware/       # Express middleware 
+│   └── utils/            # Helper functions
+├── frontend/             # React frontend
+│   ├── public/           # Static files
 │   └── src/
-│       ├── components/  # UI components
-│       ├── pages/       # Application pages
-│       ├── services/    # API communication
-│       └── utils/       # Helper functions
-└── README.md
+│       ├── components/   # UI components
+│       ├── pages/        # Application pages
+│       ├── services/     # API communication
+│       └── utils/        # Helper functions
+├── scripts/              # Build and deployment scripts
+│   ├── build-script.js   # Main build script
+│   └── cleanup.js        # Cleanup utility
+├── docs/                 # Documentation
+│   ├── DEPLOYMENT.md     # Deployment guide
+│   └── RENDER_DEPLOYMENT.md # Render-specific deployment
+└── README.md             # Project readme
 ```
 
 ## 🧪 Testing
